@@ -2,6 +2,8 @@
 #include "composer_base.hpp"
 #include "plookup_tables/plookup_tables.hpp"
 
+#include <optional>
+
 namespace waffle {
 
 class PlookupComposer : public ComposerBase {
