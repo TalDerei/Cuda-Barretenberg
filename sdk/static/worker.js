@@ -1,1 +1,0 @@
-../node_modules/@aztec/barretenberg/worker.js

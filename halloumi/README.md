@@ -1,3 +1,0 @@
-# halloumi
-
-Proof generation server.
