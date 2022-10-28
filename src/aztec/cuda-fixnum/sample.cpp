@@ -1,9 +1,13 @@
-#include <ecc/curves/grumpkin/grumpkin.hpp>
 #include <chrono>
+#include <iostream>
+#include "sample.h"
 
-int main(int, char**)
+using namespace std;
+
+// sample add
+int add(int a, int b)
 {
-
+    cout << "a + b is! : " << a + b << endl;
     constexpr size_t num_points = 1024;
 
     std::vector<grumpkin::g1::element> points;
@@ -35,4 +39,9 @@ int main(int, char**)
     end = std::chrono::steady_clock::now();
     diff = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
     std::cout << "batched mul operations: " << diff.count() << "ms" << std::endl;
+   return a + b;
+}
+
+int subtract(int a, int b) {
+    return a - b;
 }

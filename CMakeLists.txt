@@ -3,6 +3,8 @@
 
 cmake_minimum_required(VERSION 3.16)
 
+enable_language(CUDA)
+
 include(cmake/toolchain.cmake)
 
 set(PROJECT_VERSION 0.1.0)

@@ -11,3 +11,8 @@ node_modules
 *.log
 *.swp
 .next
+build/
+srs_db/ignition/transcript00.dat
+srs_db/ignition/transcript01.dat
+srs_db/ignition/transcript02.dat
+srs_db/ignition/transcript03.dat
