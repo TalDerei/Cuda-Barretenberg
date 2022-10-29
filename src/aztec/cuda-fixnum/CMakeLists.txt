@@ -15,35 +15,50 @@ set(CMAKE_CXX_STANDARD 20)
 # string(REPLACE ";" " " CUDA_ARCH_FLAGS_SPACES "${CUDA_ARCH_FLAGS}")
 
 # string(APPEND CMAKE_CUDA_FLAGS " ${CUDA_ARCH_FLAGS_SPACES}")
-# # string(APPEND CMAKE_CUDA_FLAGS " -Xcompiler -fconstexpr-steps=100000000")
+# string(APPEND CMAKE_CUDA_FLAGS " -Xcompiler -fconstexpr-steps=100000000")
 # set(CMAKE_CUDA_FLAGS_DEBUG "-g -G")
+
+# set(CUDA_SEPARABLE_COMPILATION ON)
+# set(CUDA_PROPAGATE_HOST_FLAGS ON)
+# set(CUDA_HOST_COMPILER clang++)
 
 # source
 # include_directories(src)
 
-# bench
+# # bench
 # add_executable(cuda_bench bench/bench.cu)
 # target_compile_definitions(cuda_bench PUBLIC -DNDEBUG)
 # target_link_libraries(cuda_bench ecc env -lstdc++)
 
-add_library(cuda_main STATIC main.cu)
-target_include_directories(cuda_main PUBLIC src)
-set_property(TARGET cuda_main PROPERTY CUDA_SEPARABLE_COMPILATION ON)
+# add_custom_target(
+#     run_cuda_bench
+#     COMMAND cuda_bench
+#     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+# )
+
+string(APPEND CMAKE_CUDA_FLAGS " ${CUDA_ARCH_FLAGS_SPACES}")
+string(APPEND CMAKE_CUDA_FLAGS " -Xcompiler -fconstexpr-steps=100000000")
+set(CMAKE_CUDA_FLAGS_DEBUG "-g -G")
+
+# add_library(cuda_main STATIC main.cu)
+# target_include_directories(cuda_main PUBLIC src)
+# set_property(TARGET cuda_main PROPERTY CUDA_SEPARABLE_COMPILATION ON)
 
 add_library(sample_library STATIC 
-    sample.cpp
-    sample.h
+    ./sample_test.cpp
+    ./sample_test.h
 )
-target_compile_features(sample_library PRIVATE cxx_std_20)
+# target_compile_features(sample_library PRIVATE cxx_std_20)
 
-# add_executable(example_cu example.cu)
-# target_link_libraries(example_cu ecc env sample_library -lstdc++)
+# add_executable(example_cu main.cu)
+# target_link_libraries(example_cu PUBLIC ecc env -lstdc++)
 
 # add_custom_target(
 #     run_example_cu
 #     COMMAND example_cu
 #     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
 # )
+
 
 # add_library(sample_library_new STATIC 
 #     src/functions/sample-new.h

@@ -37,10 +37,10 @@ template <class T> constexpr field<T> field<T>::operator*(const field& other) co
                   (T::modulus_1 == 0 && T::modulus_2 == 0 && T::modulus_3 == 0)) {
         return montgomery_mul(other);
     } else {
-        if (std::is_constant_evaluated()) {
+        // if (std::is_constant_evaluated()) {
             return montgomery_mul(other);
-        }
-        return asm_mul_with_coarse_reduction(*this, other);
+        // }
+        // return asm_mul_with_coarse_reduction(*this, other);
     }
 }
 
@@ -50,11 +50,11 @@ template <class T> constexpr field<T> field<T>::operator*=(const field& other) n
                   (T::modulus_1 == 0 && T::modulus_2 == 0 && T::modulus_3 == 0)) {
         *this = operator*(other);
     } else {
-        if (std::is_constant_evaluated()) {
+        // if (std::is_constant_evaluated()) {
             *this = operator*(other);
-        } else {
-            asm_self_mul_with_coarse_reduction(*this, other); // asm_self_mul(*this, other);
-        }
+        // } else {
+        //     asm_self_mul_with_coarse_reduction(*this, other); // asm_self_mul(*this, other);
+        // }
     }
     return *this;
 }
@@ -70,11 +70,11 @@ template <class T> constexpr field<T> field<T>::sqr() const noexcept
                   (T::modulus_1 == 0 && T::modulus_2 == 0 && T::modulus_3 == 0)) {
         return montgomery_square();
     } else {
-        if (std::is_constant_evaluated()) {
+        // if (std::is_constant_evaluated()) {
             return montgomery_square();
-        } else {
-            return asm_sqr_with_coarse_reduction(*this); // asm_sqr(*this);
-        }
+        // } else {
+        //     return asm_sqr_with_coarse_reduction(*this); // asm_sqr(*this);
+        // }
     }
 }
 
@@ -84,11 +84,11 @@ template <class T> constexpr void field<T>::self_sqr() noexcept
                   (T::modulus_1 == 0 && T::modulus_2 == 0 && T::modulus_3 == 0)) {
         *this = montgomery_square();
     } else {
-        if (std::is_constant_evaluated()) {
+        // if (std::is_constant_evaluated()) {
             *this = montgomery_square();
-        } else {
-            asm_self_sqr_with_coarse_reduction(*this);
-        }
+        // } else {
+        //     asm_self_sqr_with_coarse_reduction(*this);
+        // }
     }
 }
 
@@ -103,11 +103,11 @@ template <class T> constexpr field<T> field<T>::operator+(const field& other) co
                   (T::modulus_1 == 0 && T::modulus_2 == 0 && T::modulus_3 == 0)) {
         return add(other);
     } else {
-        if (std::is_constant_evaluated()) {
+        // if (std::is_constant_evaluated()) {
             return add(other);
-        } else {
-            return asm_add_with_coarse_reduction(*this, other); // asm_add_without_reduction(*this, other);
-        }
+        // } else {
+        //     return asm_add_with_coarse_reduction(*this, other); // asm_add_without_reduction(*this, other);
+        // }
     }
 }
 
@@ -117,11 +117,11 @@ template <class T> constexpr field<T> field<T>::operator+=(const field& other) n
                   (T::modulus_1 == 0 && T::modulus_2 == 0 && T::modulus_3 == 0)) {
         (*this) = operator+(other);
     } else {
-        if (std::is_constant_evaluated()) {
+        // if (std::is_constant_evaluated()) {
             (*this) = operator+(other);
-        } else {
-            asm_self_add_with_coarse_reduction(*this, other); // asm_self_add(*this, other);
-        }
+        // } else {
+        //     asm_self_add_with_coarse_reduction(*this, other); // asm_self_add(*this, other);
+        // }
     }
     return *this;
 }
@@ -137,11 +137,11 @@ template <class T> constexpr field<T> field<T>::operator-(const field& other) co
                   (T::modulus_1 == 0 && T::modulus_2 == 0 && T::modulus_3 == 0)) {
         return subtract_coarse(other); // modulus - *this;
     } else {
-        if (std::is_constant_evaluated()) {
+        // if (std::is_constant_evaluated()) {
             return subtract_coarse(other); // subtract(other);
-        } else {
-            return asm_sub_with_coarse_reduction(*this, other); // asm_sub(*this, other);
-        }
+        // } else {
+        //     return asm_sub_with_coarse_reduction(*this, other); // asm_sub(*this, other);
+        // }
     }
 }
 
@@ -162,11 +162,11 @@ template <class T> constexpr field<T> field<T>::operator-=(const field& other) n
                   (T::modulus_1 == 0 && T::modulus_2 == 0 && T::modulus_3 == 0)) {
         *this = subtract_coarse(other); // subtract(other);
     } else {
-        if (std::is_constant_evaluated()) {
+        // if (std::is_constant_evaluated()) {
             *this = subtract_coarse(other); // subtract(other);
-        } else {
-            asm_self_sub_with_coarse_reduction(*this, other); // asm_self_sub(*this, other);
-        }
+        // } else {
+        //     asm_self_sub_with_coarse_reduction(*this, other); // asm_self_sub(*this, other);
+        // }
     }
     return *this;
 }
@@ -189,11 +189,11 @@ template <class T> constexpr void field<T>::self_conditional_negate(const uint64
                   (T::modulus_1 == 0 && T::modulus_2 == 0 && T::modulus_3 == 0)) {
         *this = predicate ? -(*this) : *this;
     } else {
-        if (std::is_constant_evaluated()) {
+        // if (std::is_constant_evaluated()) {
             *this = predicate ? -(*this) : *this;
-        } else {
-            asm_conditional_negate(*this, predicate);
-        }
+        // } else {
+        //     asm_conditional_negate(*this, predicate);
+        // }
     }
 }
 
@@ -271,11 +271,11 @@ template <class T> constexpr field<T> field<T>::reduce_once() const noexcept
                   (T::modulus_1 == 0 && T::modulus_2 == 0 && T::modulus_3 == 0)) {
         return reduce();
     } else {
-        if (std::is_constant_evaluated()) {
+        // if (std::is_constant_evaluated()) {
             return reduce();
-        } else {
-            return asm_reduce_once(*this);
-        }
+        // } else {
+        //     return asm_reduce_once(*this);
+        // }
     }
 }
 
@@ -285,11 +285,11 @@ template <class T> constexpr void field<T>::self_reduce_once() noexcept
                   (T::modulus_1 == 0 && T::modulus_2 == 0 && T::modulus_3 == 0)) {
         *this = reduce();
     } else {
-        if (std::is_constant_evaluated()) {
+        // if (std::is_constant_evaluated()) {
             *this = reduce();
-        } else {
-            asm_self_reduce_once(*this);
-        }
+        // } else {
+        //     asm_self_reduce_once(*this);
+        // }
     }
 }
 
