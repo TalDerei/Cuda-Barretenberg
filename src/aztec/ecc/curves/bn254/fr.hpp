@@ -6,6 +6,8 @@
 
 #include "../../fields/field.hpp"
 
+// Scalar field
+
 namespace barretenberg {
 class Bn254FrParams {
   public:

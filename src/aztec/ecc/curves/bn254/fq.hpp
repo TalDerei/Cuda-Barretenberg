@@ -5,29 +5,40 @@
 
 #include "../../fields/field.hpp"
 
+// Base field 
+
+// For more information on the parameters, check out the references below:
+// reference: https://bag.org.tr/proje/bulutzincir/bzapi-go/blob/db-postgre/vendor/github.com/ethereum/go-ethereum/crypto/bn256/cloudflare/constants.go
+// reference: https://hackmd.io/@jpw/bn254
+
 namespace barretenberg {
 class Bn254FqParams {
   public:
+    // modulus represented as little-endian 64-bit words
     static constexpr uint64_t modulus_0 = 0x3C208C16D87CFD47UL;
     static constexpr uint64_t modulus_1 = 0x97816a916871ca8dUL;
     static constexpr uint64_t modulus_2 = 0xb85045b68181585dUL;
     static constexpr uint64_t modulus_3 = 0x30644e72e131a029UL;
 
+    // R^2 where R = 2^256 mod q
     static constexpr uint64_t r_squared_0 = 0xF32CFC5B538AFA89UL;
     static constexpr uint64_t r_squared_1 = 0xB5E71911D44501FBUL;
     static constexpr uint64_t r_squared_2 = 0x47AB1EFF0A417FF6UL;
     static constexpr uint64_t r_squared_3 = 0x06D89F71CAB8351FUL;
 
+    // ξ^((2p²-2)/3) where ξ = i+9 (a cubic root of unity, mod p)
     static constexpr uint64_t cube_root_0 = 0x71930c11d782e155UL;
     static constexpr uint64_t cube_root_1 = 0xa6bb947cffbe3323UL;
     static constexpr uint64_t cube_root_2 = 0xaa303344d4741444UL;
     static constexpr uint64_t cube_root_3 = 0x2c3b3f0d26594943UL;
 
+    // Primitives roots of unity
     static constexpr uint64_t primitive_root_0 = 0UL;
     static constexpr uint64_t primitive_root_1 = 0UL;
     static constexpr uint64_t primitive_root_2 = 0UL;
     static constexpr uint64_t primitive_root_3 = 0UL;
 
+    // Not sure what these are
     static constexpr uint64_t endo_g1_lo = 0x7a7bd9d4391eb18d;
     static constexpr uint64_t endo_g1_mid = 0x4ccef014a773d2cfUL;
     static constexpr uint64_t endo_g1_hi = 0x0000000000000002UL;
@@ -38,8 +49,10 @@ class Bn254FqParams {
     static constexpr uint64_t endo_b2_lo = 0x89d3256894d213e2UL;
     static constexpr uint64_t endo_b2_mid = 0UL;
 
+    // Negative inverse of p, mod 2^256
     static constexpr uint64_t r_inv = 0x87d20782e4866389UL;
 
+    // Not sure what coset_generators are 
     static constexpr uint64_t coset_generators_0[8]{
         0x7a17caa950ad28d7ULL, 0x4d750e37163c3674ULL, 0x20d251c4dbcb4411ULL, 0xf42f9552a15a51aeULL,
         0x4f4bc0b2b5ef64bdULL, 0x22a904407b7e725aULL, 0xf60647ce410d7ff7ULL, 0xc9638b5c069c8d94ULL,

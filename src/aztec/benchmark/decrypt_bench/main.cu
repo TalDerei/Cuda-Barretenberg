@@ -1,6 +1,6 @@
 #include <chrono>
 #include <iostream>
-#include <sample_test.h>
+// #include <sample_test.h>
 #include <ecc/curves/grumpkin/grumpkin.hpp>
 
 using namespace std;
@@ -46,9 +46,4 @@ int main(int, char**)
     end = std::chrono::steady_clock::now();
     diff = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
     std::cout << "batched mul operations: " << diff.count() << "ms" << std::endl;
-
-    // add(1,7);
-
-    // int sub = subtract(7, 1);
-    // cout << "sub is: " << sub << endl;
 }

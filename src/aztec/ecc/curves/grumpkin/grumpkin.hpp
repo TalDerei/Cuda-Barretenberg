@@ -5,15 +5,19 @@
 #include "../bn254/fr.hpp"
 
 namespace grumpkin {
+
+// Typedef the base and scalar fields -- very strange naming convention
 typedef barretenberg::fr fq;
 typedef barretenberg::fq fr;
 
+// Grumpkin G1 parameters 
 struct GrumpkinG1Params {
     static constexpr bool USE_ENDOMORPHISM = true;
     static constexpr bool can_hash_to_curve = true;
     static constexpr bool small_elements = true;
     static constexpr bool has_a = false;
-    // have checked in grumpkin.test_b that b is Montgomery form of  -17
+    
+    // have checked in grumpkin.test_b that b is Montgomery form of -17
     static constexpr barretenberg::fr b{
         0xdd7056026000005a, 0x223fa97acb319311, 0xcc388229877910c0, 0x34394632b724eaa
     };

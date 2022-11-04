@@ -2,6 +2,7 @@
 #include <gtest/gtest.h>
 
 using namespace barretenberg;
+using namespace std;
 
 TEST(fr, eq)
 {
@@ -11,6 +12,7 @@ TEST(fr, eq)
     fr d{ 0x01, 0x02, 0x04, 0x04 };
     fr e{ 0x01, 0x03, 0x03, 0x04 };
     fr f{ 0x02, 0x02, 0x03, 0x04 };
+
     EXPECT_EQ((a == b), true);
     EXPECT_EQ((a == c), false);
     EXPECT_EQ((a == d), false);
@@ -25,6 +27,11 @@ TEST(fr, is_zero)
     fr c = fr::zero();
     fr d = fr::zero();
     fr e = fr::zero();
+
+    cout << "a.data[0] is: " << a.data[0] << endl;
+    cout << "a.data[1] is: " << a.data[1] << endl;
+    cout << "a.data[2] is: " << a.data[2] << endl;
+    cout << "a.data[3] is: " << a.data[3] << endl;
 
     b.data[0] = 1;
     c.data[1] = 1;

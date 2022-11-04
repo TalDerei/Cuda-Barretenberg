@@ -305,6 +305,7 @@ template <class Params> struct alignas(32) field {
     // static constexpr auto coset_generators = compute_coset_generators();
     // static constexpr std::array<field, 15> coset_generators = compute_coset_generators((1 << 30U));
 
+    // Applies an operation to the field upon printing to output stream
     friend std::ostream& operator<<(std::ostream& os, const field& a)
     {
         field out = a.from_montgomery_form();

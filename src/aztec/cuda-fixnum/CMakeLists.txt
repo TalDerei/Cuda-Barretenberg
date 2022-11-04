@@ -40,9 +40,9 @@ string(APPEND CMAKE_CUDA_FLAGS " ${CUDA_ARCH_FLAGS_SPACES}")
 string(APPEND CMAKE_CUDA_FLAGS " -Xcompiler -fconstexpr-steps=100000000")
 set(CMAKE_CUDA_FLAGS_DEBUG "-g -G")
 
-# add_library(cuda_main STATIC main.cu)
-# target_include_directories(cuda_main PUBLIC src)
-# set_property(TARGET cuda_main PROPERTY CUDA_SEPARABLE_COMPILATION ON)
+add_library(cuda_main STATIC main.cu)
+target_include_directories(cuda_main PUBLIC src)
+set_property(TARGET cuda_main PROPERTY CUDA_SEPARABLE_COMPILATION ON)
 
 add_library(sample_library STATIC 
     ./sample_test.cpp
