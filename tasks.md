@@ -3,5 +3,11 @@
 - [x] Initialize Barretenberg repo
 - [x] Integrate cuda-fixnum external library and add cuda / nvcc support
 - [ ] Implement FF operations on the GPU
-    - [ ] Understand the logic for the BN-254 base field (fq.test.cpp, fq.hpp, field.hpp, and field_impl.hpp)
-    - [ ] Implement equivalent logic for GPU using cuda-fixnum
+    - [ ] Implement montogomery multiplication for GPU
+        - [x] Understand the algorithm, and the difference between montogomery multiplication and montogomery reduction schemes
+        - [x] Extract the montogomery multiplication function to a seperate benchmarking file and get it compiling
+        - [x] Understand Barretenberg's C++ implementation, and benchmark for correctness and performance
+        - [ ] Compare against cuda-fixnum's montogomery multiplication (CIOS) implementation
+    - [ ] Implement addition/subtraction operations on GPU
+    - [ ] Understand other logic for the BN-254 EC (fq.test.cpp, fq.hpp, field.hpp, and field_impl.hpp)
+    - [ ] Implement equivalent logic for GPU using cuda-fixnum library

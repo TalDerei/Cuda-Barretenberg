@@ -1,4 +1,0 @@
-#include <ecc/curves/grumpkin/grumpkin.hpp>
-
-int add(int a, int b);
-int subtract(int a, int b);

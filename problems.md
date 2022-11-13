@@ -1,3 +1,4 @@
+# Problems
 ```Problems encountered along completing tasks```
 
 Starting to dive into the unit testing (each module has its own set of tests). Need to figure out what the hexadecimal represents for bn254/fq.hpp for example, and how simple calculations (i.e. addition/subtraction/multiplication/division) translate between hex numbers?
@@ -9,3 +10,8 @@ Currently the recompilation process for making any change is taking a long time.
 Need to differentiate between Fq and Fr, and also need to figure out how to convert the hexadecimal representation of the fields to decimal to verify they match up?
     - Fq represents the base field for BN-254, while Fr represents the scalar field. In order to get the hexidecimal representation of the number, convert the decimal representation to hexidecimal, split it up into 4 equal limbs, and take the reverse order. 
 
+Need to figure out an effective method for testing cuda functions correctness. There doesn't seem to be a framework for cuda testing. 
+    - Depaul recommends simply writing reference kernels to test. In order to debug, need to also disable compiler optimizations -O3 and compiler with -O0 since the compiler is optimizing out a lot of the intermediary steps and not letting me see what's going on under the hood. Another option is to extract and isolate the workload into a seperate c++ file, test it out locally with print statements there since I can't add print statements to constant expressions. 
+
+Need to figure out how to integrate cuda-fixnum logic to use their montgomery multiplication implementation. 
+    - The problem is the field elements are being intialized on the device, and the cuda-fixnum functions make calls to host functions before calling a dispatch() function, which is a kernel. Tried doing a sample montgomery multiplication by modifying the cuda-fixnum base types from uint8_t * to uint64_t *. Seems to be an incorrect result. Need to verify if: [1] initializing the values is not done correctly, or [2] moving from uint8_t * to uint64_t * breaks the cuda-fixnum code, or [3] the issue is with how the numbers are being printed and need to convert it to/from montgomery representation, or [4] how i'm retrieveing the values from calling get_fixnum_array() or print()_fixnum_array. Update: I ended up scrapping using the ENTIRE cuda-fixnum library, and used the minimal implementation used in the groth16 codebase. The modular multiplication (CIOS) works now

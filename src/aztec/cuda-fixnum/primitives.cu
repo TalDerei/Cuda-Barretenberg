@@ -4,11 +4,17 @@
 #include <cassert>
 #include <type_traits>
 
-namespace cuFIXNUM {
-
 namespace internal {
     typedef std::uint32_t u32;
     typedef std::uint64_t u64;
+
+    __device__ __forceinline__
+    void
+    addc(int &s, int a, int b) {
+        asm ("addc.s32 %0, %1, %2;"
+             : "=r"(s)
+             : "r"(a), "r" (b));
+    }
 
     __device__ __forceinline__
     void
@@ -800,5 +806,3 @@ namespace internal {
     }
 
 } // End namespace internal
-
-} // End namespace cuFIXNUM

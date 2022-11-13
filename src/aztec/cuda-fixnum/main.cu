@@ -1,6 +1,0 @@
-#include "fixnum/warp_fixnum.cu"
-#include "array/fixnum_array.h"
-#include "functions/modexp.cu"
-#include "functions/multi_modexp.cu"
-#include "modnum/modnum_monty_redc.cu"
-#include "modnum/modnum_monty_cios.cu"

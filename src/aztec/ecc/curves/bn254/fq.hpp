@@ -20,7 +20,7 @@ class Bn254FqParams {
     static constexpr uint64_t modulus_2 = 0xb85045b68181585dUL;
     static constexpr uint64_t modulus_3 = 0x30644e72e131a029UL;
 
-    // R^2 where R = 2^256 mod q
+    // 2^256 mod Q
     static constexpr uint64_t r_squared_0 = 0xF32CFC5B538AFA89UL;
     static constexpr uint64_t r_squared_1 = 0xB5E71911D44501FBUL;
     static constexpr uint64_t r_squared_2 = 0x47AB1EFF0A417FF6UL;
