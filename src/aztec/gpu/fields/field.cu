@@ -54,30 +54,30 @@ __device__ void field_gpu<params>::mul(const var a, const var b, var &res) {
 
     var x = a, y = b, z = digit::zero();
     var tmp;
-    digit::mul_lo(tmp, x, BN254_MOD::Q_NINV_MOD);
+    digit::mul_lo(tmp, x, gpu_barretenberg::r_inv_base);
     digit::mul_lo(tmp, tmp, grp.shfl(y, 0));
     int cy = 0;
 
-    for (int i = 0; i < ELT_LIMBS; ++i) {
+    for (int i = 0; i < LIMBS; ++i) {
         var u;
         var xi = grp.shfl(x, i);
         var z0 = grp.shfl(z, 0);
         var tmpi = grp.shfl(tmp, i);
 
-        digit::mad_lo(u, z0, BN254_MOD::Q_NINV_MOD, tmpi);
+        digit::mad_lo(u, z0, gpu_barretenberg::r_inv_base, tmpi);
         digit::mad_lo_cy(z, cy, mod, u, z);
         digit::mad_lo_cy(z, cy, y, xi, z);
 
         assert(L || z == 0);  // z[0] must be 0
         z = grp.shfl_down(z, 1); // Shift right one word
-        z = (L >= ELT_LIMBS - 1) ? 0 : z;
+        z = (L >= LIMBS - 1) ? 0 : z;
 
         digit::add_cy(z, cy, z, cy);
         digit::mad_hi_cy(z, cy, mod, u, z);
         digit::mad_hi_cy(z, cy, y, xi, z);
     }
     // Resolve carries
-    int msb = grp.shfl(cy, ELT_LIMBS - 1);
+    int msb = grp.shfl(cy, LIMBS - 1);
     cy = grp.shfl_up(cy, 1); // left shift by 1
     cy = (L == 0) ? 0 : cy;
 

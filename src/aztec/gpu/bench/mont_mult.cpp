@@ -14,17 +14,6 @@ std::pair<uint64_t, uint64_t> field<T>::mul_wide(const uint64_t a, const uint64_
     const uint128_t res = ((uint128_t)a * (uint128_t)b);
     auto res_new = (uint64_t)(res >> 64);
     
-    // printf("(uint64_t)a %zu\n", a);
-    // printf("(uint64_t)a %zu\n", b);
-    // printf("(uint128_t)a %zu\n", (uint128_t)a);
-    // printf("(uint128_t)b %zu\n", (uint128_t)b);
-    // printf("((uint128_t)a * (uint128_t)b %zu\n", ((uint128_t)a * (uint128_t)b));
-    // printf("res %zu\n", res);
-    // printf("(uint64_t)(res) %zu\n", (uint64_t)(res));
-    // printf("(uint64_t)(res >> 64) %zu\n", (uint64_t)(res >> 64));
-    // printf("size of res is: %zu\n", sizeof(res));
-    // printf("size of res_new is: %zu\n", sizeof(res_new));
-
     // Need to explicitely cast result back to uint64_t and right bit-shfit by 8 bytes
     return { (uint64_t)(res), (uint64_t)(res >> 64) };
 }

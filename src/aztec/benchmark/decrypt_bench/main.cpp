@@ -1,19 +1,12 @@
 #include <chrono>
 #include <iostream>
-// #include <sample_test.h>
 #include <ecc/curves/grumpkin/grumpkin.hpp>
 
 using namespace std;
 
-__global__ void cuda_hello(){
-    printf("Hello World from GPU!\n");
-}
-
 int main(int, char**)
 {
     std::cout << "test" << std::endl;
-
-    cuda_hello<<<1,1>>>(); 
 
     constexpr size_t num_points = 1024;
 
