@@ -184,17 +184,6 @@ TEST(fq, coarse_equivalence_checks)
 
 TEST(fq, to_montgomery_form)
 {
-    /** Need to figure out
-     *  1. How these values are calulated
-     *  2. What the native representation is
-     * 
-     * a is: 0x168c629a0dd3899c23b4adf2350c12f3553ed9240051cbcb7c2e9fbee5f3e465
-     * a.from_montgomery_form is: 0x0994683e0032d4770ccb0999059201045759c7acb0a8eb96351a50bf4b68d877
-     * a.to_montgomery_form is: 0x0000000000000004000000000000000300000000000000020000000000000001
-     * 
-     * Should not be printing 'a' on it's own, since it's accessing the boost library. 
-     */
-    
     fq result = fq{ 0x01, 0x00, 0x00, 0x00 }.to_montgomery_form();
     fq expected = fq::one();
     EXPECT_EQ(result, expected);

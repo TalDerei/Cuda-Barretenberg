@@ -131,33 +131,34 @@ struct BN254_MOD {
     // __device__ __forceinline__ static var mod_scalar() { return MOD_Q_SCALAR[lane()]; }
 };
 
-/* -------------------------- Finite Field Arithmetic ---------------------------------------------- */
+/* -------------------------- Finite Field Arithmetic for G1 ---------------------------------------------- */
 template < typename params > 
 class field_gpu {
     public:        
         var data[4];    
 
         // Constructor 
-        __device__
-        field_gpu() noexcept {}
+        __device__ field_gpu() noexcept {}
         
-        __device__ 
-        field_gpu(const var a, const var b, const var c, const var d) noexcept;
+        __device__ field_gpu(const var a, const var b, const var c, const var d) noexcept;
 
-        __device__
-        field_gpu zero() noexcept;
+        __device__ field_gpu zero() noexcept;
 
-        __device__
-        bool is_zero() const noexcept;
+        __device__ bool is_zero() const noexcept;
 
-        __device__ 
-        static void add(const var *a, const var *b, var *res);
+        __device__ static int equal(const var x, const var y);
 
-        __device__ 
-        static void sub(const var *x, const var *y, var *z);
+        __device__ static void load(field_gpu &x, const var *mem);
 
-        __device__ 
-        static void mul(const var a, const var b, var &res);
+        __device__ static void store(var *mem, const field_gpu &x);
+
+        __device__ static void add(const var *a, const var *b, var *res);
+
+        __device__ static void sub(const var *x, const var *y, var *z);
+
+        // __device__ static void squaring(var &x, const var &y);   
+
+        __device__ static void mul(const var a, const var b, var &res);
     };
     typedef field_gpu<BN254_MOD> fq_gpu;
 }

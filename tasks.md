@@ -3,11 +3,13 @@
 - [x] Initialize Barretenberg repo
 - [x] Integrate cuda-fixnum external library and add cuda / nvcc support
 - [ ] Implement FF logic on the GPU
-    - [ ] Implement montogomery multiplication for GPU using cuda-fixnum
-        - [x] Understand the algorithm, and the difference between montogomery multiplication and montogomery reduction schemes
-        - [x] Extract the montogomery multiplication function to a seperate benchmarking file and get it compiling
-        - [x] Implement addition/subtraction operations on GPU
-        - [x] Understand Barretenberg's C++ implementation, and benchmark for correctness and performance
-        - [ ] Implement the functionlity described for both fq.tests and fr.tests (base and scalar fields)
-        - [ ] Compare against cuda-fixnum's montogomery multiplication (CIOS) implementation
-- [ ] Implement BN254 / Grumpkin ECs logic on the GPU
+    - [x] Understand the algorithm, and the difference between montogomery multiplication and montogomery reduction schemes
+    - [x] Extract the montogomery multiplication function to a seperate benchmarking file and get it compiling
+    - [x] Implement addition/subtraction operations on GPU
+    - [x] Understand Barretenberg's C++ implementation, and benchmark for correctness and performance
+    - [ ] Implement unit tests logic for fq.tests and fr.tests (base and scalar fields)
+    - [ ] Benchmark cuda-fixnum's montogomery multiplication (CIOS) implementation to barretenberg's
+- [ ] Implement BN254 / Grumpkin ECs logic on the GPU   
+    - [ ] Understand the differences between BN-254 and Grumpkin ECs
+    - [ ] Implement unit tests logic for BN-254 / Grumpkin EC 
+- [x] Set up Nvsight Compute profiling software and downgrade GPU from A10 to V100 to save on cloud computing costs

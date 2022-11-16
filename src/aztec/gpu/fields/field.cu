@@ -22,6 +22,28 @@ __device__ bool field_gpu<params>::is_zero() const noexcept {
 }
 
 template<class params> 
+__device__ int field_gpu<params>::equal(const var x, const var y) { 
+    return fixnum::cmp(x, y) == 0; 
+}
+
+// Load operation copies data from main memory into a register
+template<class params> 
+__device__ void field_gpu<params>::load(field_gpu &x, const var *mem) {
+    int id = BN254_MOD::lane();
+    x.data = (id < LIMBS) ? mem[id] : 0UL;
+}
+
+// Store operation copies data from a register into main memory
+template<class params> 
+__device__ void field_gpu<params>::store(var *mem, const field_gpu &x) {
+    int id = BN254_MOD::lane();
+    if (id < LIMBS) {
+        mem[id] = x.data;
+    }
+}
+
+// Addition operation
+template<class params> 
 __device__ void field_gpu<params>::add(const var *a, const var *b, var *res) {
     int br;
     var x = *a, y = *b, z, r;
@@ -36,6 +58,7 @@ __device__ void field_gpu<params>::add(const var *a, const var *b, var *res) {
     }
 }
 
+// Subtraction operation
 template<class params> 
 __device__ void field_gpu<params>::sub(const var *x, const var *y, var *z) {
     int br;
@@ -46,6 +69,13 @@ __device__ void field_gpu<params>::sub(const var *x, const var *y, var *z) {
     *z = r;
 }
 
+// Square operation
+// template<class params> 
+// __device__ void field_gpu<params>::squaring(var x, const var &y) {
+//     mul(x, y, y);
+// }
+
+// Mongomery multiplication (CIOS) operation
 template<class params> 
 __device__ void field_gpu<params>::mul(const var a, const var b, var &res) {
     auto grp = fixnum::layout();
