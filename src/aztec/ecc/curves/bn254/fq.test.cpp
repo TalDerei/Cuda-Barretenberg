@@ -186,6 +186,7 @@ TEST(fq, to_montgomery_form)
 {
     fq result = fq{ 0x01, 0x00, 0x00, 0x00 }.to_montgomery_form();
     fq expected = fq::one();
+
     EXPECT_EQ(result, expected);
 }
 
@@ -234,7 +235,7 @@ TEST(fq, add_mul_consistency)
     fq multiplicand = { 0x09, 0, 0, 0 };
     multiplicand.self_to_montgomery_form();
 
-    fq a = fq::random_element();
+    fq a = { 0x2523b6fa3956f038, 0x158aa08ecdd9ec1d, 0xf48216a4c74738d4, 0x2514cc93d6f0a1bf };
     fq result;
     result = a + a;   // 2
     result += result; // 4
@@ -269,7 +270,7 @@ TEST(fq, sub_mul_consistency)
 
 TEST(fq, beta)
 {
-    fq x = fq::random_element();
+    fq x{ 0x2523b6fa3956f038, 0x158aa08ecdd9ec1d, 0xf48216a4c74738d4, 0x2514cc93d6f0a1bf };
 
     fq beta_x = { x.data[0], x.data[1], x.data[2], x.data[3] };
     beta_x = beta_x * fq::beta();

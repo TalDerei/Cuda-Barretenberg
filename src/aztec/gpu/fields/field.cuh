@@ -4,6 +4,7 @@
 #include <cstring>
 #include <cassert>
 #include <vector>
+#include <chrono>
 #include <iostream>
 #include <fixnum.cu>
 
@@ -20,7 +21,7 @@ __device__ __constant__ static var MOD_Q_BASE[LIMBS] = {
     0xb85045b68181585dUL, 0x30644e72e131a029UL
 };
 
-// 2^256 mod Q
+// R^2 where R = 2^256 mod Q
 __device__ __constant__ static var R_SQUARED_BASE[LIMBS] = {
     0xF32CFC5B538AFA89UL, 0xB5E71911D44501FBUL,
     0x47AB1EFF0A417FF6UL, 0x06D89F71CAB8351FUL
@@ -76,7 +77,7 @@ const var MOD_Q_SCALAR[LIMBS] = {
     0xB85045B68181585DUL, 0x30644E72E131A029UL
 };
 
-// 2^256 mod Q
+// R^2 where R = 2^256 mod Q
 __device__ __constant__
 const var R_SQUARED_SCALAR[LIMBS] = {
     0x1BB8E645AE216DA7UL, 0x53FE3AB1E35C59E3UL,
@@ -125,18 +126,28 @@ __device__ __constant__ static var endo_b2_mid_scalar = 0UL;
 // -Q^{-1} (mod 2^256)
 __device__ __constant__ static var r_inv_scalar = 0xc2e1f593efffffffUL;
 
-struct BN254_MOD {
+struct BN254_MOD_BASE {
     __device__ __forceinline__ static int lane() { return fixnum::layout().thread_rank(); }
     __device__ __forceinline__ static var mod() { return MOD_Q_BASE[lane()]; }
-    // __device__ __forceinline__ static var mod_scalar() { return MOD_Q_SCALAR[lane()]; }
+    __device__ __forceinline__ static var monty() { return R_SQUARED_BASE[lane()]; }
+    __device__ __forceinline__ static var cube() { return CUBE_ROOT_BASE[lane()]; }
+    __device__ __forceinline__ static var root() { return PRIMTIVE_ROOTS_UNITY_BASE[lane()]; }
+};
+
+struct BN254_MOD_SCALAR {
+    __device__ __forceinline__ static int lane() { return fixnum::layout().thread_rank(); }
+    __device__ __forceinline__ static var mod() { return MOD_Q_SCALAR[lane()]; }
+    __device__ __forceinline__ static var monty() { return R_SQUARED_SCALAR[lane()]; }
+    __device__ __forceinline__ static var cube() { return CUBE_ROOT_SCALAR[lane()]; }
+    __device__ __forceinline__ static var root() { return PRIMTIVE_ROOTS_UNITY_SCALAR[lane()]; }
 };
 
 /* -------------------------- Finite Field Arithmetic for G1 ---------------------------------------------- */
-template < typename params > 
+template < typename params, typename _params > 
 class field_gpu {
-    public:        
+    public:    
         var data[4];    
-
+    
         // Constructor 
         __device__ field_gpu() noexcept {}
         
@@ -152,15 +163,20 @@ class field_gpu {
 
         __device__ static void store(var *mem, const field_gpu &x);
 
-        __device__ static void add(const var *a, const var *b, var *res);
+        __device__ static var add(const var a, const var b, var &res);
 
-        __device__ static void sub(const var *x, const var *y, var *z);
+        __device__ static var sub(const var x, const var y, var &z);
 
-        // __device__ static void squaring(var &x, const var &y);   
+        __device__ static var square(var x, var &y);   
 
-        __device__ static void mul(const var a, const var b, var &res);
+        __device__ static var mul(const var a, const var b, var &res);
+
+        __device__ static var to_monty(var x, var &res);
+        
+        __device__ static var from_monty(var x, var &res);
     };
-    typedef field_gpu<BN254_MOD> fq_gpu;
+    typedef field_gpu<BN254_MOD_BASE, BN254_MOD_SCALAR> fq_gpu;
 }
 
 // TODO: Need to add extension fields (quadtratic and cubic)
+// TODO: Need to add rest of unit tests for Fq and Fr

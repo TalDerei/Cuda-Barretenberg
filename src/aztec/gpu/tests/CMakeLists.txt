@@ -6,21 +6,21 @@ set(CMAKE_CUDA_STANDARD 17)
 include_directories(../../cuda-fixnum)
 
 add_executable(
-    montgomery_cu
-    montgomery.cu
+    montgomery
+    montgomery.cpp
 )
 
 target_link_libraries(
-    montgomery_cu
+    montgomery
     PUBLIC
-    field_library
     fixnum_library
+    field_library
     ecc
     env
 )
 
 add_custom_target(
-    run_montgomery_cu
-    COMMAND montgomery_cu
+    run_montgomery
+    COMMAND montgomery
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
 )
