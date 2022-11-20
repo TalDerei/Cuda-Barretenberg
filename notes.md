@@ -17,9 +17,11 @@
 
     It's also worth noting that NVCC will always require a general purpose C++ host compiler. You can set CMAKE_CXX_STANDARD and CMAKE_CUDA_STANDARD values to c++17 so C++-files and CUDA-files can both be compiled according to c++17.
 
-```2. Finite Field Arithmetic (BN-254 and Grumpkin) on GPU```
+```2. Finite Field Arithmetic and Elliptic Curve Operations (BN-254 and Grumpkin) on GPU```
 
+    ## Montgomery Representation
     Montgomery representation is alternative way of representing elements of Fr/Fq for more efficient multiplication. Let r be BN-254.r or q be Grumpkin.q and R = 2^256. The Montgomery representation of the nubmer x (e.g. 5) is (xR) mod p. This number then is represented as a little-endian length 4 array of 64-bit integers, where each element in the array is called a limb. 
 
     Usually we're used to working 32-bit/64-bit integers. With SNARK provers, the integers are much larger. The integers are 256 bits and represented using arrays of integers. For example, we could represent them using an array of 4 64-bit integers (since 4 * 64 = 256 > 254). 
 
+    Q. Difference between BN-254 and Grumpkin curves?

@@ -153,7 +153,9 @@ class field_gpu {
         
         __device__ field_gpu(const var a, const var b, const var c, const var d) noexcept;
 
-        __device__ field_gpu zero() noexcept;
+        __device__ static field_gpu zero() noexcept;
+        
+        __device__ static field_gpu one() noexcept;
 
         __device__ bool is_zero() const noexcept;
 

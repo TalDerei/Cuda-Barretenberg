@@ -7,4 +7,5 @@ include_directories(../../cuda-fixnum)
 
 add_library(field_library STATIC 
     ./field.cu
+    ./group.cu
 )
