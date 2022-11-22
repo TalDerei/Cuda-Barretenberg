@@ -25,3 +25,8 @@
     Usually we're used to working 32-bit/64-bit integers. With SNARK provers, the integers are much larger. The integers are 256 bits and represented using arrays of integers. For example, we could represent them using an array of 4 64-bit integers (since 4 * 64 = 256 > 254). 
 
     Q. Difference between BN-254 and Grumpkin curves?
+
+
+    Q. Difference between Jacobian and Affine point representation?
+
+        A field element is a bigint in the interval [0, q - 1]

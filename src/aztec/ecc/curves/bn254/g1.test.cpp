@@ -7,6 +7,11 @@ namespace test_g1 {
 TEST(g1, random_element)
 {
     g1::element result = g1::element::random_element();
+    
+    printf("result x is: %zu\n", result.x);
+    printf("result y is: %zu\n", result.y);
+    printf("result z is: %zu\n", result.z);
+
     EXPECT_EQ(result.on_curve(), true);
 }
 

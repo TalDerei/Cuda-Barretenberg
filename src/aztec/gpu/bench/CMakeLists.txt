@@ -6,12 +6,12 @@ set(CMAKE_CUDA_STANDARD 17)
 include_directories(../../cuda-fixnum)
 
 add_executable(
-    montgomery_cu
-    montgomery.cu
+    field_bench_cu
+    field_bench.cu
 )
 
 target_link_libraries(
-    montgomery_cu
+    field_bench_cu
     PUBLIC
     field_library
     fixnum_library
@@ -20,7 +20,27 @@ target_link_libraries(
 )
 
 add_custom_target(
-    run_montgomery_cu
-    COMMAND montgomery_cu
+    run_field_bench_cu
+    COMMAND field_bench_cu
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+)
+
+add_executable(
+    group_bench_cu
+    group_bench.cu
+)
+
+target_link_libraries(
+    group_bench_cu
+    PUBLIC
+    field_library
+    fixnum_library
+    ecc
+    env
+)
+
+add_custom_target(
+    run_group_bench_cu
+    COMMAND group_bench_cu
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
 )

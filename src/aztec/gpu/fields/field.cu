@@ -9,7 +9,7 @@ using namespace gpu_barretenberg;
 
 // Templated with base and scalar fields
 template<class params, class _params> 
-__device__  field_gpu<params, _params>::field_gpu(var a, var b, var c, var d) noexcept
+__device__ field_gpu<params, _params>::field_gpu(var a, var b, var c, var d) noexcept
     : data{ a, b, c, d } {};
     
 template<class params, class _params> 
@@ -17,10 +17,10 @@ __device__ field_gpu<params, _params> field_gpu<params, _params>::zero() noexcep
     return field_gpu(0, 0, 0, 0); 
 }
 
-template<class params, class _params> 
-__device__ field_gpu<params, _params> field_gpu<params, _params>::one() noexcept {
-    return field_gpu{ 0x01, 0x00, 0x00, 0x00 }.to_montgomery_form();
-}
+// template<class params, class _params> 
+// __device__ field_gpu<params, _params> field_gpu<params, _params>::one() noexcept {
+//     return field_gpu{ 0x01, 0x00, 0x00, 0x00 }.to_montgomery_form();
+// }
 
 template<class params, class _params> 
 __device__ bool field_gpu<params, _params>::is_zero() const noexcept {
@@ -72,7 +72,7 @@ __device__ var field_gpu<params, _params>::sub(const var x, const var y, var &re
     return r;
 }
 
-// Square operation
+// Square operation -- worth special casing for 1.5 - 2x speed improvement
 template<class params, class _params> 
 __device__ var field_gpu<params, _params>::square(var x, var &y) {
     field_gpu::mul(x, x, y);

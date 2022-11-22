@@ -71,7 +71,7 @@ __device__ __constant__ static var endo_b2_lo_base = 0x89d3256894d213e2UL;
 __device__ __constant__ static var endo_b2_mid_base = 0UL;
 
 /* -------------------------- Scalar Field Modulus Fr ---------------------------------------------- */
-__device__
+__device__ __constant__
 const var MOD_Q_SCALAR[LIMBS] = {
     0x43E1F593F0000001UL, 0x2833E84879B97091UL,
     0xB85045B68181585DUL, 0x30644E72E131A029UL
@@ -155,7 +155,7 @@ class field_gpu {
 
         __device__ static field_gpu zero() noexcept;
         
-        __device__ static field_gpu one() noexcept;
+        // __device__ static field_gpu one() noexcept;
 
         __device__ bool is_zero() const noexcept;
 

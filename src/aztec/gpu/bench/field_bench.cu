@@ -2,7 +2,6 @@
 
 using namespace std;
 using namespace std::chrono;
-
 using namespace gpu_barretenberg;
 
 static constexpr size_t LIMBS_NUM = 4;

@@ -13,8 +13,6 @@ add_executable(
 target_link_libraries(
     montgomery
     PUBLIC
-    fixnum_library
-    field_library
     ecc
     env
 )
