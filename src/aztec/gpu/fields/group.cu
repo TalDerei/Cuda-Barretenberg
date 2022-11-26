@@ -48,10 +48,10 @@ __device__ void group_gpu<fq_gpu>::is_zero(const element &X) {
 
 }
 
+// Elliptic curve operations: https://hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-0.html#addition-zadd-2007-m
 template <class fq_gpu>
 __device__ void group_gpu<fq_gpu>::mixed_add(var X, var Y, var Z, var A, var B, var &res_x, var &res_y, var &res_z) noexcept {
-    var z1z1, u2, s2, h, hh, i, j, r, v;
-    var t0, t1;
+    var z1z1, u2, s2, h, hh, i, j, r, v, t0, t1;
 
     // X element
     fq_gpu::square(Z, z1z1);   
@@ -86,4 +86,46 @@ __device__ void group_gpu<fq_gpu>::mixed_add(var X, var Y, var Z, var A, var B, 
     fq_gpu::square(t0, t0);     
     fq_gpu::sub(t0, z1z1, t0);  
     fq_gpu::sub(t0, hh, res_z); 
+}
+
+template <class fq_gpu>
+__device__ void group_gpu<fq_gpu>::doubling(var X, var Y, var Z, var &res_x, var &res_y, var &res_z) noexcept {
+    var xx, yy, yyyy, zz, s, m, t, t0, t1;
+    
+    fq_gpu::square(X, xx);
+    fq_gpu::square(Y, yy);
+    fq_gpu::square(yy, yyyy);
+    fq_gpu::square(Z, zz);
+    fq_gpu::add(X, yy, t0);
+    fq_gpu::square(t0, t0);
+    fq_gpu::add(xx, yyyy, t1);
+    fq_gpu::sub(t0, t1, t0);
+    fq_gpu::add(t0, t0, s);
+
+    fq_gpu::add(t0, t0, xx);
+    fq_gpu::add(xx, t0, xx);
+    fq_gpu::square(zz, t1);
+    fq_gpu::add(t1, t1, t1);
+    fq_gpu::add(t0, t1, m);
+    fq_gpu::square(m, t0);
+    fq_gpu::add(s, s, t1);
+    fq_gpu::sub(t0, t1, t);
+
+    // X element
+    res_x = t;
+
+    // Z element
+    fq_gpu::add(Y, Z, t0);
+    fq_gpu::square(t0, t0);
+    fq_gpu::square(t0, t0);
+    fq_gpu::add(yy, zz, t1);
+    fq_gpu::sub(t0, t1, res_z);
+    
+    // Y element
+    fq_gpu::sub(s, t, t0);
+    fq_gpu::mul(m, t0, t0); 
+    fq_gpu::add(yyyy, yyyy, t1);
+    fq_gpu::add(t1, t1, t1);
+    fq_gpu::add(t1, t1, t1);
+    fq_gpu::sub(t0, t1, res_y);
 }

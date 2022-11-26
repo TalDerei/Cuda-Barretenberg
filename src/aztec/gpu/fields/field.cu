@@ -19,7 +19,7 @@ __device__ field_gpu<params, _params> field_gpu<params, _params>::zero() noexcep
 
 // template<class params, class _params> 
 // __device__ field_gpu<params, _params> field_gpu<params, _params>::one() noexcept {
-//     return field_gpu{ 0x01, 0x00, 0x00, 0x00 }.to_montgomery_form();
+//     return field_gpu{ 1, 0, 0, 0 }; // Cast to montgomery form
 // }
 
 template<class params, class _params> 
