@@ -20,4 +20,12 @@ Need to figure out how the reduce() algorithm fits into the from_montgomery_form
     - What migth be happening, from initial intution, is that EC calls are loading in the points and converting them to montgomery form, and then the FF arithemtic is operating on those representations. What doesn't make sense is why we can call montgomery multiplication before transforming them field elements into montgomery representation. One possibility is [1] the algorithm does the conversion for you and finds the Montgomery representation of the product, but doesn't do the conversion back, or [2] the algorithm doesn't do the conversion for you and finds the Montgomery representation of the product, but doesn't do the conversion back. In both cases, the product is still in montgomery representation. Update: ended up using cuda-fixnum for converting to and from montgomery representation. Still need to look deeper into how these reductions works.
 
 Need to understand the BN-254 G1 parameters?
-    - 
+    - These are curve parameters a and b (y^2 = x^3 + ax + b), cofactor, and group generators
+    
+Why is the first run of cuda functions much slower than the subsequent runs? 
+    - There might be some sort of caching effects happening, and need to verify these results with compiler optimizations -03 turned on, which are currently disabled for gdb testing purposes.  
+
+I have a struct T = {x, y, z} and Z = {x, y}, and each of the inner variables represent a length-4 array of 64-bit integers. I’m calling a device function mixed_addition (from a kernel) to add structs T + Z. One method is since there are 5 arrays w/ 4 elements each, I can execute the kernel on 4 threads, and each thread focuses on different array indices. Here’s my question. How can I perform the same parallelization by calling mixed_addition by passing in the top-level structs T and Z (instead of the individual arrays themselves)? And how does the kernel know how to operate more complex data structures / structs? (edited)    
+    - For arrays, you need to calculate the index each thread will be operating on with the following formula: tid = (blockDim.x * blockIdx.x) + threadIdx.x; For more complex data structures, currently looking into cuda's memory grid heirachy and streams. For testing purposes, I'll treat everything like a var and see if that works, but in production, will need to figure out how to parallelize on the element / affine element level. Also look into the concept of "grid-stride loops". 
+
+    

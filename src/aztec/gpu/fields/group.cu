@@ -34,7 +34,7 @@ __device__ void group_gpu<fq_gpu>::store_affine(const affine_element &X, const v
 }
 
 template <class fq_gpu> 
-__device__ void group_gpu<fq_gpu>::store_jacobian(const element & X, const var * y) {
+__device__ void group_gpu<fq_gpu>::store_jacobian(const element &X, const var *y) {
 
 }
 
@@ -49,80 +49,41 @@ __device__ void group_gpu<fq_gpu>::is_zero(const element &X) {
 }
 
 template <class fq_gpu>
-__device__ void group_gpu<fq_gpu>::mixed_add(fq_gpu &X, fq_gpu &Y) noexcept {
-    // fq_gpu z1z1, u2, s2, h, hh, i, j, r, v;
-    // fq_gpu t0, t1;
+__device__ void group_gpu<fq_gpu>::mixed_add(var X, var Y, var Z, var A, var B, var &res_x, var &res_y, var &res_z) noexcept {
+    var z1z1, u2, s2, h, hh, i, j, r, v;
+    var t0, t1;
 
-    // fq_gpu::square(X.data[0], Y.data[0]);
-
-    // // T0 = z1.z1
-    // Fq T0 = z.sqr();
-
-    // // T1 = x2.t0 - x1 = x2.z1.z1 - x1
-    // Fq T1 = other.x * T0;
-    // T1 -= x;
-
-    // // T2 = T0.z1 = z1.z1.z1
-    // // T2 = T2.y2 - y1 = y2.z1.z1.z1 - y1
-    // Fq T2 = z * T0;
-    // T2 *= other.y;
-    // T2 -= y;
-
-    // if (__builtin_expect(T1.is_zero(), 0)) {
-    //     if (T2.is_zero()) {
-    //         self_dbl();
-    //         return *this;
-    //     } else {
-    //         self_set_infinity();
-    //         return *this;
-    //     }
+    // X element
+    fq_gpu::square(Z, z1z1);   
+    fq_gpu::mul(A, z1z1, u2); 
+    fq_gpu::mul(B, Z, s2);
+    fq_gpu::mul(s2, z1z1, s2); 
+    // if (fq_gpu::equal(u2, X) && fq_gpu::equal(s2, Y)) {
+    //     // double
     // }
+    fq_gpu::sub(u2, X, h);   
+    fq_gpu::square(h, hh);    
+    fq_gpu::add(hh, hh, i);     
+    fq_gpu::add(i, i, i);      
+    fq_gpu::mul(i, h, j);      
+    fq_gpu::sub(s2, Y, r);      
+    fq_gpu::add(r, r, r);      
+    fq_gpu::mul(X, i, v);      
+    fq_gpu::square(r, t0);     
+    fq_gpu::add(v, v, t1);
+    fq_gpu::sub(t0, j, t0);    
+    fq_gpu::sub(t0, t1, res_x); 
 
-    // // T2 = 2T2 = 2(y2.z1.z1.z1 - y1) = R
-    // // z3 = z1 + H
-    // T2 += T2;
-    // z += T1;
+    // Y element
+    fq_gpu::sub(v, res_x, t0);  
+    fq_gpu::mul(Y, j, t1);     
+    fq_gpu::add(t1, t1, t1);
+    fq_gpu::mul(t0, r, t0);     
+    fq_gpu::sub(t0, t1, res_y);
 
-    // // T3 = T1*T1 = HH
-    // Fq T3 = T1.sqr();
-
-    // // z3 = z3 - z1z1 - HH
-    // T0 += T3;
-
-    // // z3 = (z1 + H)*(z1 + H)
-    // z.self_sqr();
-    // z -= T0;
-
-    // // T3 = 4HH
-    // T3 += T3;
-    // T3 += T3;
-
-    // // T1 = T1*T3 = 4HHH
-    // T1 *= T3;
-
-    // // T3 = T3 * x1 = 4HH*x1
-    // T3 *= x;
-
-    // // T0 = 2T3
-    // T0 = T3 + T3;
-
-    // // T0 = T0 + T1 = 2(4HH*x1) + 4HHH
-    // T0 += T1;
-    // x = T2.sqr();
-
-    // // x3 = x3 - T0 = R*R - 8HH*x1 -4HHH
-    // x -= T0;
-
-    // // T3 = T3 - x3 = 4HH*x1 - x3
-    // T3 -= x;
-
-    // T1 *= y;
-    // T1 += T1;
-
-    // // T3 = T2 * T3 = R*(4HH*x1 - x3)
-    // T3 *= T2;
-
-    // // y3 = T3 - T1
-    // y = T3 - T1;
-    // return *this;
+    // Z element
+    fq_gpu::add(Z, h, t0);      
+    fq_gpu::square(t0, t0);     
+    fq_gpu::sub(t0, z1z1, t0);  
+    fq_gpu::sub(t0, hh, res_z); 
 }

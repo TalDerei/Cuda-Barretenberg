@@ -13,6 +13,7 @@ namespace group_elements {
 template < typename fq_gpu > 
 class element {
     public:    
+        // fq_gpu datas[3];    
         fq_gpu x, y, z;
 
         // Constructor 

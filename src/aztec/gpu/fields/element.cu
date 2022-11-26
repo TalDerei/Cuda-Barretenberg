@@ -7,6 +7,7 @@ using namespace group_elements;
 template < typename fq_gpu > 
 __device__ element<fq_gpu>::element(const fq_gpu &a, const fq_gpu &b, const fq_gpu &c) noexcept
     : x{a}, y{b}, z{c} {};
+    // : datas{ a, b, c} {};
 
 template < typename fq_gpu > 
 __device__ element<fq_gpu>::element(const element &other) noexcept

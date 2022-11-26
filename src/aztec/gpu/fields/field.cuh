@@ -159,9 +159,9 @@ class field_gpu {
 
         __device__ bool is_zero() const noexcept;
 
-        __device__ static int equal(const var x, const var y);
+        __device__ static var equal(const var x, const var y);
 
-        __device__ static void load(field_gpu &x, const var *mem);
+        __device__ static var load(var x, var &res);
 
         __device__ static void store(var *mem, const field_gpu &x);
 

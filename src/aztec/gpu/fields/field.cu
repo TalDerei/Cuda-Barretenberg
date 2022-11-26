@@ -28,15 +28,16 @@ __device__ bool field_gpu<params, _params>::is_zero() const noexcept {
 }
 
 template<class params, class _params> 
-__device__ int field_gpu<params, _params>::equal(const var x, const var y) { 
+__device__ var field_gpu<params, _params>::equal(const var x, const var y) { 
     return fixnum::cmp(x, y) == 0; 
 }
 
 // Load operation copies data from main memory into a register
 template<class params, class _params> 
-__device__ void field_gpu<params, _params>::load(field_gpu &x, const var *mem) {
+__device__ var field_gpu<params, _params>::load(var x, var &res) {
     int id = params::lane();
-    x.data = (id < LIMBS) ? mem[id] : 0UL;
+    res = x;
+    return res;
 }
 
 // Store operation copies data from a register into main memory

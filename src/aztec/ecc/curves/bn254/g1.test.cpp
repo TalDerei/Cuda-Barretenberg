@@ -64,6 +64,65 @@ TEST(g1, mixed_add_check_against_constants)
     expected.y = expected_y.to_montgomery_form();
     expected.z = expected_z.to_montgomery_form();
     result = lhs + rhs;
+    result.x = result.x.from_montgomery_form();
+    result.y = result.y.from_montgomery_form();
+    result.z = result.z.from_montgomery_form();
+
+
+    printf("lhs.x.data[0] is: %zu\n", lhs.x.data[0]);
+    printf("lhs.x.data[1] is: %zu\n", lhs.x.data[1]);
+    printf("lhs.x.data[2] is: %zu\n", lhs.x.data[2]);
+    printf("lhs.x.data[3] is: %zu\n", lhs.x.data[3]);
+
+    printf("lhs.y.data[0] is: %zu\n", lhs.y.data[0]);
+    printf("lhs.y.data[1] is: %zu\n", lhs.y.data[1]);
+    printf("lhs.y.data[2] is: %zu\n", lhs.y.data[2]);
+    printf("lhs.y.data[3] is: %zu\n", lhs.y.data[3]);
+
+    printf("lhs.z.data[0] is: %zu\n", lhs.z.data[0]);
+    printf("lhs.z.data[1] is: %zu\n", lhs.z.data[1]);
+    printf("lhs.z.data[2] is: %zu\n", lhs.z.data[2]);
+    printf("lhs.z.data[3] is: %zu\n", lhs.z.data[3]);
+
+    printf("rhs.x.data[0] is: %zu\n", rhs.x.data[0]);
+    printf("rhs.x.data[1] is: %zu\n", rhs.x.data[1]);
+    printf("rhs.x.data[2] is: %zu\n", rhs.x.data[2]);
+    printf("rhs.x.data[3] is: %zu\n", rhs.x.data[3]);
+
+    printf("rhs.y.data[0] is: %zu\n", rhs.y.data[0]);
+    printf("rhs.y.data[1] is: %zu\n", rhs.y.data[1]);
+    printf("rhs.y.data[2] is: %zu\n", rhs.y.data[2]);
+    printf("rhs.y.data[3] is: %zu\n", rhs.y.data[3]);
+
+    printf("expected_x.data[0] is: %zu\n", expected.x.data[0]);
+    printf("expected_x.data[1] is: %zu\n", expected.x.data[1]);
+    printf("expected_x.data[2] is: %zu\n", expected.x.data[2]);
+    printf("expected_x.data[3] is: %zu\n", expected.x.data[3]);
+
+    printf("expected_y.data[0] is: %zu\n", expected.y.data[0]);
+    printf("expected_y.data[1] is: %zu\n", expected.y.data[1]);
+    printf("expected_y.data[2] is: %zu\n", expected.y.data[2]);
+    printf("expected_y.data[3] is: %zu\n", expected.y.data[3]);
+
+    printf("expected_z.data[0] is: %zu\n", expected.z.data[0]);
+    printf("expected_z.data[1] is: %zu\n", expected.z.data[1]);
+    printf("expected_z.data[2] is: %zu\n", expected.z.data[2]);
+    printf("expected_z.data[3] is: %zu\n", expected.z.data[3]);
+
+    printf("result.x.data[0] is: %zu\n", result.x.data[0]);
+    printf("result.x.data[1] is: %zu\n", result.x.data[1]);
+    printf("result.x.data[2] is: %zu\n", result.x.data[2]);
+    printf("result.x.data[3] is: %zu\n", result.x.data[3]);
+
+    printf("result.y.data[0] is: %zu\n", result.y.data[0]);
+    printf("result.y.data[1] is: %zu\n", result.y.data[1]);
+    printf("result.y.data[2] is: %zu\n", result.y.data[2]);
+    printf("result.y.data[3] is: %zu\n", result.y.data[3]);
+
+    printf("result.z.data[0] is: %zu\n", result.z.data[0]);
+    printf("result.z.data[1] is: %zu\n", result.z.data[1]);
+    printf("result.z.data[2] is: %zu\n", result.z.data[2]);
+    printf("result.z.data[3] is: %zu\n", result.z.data[3]);
 
     EXPECT_EQ(result == expected, true);
 }

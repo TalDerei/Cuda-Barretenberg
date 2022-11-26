@@ -58,7 +58,7 @@ class group_gpu {
 
         __device__ static void is_zero(const element &X);
 
-        __device__ static void mixed_add(fq_gpu &X, fq_gpu &Y) noexcept;
+        __device__ static void mixed_add(var X, var Y, var Z, var A, var B, var &res_x, var &res_y, var &res_z) noexcept;
         
         // add, mul, dbl, neg
     };

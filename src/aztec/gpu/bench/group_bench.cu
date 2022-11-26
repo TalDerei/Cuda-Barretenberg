@@ -27,9 +27,6 @@ __global__ void initialize_mixed_add_check_against_constants(var *a, var *b, var
         c[i] = a_z.data[i];
         x[i] = b_x.data[i];
         y[i] = b_y.data[i];
-        expected_x[i] = exp_x.data[i];
-        expected_y[i] = exp_y.data[i];
-        expected_z[i] = exp_z.data[i];
     }
 }
 
@@ -47,10 +44,12 @@ __global__ void mixed_add_check_against_constants(var *a, var *b, var *c, var *x
         lhs.z.data[tid] = fq_gpu::to_monty(c[tid], res[tid]);
         rhs.x.data[tid] = fq_gpu::to_monty(x[tid], res[tid]);
         rhs.y.data[tid] = fq_gpu::to_monty(y[tid], res[tid]);
-        expected.x.data[tid] = fq_gpu::to_monty(expected_x[tid], res[tid]);
-        expected.y.data[tid] = fq_gpu::to_monty(expected_y[tid], res[tid]);
-        expected.z.data[tid] = fq_gpu::to_monty(expected_z[tid], res[tid]);
-        // g1::mixed_add(lhs.x.data, rhs[tid].x);
+
+        g1::mixed_add(lhs.x.data[tid], lhs.y.data[tid], lhs.z.data[tid], rhs.x.data[tid], rhs.y.data[tid], expected_x[tid], expected_y[tid], expected_z[tid]);
+        
+        expected_x[tid] = fq_gpu::from_monty(expected_x[tid], expected_x[tid]);
+        expected_y[tid] = fq_gpu::from_monty(expected_y[tid], expected_y[tid]);
+        expected_z[tid] = fq_gpu::from_monty(expected_z[tid], expected_z[tid]);
 
         // EXPECT_EQ(result == expected, true);
     }
@@ -92,10 +91,20 @@ int main(int, char**) {
     cudaDeviceSynchronize();
 
     // Print results
-    printf("result[0] is: %zu\n", res[0]);
-    printf("result[1] is: %zu\n", res[1]);
-    printf("result[2] is: %zu\n", res[2]);
-    printf("result[3] is: %zu\n", res[3]);
+    printf("expected_x[0] is: %zu\n", expected_x[0]);
+    printf("expected_x[1] is: %zu\n", expected_x[1]);
+    printf("expected_x[2] is: %zu\n", expected_x[2]);
+    printf("expected_x[3] is: %zu\n", expected_x[3]);
+
+    printf("expected_y[0] is: %zu\n", expected_y[0]);
+    printf("expected_y[1] is: %zu\n", expected_y[1]);
+    printf("expected_y[2] is: %zu\n", expected_y[2]);
+    printf("expected_y[3] is: %zu\n", expected_y[3]);
+
+    printf("expected_z[0] is: %zu\n", expected_z[0]);
+    printf("expected_z[1] is: %zu\n", expected_z[1]);
+    printf("expected_z[2] is: %zu\n", expected_z[2]);
+    printf("expected_z[3] is: %zu\n", expected_z[3]);
 
     // End timer
     auto stop = high_resolution_clock::now();
