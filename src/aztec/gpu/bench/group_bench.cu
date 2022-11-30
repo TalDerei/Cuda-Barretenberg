@@ -84,10 +84,13 @@ __global__ void dbl_check_against_constants(var *a, var *b, var *c, var *x, var 
         lhs.z.data[tid] = fq_gpu::to_monty(c[tid], res[tid]);
 
         g1::doubling(lhs.x.data[tid], lhs.y.data[tid], lhs.z.data[tid], expected_x[tid], expected_y[tid], expected_z[tid]);
-        
-        expected_x[tid] = fq_gpu::from_monty(expected_x[tid], expected_x[tid]);
-        expected_y[tid] = fq_gpu::from_monty(expected_y[tid], expected_y[tid]);
-        expected_z[tid] = fq_gpu::from_monty(expected_z[tid], expected_z[tid]);
+        g1::doubling(expected_x[tid], expected_y[tid], expected_z[tid], expected_x[tid], expected_y[tid], expected_z[tid]);
+        g1::doubling(expected_x[tid], expected_y[tid], expected_z[tid], expected_x[tid], expected_y[tid], expected_z[tid]);
+
+        // Converting from monty form gets back the correct result
+        expected_x[tid] = fq_gpu::from_monty(expected_x[tid], res[tid]);
+        expected_y[tid] = fq_gpu::from_monty(expected_y[tid], res[tid]);
+        expected_z[tid] = fq_gpu::from_monty(expected_z[tid], res[tid]);
 
         // EXPECT_EQ(result == expected, true);
     }
@@ -131,6 +134,11 @@ int main(int, char**) {
     cudaDeviceSynchronize();
 
     // Print results
+    // printf("res[0] is: %zu\n", res[0]);
+    // printf("res[1] is: %zu\n", res[1]);
+    // printf("res[2] is: %zu\n", res[2]);
+    // printf("res[3] is: %zu\n", res[3]);
+
     printf("expected_x[0] is: %zu\n", expected_x[0]);
     printf("expected_x[1] is: %zu\n", expected_x[1]);
     printf("expected_x[2] is: %zu\n", expected_x[2]);

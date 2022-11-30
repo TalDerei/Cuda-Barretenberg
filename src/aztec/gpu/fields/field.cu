@@ -17,11 +17,6 @@ __device__ field_gpu<params, _params> field_gpu<params, _params>::zero() noexcep
     return field_gpu(0, 0, 0, 0); 
 }
 
-// template<class params, class _params> 
-// __device__ field_gpu<params, _params> field_gpu<params, _params>::one() noexcept {
-//     return field_gpu{ 1, 0, 0, 0 }; // Cast to montgomery form
-// }
-
 template<class params, class _params> 
 __device__ bool field_gpu<params, _params>::is_zero() const noexcept {
     return ((data[0] | data[1] | data[2] | data[3]) == 0);
@@ -66,6 +61,18 @@ template<class params, class _params>
 __device__ var field_gpu<params, _params>::sub(const var x, const var y, var &res) {
     int br;
     var r, mod = params::mod();
+    fixnum::sub_br(r, br, x, y);
+    if (br)
+        fixnum::add(r, r, mod);
+    res = r;
+    return r;
+}
+
+// Subtraction operation
+template<class params, class _params> 
+__device__ var field_gpu<params, _params>::sub_coarse(const var x, const var y, var &res) {
+    int br;
+    var r, mod = params::mod() + params::mod();
     fixnum::sub_br(r, br, x, y);
     if (br)
         fixnum::add(r, r, mod);

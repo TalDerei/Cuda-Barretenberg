@@ -9,11 +9,15 @@
     - [x] Understand Barretenberg's C++ implementation, and benchmark for correctness and performance
     - [x] Implement unit tests logic for fq / fr (base and scalar fields)
 - [ ] Implement BN254 / Grumpkin ECs logic on the GPU   
-    - [ ] Understand the differences between BN-254 and Grumpkin ECs
-    - [ ] Implement unit tests logic for BN-254 / Grumpkin EC
+    - [x] Understand the differences between BN-254 and Grumpkin ECs
+    - [ ] Implement unit tests logic for BN-254
+    - [ ] Implement unit tests logic for Grumpkin
 - [ ] Benchmark FF and ECC implementations for CPU / GPU
-    - Benchmark decrypt_bench folder for initial baselines
-    - Reimplement logic for decrypt_bench for GPU and check for correctness
-    - Benchmark GPU implementation
+    - [ ] Benchmark decrypt_bench folder for initial baselines
+    - [ ] Reimplement logic for decrypt_bench for GPU and check for correctness
+    - [ ] Benchmark GPU implementation
+- [ ] Multi-scalar multiplication
+    - [ ] Understand the multi exponentiation scheme
+    - [ ] Understand more complex parallelism schemes w/ grids and streams
 - [x] Set up Nvsight Compute profiling software
 - [x] Downgrade GPU from A10 to V100 to save on cloud computing costs, and create custom images to clone machines

@@ -84,8 +84,8 @@ __global__ void mul_square_consistency(uint64_t *a, uint64_t *b, uint64_t *res) 
 
 __global__ void initialize_sqr_check_against_constants(uint64_t *a, uint64_t *b, uint64_t *res) {
     fq_gpu a_field{ 0x329596aa978981e8, 0x8542e6e254c2a5d0, 0xc5b687d82eadb178, 0x2d242aaf48f56b8a };
-    fq_gpu b_field{ 0, 0, 0, 0 };
-    fq_gpu const_expected{ 0xbf4fb34e120b8b12, 0xf64d70efbf848328, 0xefbb6a533f2e7d89, 0x1de50f941425e4aa };
+    fq_gpu b_field{ 0x7d2e20e82f73d3e8, 0x8e50616a7a9d419d, 0xcdc833531508914b, 0xd510253a2ce62c };
+    // fq_gpu const_expected{ 0xbf4fb34e120b8b12, 0xf64d70efbf848328, 0xefbb6a533f2e7d89, 0x1de50f941425e4aa };
 
     for (int i = 0; i < LIMBS; i++) {
         a[i] = a_field.data[i];
@@ -333,32 +333,32 @@ __global__ void cube(uint64_t *a, uint64_t *res) {
 
 void execute_kernels(var *a, var *b, var *res) {
     // Initialization kernels
-    initialize_mont_mult<<<BLOCKS, THREADS>>>(a, b, res);
-    initialize_mont_mult_short<<<BLOCKS, THREADS>>>(a, b, res);
-    initialize_mul_square_consistency<<<BLOCKS, THREADS>>>(a, b, res);
+    // initialize_mont_mult<<<BLOCKS, THREADS>>>(a, b, res);
+    // initialize_mont_mult_short<<<BLOCKS, THREADS>>>(a, b, res);
+    // initialize_mul_square_consistency<<<BLOCKS, THREADS>>>(a, b, res);
     initialize_sqr_check_against_constants<<<BLOCKS, THREADS>>>(a, b, res);
-    initialize_add_check_against_constants<<<BLOCKS, THREADS>>>(a, b, res);
-    initialize_sub_check_against_constants<<<BLOCKS, THREADS>>>(a, b, res);
-    initialize_to_montgomery_form<<<BLOCKS, THREADS>>>(a, res);
-    initialize_from_montgomery_form<<<BLOCKS, THREADS>>>(a, res);
-    initialize_montgomery_consistency_check<<<BLOCKS, THREADS>>>(a, b, res);
-    initialize_add_mul_consistency<<<BLOCKS, THREADS>>>(a, b, res);
-    initialize_sub_mul_consistency<<<BLOCKS, THREADS>>>(a, b, res);
-    initialize_cube<<<BLOCKS, THREADS>>>(a, res);
+    // initialize_add_check_against_constants<<<BLOCKS, THREADS>>>(a, b, res);
+    // initialize_sub_check_against_constants<<<BLOCKS, THREADS>>>(a, b, res);
+    // initialize_to_montgomery_form<<<BLOCKS, THREADS>>>(a, res);
+    // initialize_from_montgomery_form<<<BLOCKS, THREADS>>>(a, res);
+    // initialize_montgomery_consistency_check<<<BLOCKS, THREADS>>>(a, b, res);
+    // initialize_add_mul_consistency<<<BLOCKS, THREADS>>>(a, b, res);
+    // initialize_sub_mul_consistency<<<BLOCKS, THREADS>>>(a, b, res);
+    // initialize_cube<<<BLOCKS, THREADS>>>(a, res);
 
     // Workload kernels
-    mont_mult<<<BLOCKS, LIMBS_NUM>>>(a, b, res);
-    mont_mult_short<<<BLOCKS, LIMBS_NUM>>>(a, b, res);
-    mul_square_consistency<<<BLOCKS, LIMBS_NUM>>>(a, b, res);
+    // mont_mult<<<BLOCKS, LIMBS_NUM>>>(a, b, res);
+    // mont_mult_short<<<BLOCKS, LIMBS_NUM>>>(a, b, res);
+    // mul_square_consistency<<<BLOCKS, LIMBS_NUM>>>(a, b, res);
     sqr_check_against_constants<<<BLOCKS, LIMBS_NUM>>>(a, b, res);
-    add_check_against_constants<<<BLOCKS, LIMBS_NUM>>>(a, b, res);
-    sub_check_against_constants<<<BLOCKS, LIMBS_NUM>>>(a, b, res);
-    to_montgomery_form<<<BLOCKS, LIMBS_NUM>>>(a, res);
-    from_montgomery_form<<<BLOCKS, LIMBS_NUM>>>(a, res);
-    montgomery_consistency_check<<<BLOCKS, LIMBS_NUM>>>(a, b, res);
-    add_mul_consistency<<<BLOCKS, LIMBS_NUM>>>(a, b, res);
-    sub_mul_consistency<<<BLOCKS, LIMBS_NUM>>>(a, b, res);
-    cube<<<BLOCKS, LIMBS_NUM>>>(a, res);
+    // add_check_against_constants<<<BLOCKS, LIMBS_NUM>>>(a, b, res);
+    // sub_check_against_constants<<<BLOCKS, LIMBS_NUM>>>(a, b, res);
+    // to_montgomery_form<<<BLOCKS, LIMBS_NUM>>>(a, res);
+    // from_montgomery_form<<<BLOCKS, LIMBS_NUM>>>(a, res);
+    // montgomery_consistency_check<<<BLOCKS, LIMBS_NUM>>>(a, b, res);
+    // add_mul_consistency<<<BLOCKS, LIMBS_NUM>>>(a, b, res);
+    // sub_mul_consistency<<<BLOCKS, LIMBS_NUM>>>(a, b, res);
+    // cube<<<BLOCKS, LIMBS_NUM>>>(a, res);
 
     printf("result[0] is: %zu\n", res[0]);
     printf("result[1] is: %zu\n", res[1]);

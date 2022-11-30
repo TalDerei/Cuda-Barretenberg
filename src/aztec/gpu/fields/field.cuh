@@ -155,8 +155,6 @@ class field_gpu {
 
         __device__ static field_gpu zero() noexcept;
         
-        // __device__ static field_gpu one() noexcept;
-
         __device__ bool is_zero() const noexcept;
 
         __device__ static var equal(const var x, const var y);
@@ -168,6 +166,8 @@ class field_gpu {
         __device__ static var add(const var a, const var b, var &res);
 
         __device__ static var sub(const var x, const var y, var &z);
+
+        __device__ static var sub_coarse(const var x, const var y, var &z);
 
         __device__ static var square(var x, var &y);   
 

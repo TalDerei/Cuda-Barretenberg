@@ -38,6 +38,9 @@ __device__ __constant__ bool has_a_bn_254 = false;
 
 /* -------------------------- Grumpkin G1 Parameters ---------------------------------------------- */
 namespace grumpkin {
+    // typedef barretenberg::fr fq;
+    // typedef barretenberg::fq fr;
+
     __device__ __constant__ var b_grumpkin[LIMBS] = {
         0xdd7056026000005a, 0x223fa97acb319311, 
         0xcc388229877910c0, 0x34394632b724eaa
