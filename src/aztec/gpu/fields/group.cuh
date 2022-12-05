@@ -94,9 +94,11 @@ class group_gpu {
 
         __device__ static void is_zero(const element &X);
 
-        __device__ static void mixed_add(var X, var Y, var Z, var A, var B, var &res_x, var &res_y, var &res_z) noexcept;
+        __device__ static void mixed_add(var X1, var Y1, var Z1, var X2, var Y2, var &res_x, var &res_y, var &res_z) noexcept;
 
         __device__ static void doubling(var X, var Y, var Z, var &res_x, var &res_y, var &res_z) noexcept;
+        
+        __device__ static void add(var X1, var Y1, var Z1, var X2, var Y2, var Z2, var &res_x, var &res_y, var &res_z) noexcept;
     };
     typedef group_gpu<fq_gpu> g1;
 }

@@ -52,7 +52,7 @@ __device__ void group_gpu<fq_gpu>::is_zero(const element &X) {
 template <class fq_gpu>
 __device__ void group_gpu<fq_gpu>::mixed_add(var X, var Y, var Z, var A, var B, var &res_x, var &res_y, var &res_z) noexcept {
     var z1z1, u2, s2, h, hh, i, j, r, v, t0, t1;
-
+    
     // X Element
     fq_gpu::square(Z, z1z1);   
     fq_gpu::mul(A, z1z1, u2); 
@@ -120,3 +120,49 @@ __device__ void group_gpu<fq_gpu>::doubling(var X, var Y, var Z, var &res_x, var
     fq_gpu::mul(Y, T3, Y);              // Y = Y*T3
     fq_gpu::sub(Y, T2, res_y);          // Y = Y - T2
 }
+
+template <class fq_gpu>
+__device__ void group_gpu<fq_gpu>::add(var X1, var Y1, var Z1, var X2, var Y2, var Z2, var &res_x, var &res_y, var &res_z) noexcept {
+    var Z1Z1, Z2Z2, U1, U2, S1, S2, F, H, I, J;
+
+    // X Element
+    fq_gpu::square(Z1, Z1Z1);            // Z1Z1 = Z1^2
+    fq_gpu::square(Z2, Z2Z2);            // Z1Z1 = Z2^2
+    fq_gpu::mul(Z1Z1, Z1, S2);           // S2 = Z1Z1 * Z1 
+    fq_gpu::mul(Z1Z1, X2, U2);           // U2 = Z1Z1 * X2
+    fq_gpu::mul(S2, Y2, S2);             // S2 = S2 * Y2
+    fq_gpu::mul(Z2Z2, X1, U1);           // U1 = Z2Z2 * X1
+    fq_gpu::mul(Z2Z2, Z2, S1);           // S1 = Z2Z2 * Z2
+    fq_gpu::mul(S1, Y1, S1);             // S1 = S1 * Y1
+    fq_gpu::sub(S2, S1, F);              // F = S2 - S1
+    fq_gpu::sub(U2, U1, H);              // H = U2 - U1
+    fq_gpu::add(F, F, F);                // F = F + F
+    fq_gpu::add(H, H, I);                // I = H + H
+    fq_gpu::square(I, I);                // I = I * H
+    fq_gpu::mul(H, I, J);                // J = H * H
+    fq_gpu::mul(U1, I, U1);              // U1 = U1 * I
+    fq_gpu::add(U1, U1, U2);             // U2 = U1 + U1
+    fq_gpu::add(U2, J, U2);              // U2 = U2 * J
+    fq_gpu::square(F, X1);               // X1 = F^2
+    fq_gpu::sub(X1, U2, X1);             // X1 = X1 - U2
+    fq_gpu::load(X1, res_x);             // res_x = X1
+
+    // Y Element
+    fq_gpu::mul(J, S1, J);              // J = J * S1
+    fq_gpu::add(J, J, J);               // J = J + J
+    fq_gpu::sub(U1, X1, Y1);            // Y1 = U1 - X1
+    fq_gpu::mul(Y1, F, Y1);             // Y1 = Y1 + F
+    fq_gpu::sub(Y1, J, Y1);             // Y1 = Y1 - J
+    fq_gpu::load(Y1, res_y);            // res_y = Y1
+
+    // Z Element
+    fq_gpu::add(Z1, Z2, Z1);            // Z1 = Z1 + Z2
+    fq_gpu::add(Z1Z1, Z2Z2, Z1Z1);      // Z1Z1 = Z2Z2 + Z1Z1
+    fq_gpu::square(Z1, Z1);             // Z1 = Z1^2
+    fq_gpu::sub(Z1, Z1Z1, Z1);          // Z1 = Z1 - Z1Z1
+    fq_gpu::mul(Z1, H, Z1);             // Z1 = Z1 * H
+    fq_gpu::load(Z1, res_z);            // res_z = Z1;
+}
+
+// TODO: add is_zero() tests
+// TODO: add inifinty check tests

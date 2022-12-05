@@ -96,16 +96,124 @@ __global__ void dbl_check_against_constants(var *a, var *b, var *c, var *x, var 
     }
 }
 
+/* -------------------------- Addition ---------------------------------------------- */
+
+__global__ void initialize_add_check_against_constants(var *a, var *b, var *c, var *x, var *y, var *z, var *expected_x, var *expected_y, var *expected_z, var *res) {
+    fq_gpu a_x{ 0x184b38afc6e2e09a, 0x4965cd1c3687f635, 0x334da8e7539e71c4, 0xf708d16cfe6e14 };
+    fq_gpu a_y{ 0x2a6ff6ffc739b3b6, 0x70761d618b513b9, 0xbf1645401de26ba1, 0x114a1616c164b980 };
+    fq_gpu a_z{ 0x10143ade26bbd57a, 0x98cf4e1f6c214053, 0x6bfdc534f6b00006, 0x1875e5068ababf2c };
+    fq_gpu b_x{ 0xafdb8a15c98bf74c, 0xac54df622a8d991a, 0xc6e5ae1f3dad4ec8, 0x1bd3fb4a59e19b52 };
+    fq_gpu b_y{ 0x21b3bb529bec20c0, 0xaabd496406ffb8c1, 0xcd3526c26ac5bdcb, 0x187ada6b8693c184 };
+    fq_gpu b_z{ 0xffcd440a228ed652, 0x8a795c8f234145f1, 0xd5279cdbabb05b95, 0xbdf19ba16fc607a };
+    fq_gpu exp_x{ 0x18764da36aa4cd81, 0xd15388d1fea9f3d3, 0xeb7c437de4bbd748, 0x2f09b712adf6f18f };
+    fq_gpu exp_y{ 0x50c5f3cab191498c, 0xe50aa3ce802ea3b5, 0xd9d6125b82ebeff8, 0x27e91ba0686e54fe };
+    fq_gpu exp_z{ 0xe4b81ef75fedf95, 0xf608edef14913c75, 0xfd9e178143224c96, 0xa8ae44990c8accd };
+
+    for (int i = 0; i < LIMBS_NUM; i++) {
+        a[i] = a_x.data[i];
+        b[i] = a_y.data[i];
+        c[i] = a_z.data[i];
+        x[i] = b_x.data[i];
+        y[i] = b_y.data[i];
+        z[i] = b_z.data[i];
+    }
+}
+
+__global__ void add_check_against_constants(var *a, var *b, var *c, var *x, var *y, var *z, var *expected_x, var *expected_y, var *expected_z, var *res) {
+    g1::element lhs;
+    g1::element rhs;
+    g1::element result;
+    g1::element expected;
+
+    // Calculate global thread ID, and boundry check
+    int tid = (blockDim.x * blockIdx.x) + threadIdx.x;
+    if (tid < LIMBS) {
+        lhs.x.data[tid] = fq_gpu::to_monty(a[tid], res[tid]);
+        lhs.y.data[tid] = fq_gpu::to_monty(b[tid], res[tid]);
+        lhs.z.data[tid] = fq_gpu::to_monty(c[tid], res[tid]);
+        rhs.x.data[tid] = fq_gpu::to_monty(x[tid], res[tid]);
+        rhs.y.data[tid] = fq_gpu::to_monty(y[tid], res[tid]);
+        rhs.z.data[tid] = fq_gpu::to_monty(z[tid], res[tid]);
+
+        g1::add(lhs.x.data[tid], lhs.y.data[tid], lhs.z.data[tid], rhs.x.data[tid], rhs.y.data[tid], rhs.z.data[tid], expected_x[tid], expected_y[tid], expected_z[tid]);
+        
+        expected_x[tid] = fq_gpu::from_monty(expected_x[tid], expected_x[tid]);
+        expected_y[tid] = fq_gpu::from_monty(expected_y[tid], expected_y[tid]);
+        expected_z[tid] = fq_gpu::from_monty(expected_z[tid], expected_z[tid]);
+
+        // EXPECT_EQ(result == expected, true);
+    }
+}
+
+/* -------------------------- Add Exception Test ---------------------------------------------- */
+
+__global__ void initialize_add_exception_test_dbl(var *a, var *b, var *c, var *x, var *y, var *z, var *expected_x, var *expected_y, var *expected_z, var *res) {
+    fq_gpu a_x{ 0x184b38afc6e2e09a, 0x4965cd1c3687f635, 0x334da8e7539e71c4, 0xf708d16cfe6e14 };
+    fq_gpu a_y{ 0x2a6ff6ffc739b3b6, 0x70761d618b513b9, 0xbf1645401de26ba1, 0x114a1616c164b980 };
+    fq_gpu a_z{ 0x10143ade26bbd57a, 0x98cf4e1f6c214053, 0x6bfdc534f6b00006, 0x1875e5068ababf2c };
+    fq_gpu b_x{ 0xafdb8a15c98bf74c, 0xac54df622a8d991a, 0xc6e5ae1f3dad4ec8, 0x1bd3fb4a59e19b52 };
+    fq_gpu b_y{ 0x21b3bb529bec20c0, 0xaabd496406ffb8c1, 0xcd3526c26ac5bdcb, 0x187ada6b8693c184 };
+    fq_gpu b_z{ 0xffcd440a228ed652, 0x8a795c8f234145f1, 0xd5279cdbabb05b95, 0xbdf19ba16fc607a };
+
+    for (int i = 0; i < LIMBS_NUM; i++) {
+        a[i] = a_x.data[i];
+        b[i] = a_y.data[i];
+        c[i] = a_z.data[i];
+        x[i] = b_x.data[i];
+        y[i] = b_y.data[i];
+        z[i] = b_z.data[i];
+    }
+}
+
+__global__ void add_exception_test_dbl(var *a, var *b, var *c, var *x, var *y, var *z, var *expected_x, var *expected_y, var *expected_z, var *res) {
+    g1::element lhs;
+    g1::element rhs;
+    g1::element result;
+    g1::element expected;
+
+    // Calculate global thread ID, and boundry check
+    int tid = (blockDim.x * blockIdx.x) + threadIdx.x;
+    if (tid < LIMBS) {
+        // lhs.x.data[tid] = fq_gpu::load(a[tid], res[tid]);
+        // lhs.y.data[tid] = fq_gpu::load(b[tid], res[tid]);
+        // lhs.z.data[tid] = fq_gpu::load(c[tid], res[tid]);
+        // rhs.x.data[tid] = fq_gpu::load(x[tid], res[tid]);
+        // rhs.y.data[tid] = fq_gpu::load(y[tid], res[tid]);
+        // rhs.z.data[tid] = fq_gpu::load(z[tid], res[tid]);
+
+        lhs.x.data[tid] = fq_gpu::to_monty(a[tid], res[tid]);
+        lhs.y.data[tid] = fq_gpu::to_monty(b[tid], res[tid]);
+        lhs.z.data[tid] = fq_gpu::to_monty(c[tid], res[tid]);
+        rhs.x.data[tid] = fq_gpu::to_monty(x[tid], res[tid]);
+        rhs.y.data[tid] = fq_gpu::to_monty(y[tid], res[tid]);
+        rhs.z.data[tid] = fq_gpu::to_monty(z[tid], res[tid]);
+
+        g1::add(lhs.x.data[tid], lhs.y.data[tid], lhs.z.data[tid], rhs.x.data[tid], rhs.y.data[tid], rhs.z.data[tid], expected_x[tid], expected_y[tid], expected_z[tid]);
+        // g1::doubling(lhs.x.data[tid], lhs.y.data[tid], lhs.z.data[tid], expected_x[tid], expected_y[tid], expected_z[tid]);
+            
+        expected_x[tid] = fq_gpu::from_monty(expected_x[tid], expected_x[tid]);
+        expected_y[tid] = fq_gpu::from_monty(expected_y[tid], expected_y[tid]);
+        expected_z[tid] = fq_gpu::from_monty(expected_z[tid], expected_z[tid]);
+
+        // EXPECT_EQ(result == expected, true);
+    }
+}
+
+
 /* -------------------------- Main -- Executing Kernels ---------------------------------------------- */
 
 void execute_kernels(var *a, var *b, var *c, var *x, var *y, var *z, var *expected_x, var *expected_y, var *expected_z, var *res) {
     // Initialization kernels
     // initialize_mixed_add_check_against_constants<<<BLOCKS, THREADS>>>(a, b, c, x, y, z, expected_x, expected_y, expected_z, res);
-    initialize_dbl_check_against_constants<<<BLOCKS, THREADS>>>(a, b, c, x, y, z, expected_x, expected_y, expected_z, res);
+    // initialize_dbl_check_against_constants<<<BLOCKS, THREADS>>>(a, b, c, x, y, z, expected_x, expected_y, expected_z, res);
+    // initialize_add_check_against_constants<<<BLOCKS, THREADS>>>(a, b, c, x, y, z, expected_x, expected_y, expected_z, res);
+    initialize_add_exception_test_dbl<<<BLOCKS, THREADS>>>(a, b, c, x, y, z, expected_x, expected_y, expected_z, res);
 
     // Workload kernels
     // mixed_add_check_against_constants<<<BLOCKS, LIMBS_NUM>>>(a, b, c, x, y, z, expected_x, expected_y, expected_z, res);
-    dbl_check_against_constants<<<BLOCKS, LIMBS_NUM>>>(a, b, c, x, y, z, expected_x, expected_y, expected_z, res);
+    // dbl_check_against_constants<<<BLOCKS, LIMBS_NUM>>>(a, b, c, x, y, z, expected_x, expected_y, expected_z, res);
+    // add_check_against_constants<<<BLOCKS, LIMBS_NUM>>>(a, b, c, x, y, z, expected_x, expected_y, expected_z, res);
+    add_exception_test_dbl<<<BLOCKS, LIMBS_NUM>>>(a, b, c, x, y, z, expected_x, expected_y, expected_z, res);
 }
 
 int main(int, char**) {
@@ -132,12 +240,6 @@ int main(int, char**) {
 
     // Explicit synchronization barrier
     cudaDeviceSynchronize();
-
-    // Print results
-    // printf("res[0] is: %zu\n", res[0]);
-    // printf("res[1] is: %zu\n", res[1]);
-    // printf("res[2] is: %zu\n", res[2]);
-    // printf("res[3] is: %zu\n", res[3]);
 
     printf("expected_x[0] is: %zu\n", expected_x[0]);
     printf("expected_x[1] is: %zu\n", expected_x[1]);

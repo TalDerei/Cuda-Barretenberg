@@ -11,15 +11,20 @@
 typedef std::uint64_t var;
 
 struct digit {
+    // BYTES is the number of bytes in a var value
     static constexpr int BYTES = sizeof(var);
+    // BITS is the number of bits in a var value
     static constexpr int BITS = BYTES * 8;
 
+    // Add the values of two variables 'a' and 'b' and stores the result in 's'
     __device__ __forceinline__
     static void
     add(var &s, var a, var b) {
         s = a + b;
     }
 
+    // Add the values of two variables 'a' and b and stores the result in 's' 
+    // Store the carry bit in variable 'cy'
     __device__ __forceinline__
     static void
     add_cy(var &s, int &cy, var a, var b) {
@@ -27,12 +32,15 @@ struct digit {
         cy = s < a;
     }
 
+    // Subtract the value of one variable 'b' from 'a' and stores the result in 'd'
     __device__ __forceinline__
     static void
     sub(var &d, var a, var b) {
         d = a - b;
     }
 
+    // Subtract the value of variable 'b' from 'a' and stores the result in 'd'
+    // Store the borrow bit in variable 'br'
     __device__ __forceinline__
     static void
     sub_br(var &d, int &br, var a, var b) {
@@ -40,28 +48,34 @@ struct digit {
         br = d > a;
     }
 
+    // Return zero value of the var type
     __device__ __forceinline__
     static var
     zero() { return 0ULL; }
 
+    // Return true if variable 'a' is equal to the maximum value of the var type, and false otherwise
     __device__ __forceinline__
     static int
     is_max(var a) { return a == ~0ULL; }
 
+    // Return true if variable 'a' is equal to the minimum value of the var type, and false otherwise
     __device__ __forceinline__
     static int
     is_min(var a) { return a == 0ULL; }
 
+    // Return true if variable 'a' is equal to zero, and false otherwise
     __device__ __forceinline__
     static int
     is_zero(var a) { return a == zero(); }
 
+    // Mltiply two variables 'a' and 'b' and stores the lower 64 bits of the result in 'lo'
     __device__ __forceinline__
     static void
     mul_lo(var &lo, var a, var b) {
         lo = a * b;
     }
 
+    // Compute the result of the operation a * b + c and stores the lower 64 bits in 'lo'
     // lo = a * b + c (mod 2^64)
     __device__ __forceinline__
     static void
@@ -69,7 +83,8 @@ struct digit {
         internal::mad_lo(lo, a, b, c);
     }
 
-    // as above but increment cy by the mad carry
+    // Compute the result of the operation a * b + c and stores the lower 64 bits in 'lo'
+    // Increment the value of 'cy' by the mad carry
     __device__ __forceinline__
     static void
     mad_lo_cy(var &lo, int &cy, var a, var b, var c) {
@@ -77,13 +92,15 @@ struct digit {
         internal::addc(cy, cy, 0);
     }
 
+    // Compute the result of the operation a * b + c and stores the upper 64 bits in 'hi'
     __device__ __forceinline__
     static void
     mad_hi(var &hi, var a, var b, var c) {
         internal::mad_hi(hi, a, b, c);
     }
 
-    // as above but increment cy by the mad carry
+    // Compute the result of the operation a * b + c and stores the upper 64 bits in 'hi'
+    // Increment the value of 'cy' by the mad carry
     __device__ __forceinline__
     static void
     mad_hi_cy(var &hi, int &cy, var a, var b, var c) {
@@ -95,8 +112,7 @@ struct digit {
 struct fixnum {
     static constexpr unsigned WIDTH = 4;
 
-    // TODO: Previous versiona allowed 'auto' return type here instead
-    // of this mess
+    // Return the layout of the current thread block as a thread_block_tile object with WIDTH threads
     __device__
     static cooperative_groups::thread_block_tile<WIDTH>
     layout() {
@@ -104,6 +120,7 @@ struct fixnum {
             cooperative_groups::this_thread_block());
     }
 
+    // Return zero value of var type
     __device__ __forceinline__
     static var
     zero() { return digit::zero(); }
@@ -115,6 +132,9 @@ struct fixnum {
         return (var)(t == 0);
     }
 
+    // Add the values of two variables 'a' and 'b' and stores the result in 'r'
+    // Store the carry bit in the variable 'cy_hi'. If the result of the addition overflows, 
+    // it is propagated to the 'cy_hi' variable
     __device__
     static void
     add_cy(var &r, int &cy_hi, const var &a, const var &b) {
@@ -125,6 +145,8 @@ struct fixnum {
         digit::add(r, r, r_cy);
     }
 
+    // Add the values of two variables 'a' and 'b' and stores the result in a third variable 'r' 
+    // If the result of the addition overflows, it is propagated to the next higher digit
     __device__
     static void
     add(var &r, const var &a, const var &b) {
@@ -132,6 +154,9 @@ struct fixnum {
         add_cy(r, cy_hi, a, b);
     }
 
+    // Ssubtract the value of one variable 'b' from 'a' and stores the result in 'r'
+    // Store the borrow bit in the variable 'br_lo'. If the result of the subtraction underflows, 
+    // it is propagated to the 'br_lo' variable
     __device__
     static void
     sub_br(var &r, int &br_lo, const var &a, const var &b) {
@@ -142,6 +167,9 @@ struct fixnum {
         digit::sub(r, r, r_br);
     }
 
+
+    // Subtract the value of one variable 'b' from 'a' and stores the result in 'r'. If the result
+    // of the subtraction underflows, it is propagated to the next higher digit
     __device__
     static void
     sub(var &r, const var &a, const var &b) {
@@ -164,6 +192,7 @@ struct fixnum {
         return UINT32_BITS - (internal::clz(a) + 1);
     }
 
+    // Compare equality of two var arrays
     __device__ static int cmp(var x, var y) {
         var r;
         int br;
@@ -172,6 +201,7 @@ struct fixnum {
         return nonzero_mask(r) ? (br ? -1 : 1) : 0;
     }
 
+    // Helper function 
     __device__
     static var
     effective_carries(int &cy_hi, int propagate, int cy) {
