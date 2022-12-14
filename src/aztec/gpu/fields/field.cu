@@ -2,7 +2,6 @@
 #include <stdio.h>
 
 #include "field.cuh"
-#include <fixnum.cu>
 
 using namespace std;
 using namespace gpu_barretenberg;
@@ -68,18 +67,6 @@ __device__ var field_gpu<params, _params>::sub(const var x, const var y, var &re
     return r;
 }
 
-// Subtraction operation
-template<class params, class _params> 
-__device__ var field_gpu<params, _params>::sub_coarse(const var x, const var y, var &res) {
-    int br;
-    var r, mod = params::mod() + params::mod();
-    fixnum::sub_br(r, br, x, y);
-    if (br)
-        fixnum::add(r, r, mod);
-    res = r;
-    return r;
-}
-
 // Square operation -- worth special casing for 1.5 - 2x speed improvement
 template<class params, class _params> 
 __device__ var field_gpu<params, _params>::square(var x, var &y) {
@@ -99,6 +86,13 @@ __device__ var field_gpu<params, _params>::from_monty(var x, var &res) {
     var mont;
     mont = fixnum::one();
     mul(x, mont, res);
+    return res;
+}
+
+template<class params, class _params> 
+__device__ var field_gpu<params, _params>::neg(var &x, var &res) {
+    var mod = params::mod();
+    fixnum::sub(res, mod, x);
     return res;
 }
 

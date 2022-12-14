@@ -8,9 +8,9 @@ static constexpr size_t LIMBS_NUM = 4;
 static constexpr size_t BLOCKS = 1;
 static constexpr size_t THREADS = 1;
 
-/* -------------------------- Mixed Addition ---------------------------------------------- */
-
-__global__ void initialize_mixed_add_check_against_constants(var *a, var *b, var *c, var *x, var *y, var *z, var *expected_x, var *expected_y, var *expected_z, var *res) {
+/* -------------------------- Mixed Addition Test ---------------------------------------------- */
+__global__ void initialize_mixed_add_check_against_constants
+(var *a, var *b, var *c, var *x, var *y, var *z, var *expected_x, var *expected_y, var *expected_z, var *res) {
     fq_gpu a_x{ 0x92716caa6cac6d26, 0x1e6e234136736544, 0x1bb04588cde00af0, 0x9a2ac922d97e6f5 };
     fq_gpu a_y{ 0x9e693aeb52d79d2d, 0xf0c1895a61e5e975, 0x18cd7f5310ced70f, 0xac67920a22939ad };
     fq_gpu a_z{ 0xfef593c9ce1df132, 0xe0486f801303c27d, 0x9bbd01ab881dc08e, 0x2a589badf38ec0f9 };
@@ -29,7 +29,8 @@ __global__ void initialize_mixed_add_check_against_constants(var *a, var *b, var
     }
 }
 
-__global__ void mixed_add_check_against_constants(var *a, var *b, var *c, var *x, var *y, var *z, var *expected_x, var *expected_y, var *expected_z, var *res) {
+__global__ void mixed_add_check_against_constants
+(var *a, var *b, var *c, var *x, var *y, var *z, var *expected_x, var *expected_y, var *expected_z, var *res) {
     g1::element lhs;
     g1::affine_element rhs;
     g1::element result;
@@ -44,19 +45,23 @@ __global__ void mixed_add_check_against_constants(var *a, var *b, var *c, var *x
         rhs.x.data[tid] = fq_gpu::to_monty(x[tid], res[tid]);
         rhs.y.data[tid] = fq_gpu::to_monty(y[tid], res[tid]);
 
-        g1::mixed_add(lhs.x.data[tid], lhs.y.data[tid], lhs.z.data[tid], rhs.x.data[tid], rhs.y.data[tid], expected_x[tid], expected_y[tid], expected_z[tid]);
-        
-        expected_x[tid] = fq_gpu::from_monty(expected_x[tid], expected_x[tid]);
-        expected_y[tid] = fq_gpu::from_monty(expected_y[tid], expected_y[tid]);
-        expected_z[tid] = fq_gpu::from_monty(expected_z[tid], expected_z[tid]);
+        // lhs + rhs (affine element + jacobian element)
+        g1::mixed_add(
+            lhs.x.data[tid], lhs.y.data[tid], lhs.z.data[tid], 
+            rhs.x.data[tid], rhs.y.data[tid], 
+            expected_x[tid], expected_y[tid], expected_z[tid]
+        );
 
-        // EXPECT_EQ(result == expected, true);
+        // Return results from montgomery form 
+        fq_gpu::from_monty(expected_x[tid], expected_x[tid]);
+        fq_gpu::from_monty(expected_y[tid], expected_y[tid]);
+        fq_gpu::from_monty(expected_z[tid], expected_z[tid]);
     }
 }
 
-/* -------------------------- Doubling ---------------------------------------------- */
-
-__global__ void initialize_dbl_check_against_constants(var *a, var *b, var *c, var *x, var *y, var *z, var *expected_x, var *expected_y, var *expected_z, var *res) {
+/* -------------------------- Doubling Test ---------------------------------------------- */
+__global__ void initialize_dbl_check_against_constants
+(var *a, var *b, var *c, var *x, var *y, var *z, var *expected_x, var *expected_y, var *expected_z, var *res) {
     fq_gpu a_x{ 0x8d1703aa518d827f, 0xd19cc40779f54f63, 0xabc11ce30d02728c, 0x10938940de3cbeec };
     fq_gpu a_y{ 0xcf1798994f1258b4, 0x36307a354ad90a25, 0xcd84adb348c63007, 0x6266b85241aff3f };
     fq_gpu a_z{ 0xe213e18fd2df7044, 0xb2f42355982c5bc8, 0xf65cf5150a3a9da1, 0xc43bde08b03aca2 };
@@ -71,7 +76,8 @@ __global__ void initialize_dbl_check_against_constants(var *a, var *b, var *c, v
     }
 }
 
-__global__ void dbl_check_against_constants(var *a, var *b, var *c, var *x, var *y, var *z, var *expected_x, var *expected_y, var *expected_z, var *res) {
+__global__ void dbl_check_against_constants
+(var *a, var *b, var *c, var *x, var *y, var *z, var *expected_x, var *expected_y, var *expected_z, var *res) {
     g1::element lhs;
     g1::element result;
     g1::element expected;
@@ -83,22 +89,32 @@ __global__ void dbl_check_against_constants(var *a, var *b, var *c, var *x, var 
         lhs.y.data[tid] = fq_gpu::to_monty(b[tid], res[tid]);
         lhs.z.data[tid] = fq_gpu::to_monty(c[tid], res[tid]);
 
-        g1::doubling(lhs.x.data[tid], lhs.y.data[tid], lhs.z.data[tid], expected_x[tid], expected_y[tid], expected_z[tid]);
-        g1::doubling(expected_x[tid], expected_y[tid], expected_z[tid], expected_x[tid], expected_y[tid], expected_z[tid]);
-        g1::doubling(expected_x[tid], expected_y[tid], expected_z[tid], expected_x[tid], expected_y[tid], expected_z[tid]);
+        // lhs.doubling
+        g1::doubling(
+            lhs.x.data[tid], lhs.y.data[tid], lhs.z.data[tid], 
+            expected_x[tid], expected_y[tid], expected_z[tid]
+        );
+        //  (lhs.doubling).doubling
+        g1::doubling(
+            expected_x[tid], expected_y[tid], expected_z[tid], 
+            expected_x[tid], expected_y[tid], expected_z[tid]
+        );
+        //  ((lhs.doubling).doubling).doubling
+        g1::doubling(
+            expected_x[tid], expected_y[tid], expected_z[tid], 
+            expected_x[tid], expected_y[tid], expected_z[tid]
+        );
 
-        // Converting from monty form gets back the correct result
-        expected_x[tid] = fq_gpu::from_monty(expected_x[tid], res[tid]);
-        expected_y[tid] = fq_gpu::from_monty(expected_y[tid], res[tid]);
-        expected_z[tid] = fq_gpu::from_monty(expected_z[tid], res[tid]);
-
-        // EXPECT_EQ(result == expected, true);
+        // Return results from montgomery form 
+        fq_gpu::from_monty(expected_x[tid], res[tid]);
+        fq_gpu::from_monty(expected_y[tid], res[tid]);
+        fq_gpu::from_monty(expected_z[tid], res[tid]);
     }
 }
 
-/* -------------------------- Addition ---------------------------------------------- */
-
-__global__ void initialize_add_check_against_constants(var *a, var *b, var *c, var *x, var *y, var *z, var *expected_x, var *expected_y, var *expected_z, var *res) {
+/* -------------------------- Addition Test ---------------------------------------------- */
+__global__ void initialize_add_check_against_constants
+(var *a, var *b, var *c, var *x, var *y, var *z, var *expected_x, var *expected_y, var *expected_z, var *res) {
     fq_gpu a_x{ 0x184b38afc6e2e09a, 0x4965cd1c3687f635, 0x334da8e7539e71c4, 0xf708d16cfe6e14 };
     fq_gpu a_y{ 0x2a6ff6ffc739b3b6, 0x70761d618b513b9, 0xbf1645401de26ba1, 0x114a1616c164b980 };
     fq_gpu a_z{ 0x10143ade26bbd57a, 0x98cf4e1f6c214053, 0x6bfdc534f6b00006, 0x1875e5068ababf2c };
@@ -119,7 +135,8 @@ __global__ void initialize_add_check_against_constants(var *a, var *b, var *c, v
     }
 }
 
-__global__ void add_check_against_constants(var *a, var *b, var *c, var *x, var *y, var *z, var *expected_x, var *expected_y, var *expected_z, var *res) {
+__global__ void add_check_against_constants
+(var *a, var *b, var *c, var *x, var *y, var *z, var *expected_x, var *expected_y, var *expected_z, var *res) {
     g1::element lhs;
     g1::element rhs;
     g1::element result;
@@ -135,25 +152,29 @@ __global__ void add_check_against_constants(var *a, var *b, var *c, var *x, var 
         rhs.y.data[tid] = fq_gpu::to_monty(y[tid], res[tid]);
         rhs.z.data[tid] = fq_gpu::to_monty(z[tid], res[tid]);
 
-        g1::add(lhs.x.data[tid], lhs.y.data[tid], lhs.z.data[tid], rhs.x.data[tid], rhs.y.data[tid], rhs.z.data[tid], expected_x[tid], expected_y[tid], expected_z[tid]);
+        // lhs + rhs (affine element + affine element)
+        g1::add(
+            lhs.x.data[tid], lhs.y.data[tid], lhs.z.data[tid], 
+            rhs.x.data[tid], rhs.y.data[tid], rhs.z.data[tid], 
+            expected_x[tid], expected_y[tid], expected_z[tid]
+        );
         
-        expected_x[tid] = fq_gpu::from_monty(expected_x[tid], expected_x[tid]);
-        expected_y[tid] = fq_gpu::from_monty(expected_y[tid], expected_y[tid]);
-        expected_z[tid] = fq_gpu::from_monty(expected_z[tid], expected_z[tid]);
-
-        // EXPECT_EQ(result == expected, true);
+        // Return results from montgomery form 
+        fq_gpu::from_monty(expected_x[tid], expected_x[tid]);
+        fq_gpu::from_monty(expected_y[tid], expected_y[tid]);
+        fq_gpu::from_monty(expected_z[tid], expected_z[tid]);
     }
 }
 
 /* -------------------------- Add Exception Test ---------------------------------------------- */
-
-__global__ void initialize_add_exception_test_dbl(var *a, var *b, var *c, var *x, var *y, var *z, var *expected_x, var *expected_y, var *expected_z, var *res) {
+__global__ void initialize_add_exception_test_dbl
+(var *a, var *b, var *c, var *x, var *y, var *z, var *expected_x, var *expected_y, var *expected_z, var *res) {
     fq_gpu a_x{ 0x184b38afc6e2e09a, 0x4965cd1c3687f635, 0x334da8e7539e71c4, 0xf708d16cfe6e14 };
     fq_gpu a_y{ 0x2a6ff6ffc739b3b6, 0x70761d618b513b9, 0xbf1645401de26ba1, 0x114a1616c164b980 };
     fq_gpu a_z{ 0x10143ade26bbd57a, 0x98cf4e1f6c214053, 0x6bfdc534f6b00006, 0x1875e5068ababf2c };
-    fq_gpu b_x{ 0xafdb8a15c98bf74c, 0xac54df622a8d991a, 0xc6e5ae1f3dad4ec8, 0x1bd3fb4a59e19b52 };
-    fq_gpu b_y{ 0x21b3bb529bec20c0, 0xaabd496406ffb8c1, 0xcd3526c26ac5bdcb, 0x187ada6b8693c184 };
-    fq_gpu b_z{ 0xffcd440a228ed652, 0x8a795c8f234145f1, 0xd5279cdbabb05b95, 0xbdf19ba16fc607a };
+    fq_gpu b_x{ 0x184b38afc6e2e09a, 0x4965cd1c3687f635, 0x334da8e7539e71c4, 0xf708d16cfe6e14 };
+    fq_gpu b_y{ 0x2a6ff6ffc739b3b6, 0x70761d618b513b9, 0xbf1645401de26ba1, 0x114a1616c164b980 };
+    fq_gpu b_z{ 0x10143ade26bbd57a, 0x98cf4e1f6c214053, 0x6bfdc534f6b00006, 0x1875e5068ababf24 };
 
     for (int i = 0; i < LIMBS_NUM; i++) {
         a[i] = a_x.data[i];
@@ -165,7 +186,8 @@ __global__ void initialize_add_exception_test_dbl(var *a, var *b, var *c, var *x
     }
 }
 
-__global__ void add_exception_test_dbl(var *a, var *b, var *c, var *x, var *y, var *z, var *expected_x, var *expected_y, var *expected_z, var *res) {
+__global__ void add_exception_test_dbl
+(var *a, var *b, var *c, var *x, var *y, var *z, var *expected_x, var *expected_y, var *expected_z, var *res) {
     g1::element lhs;
     g1::element rhs;
     g1::element result;
@@ -174,46 +196,201 @@ __global__ void add_exception_test_dbl(var *a, var *b, var *c, var *x, var *y, v
     // Calculate global thread ID, and boundry check
     int tid = (blockDim.x * blockIdx.x) + threadIdx.x;
     if (tid < LIMBS) {
-        // lhs.x.data[tid] = fq_gpu::load(a[tid], res[tid]);
-        // lhs.y.data[tid] = fq_gpu::load(b[tid], res[tid]);
-        // lhs.z.data[tid] = fq_gpu::load(c[tid], res[tid]);
-        // rhs.x.data[tid] = fq_gpu::load(x[tid], res[tid]);
-        // rhs.y.data[tid] = fq_gpu::load(y[tid], res[tid]);
-        // rhs.z.data[tid] = fq_gpu::load(z[tid], res[tid]);
+        lhs.x.data[tid] = fq_gpu::load(a[tid], res[tid]);
+        lhs.y.data[tid] = fq_gpu::load(b[tid], res[tid]);
+        lhs.z.data[tid] = fq_gpu::load(c[tid], res[tid]);
+        rhs.x.data[tid] = fq_gpu::load(x[tid], res[tid]);
+        rhs.y.data[tid] = fq_gpu::load(y[tid], res[tid]);
+        rhs.z.data[tid] = fq_gpu::load(z[tid], res[tid]);
 
-        lhs.x.data[tid] = fq_gpu::to_monty(a[tid], res[tid]);
-        lhs.y.data[tid] = fq_gpu::to_monty(b[tid], res[tid]);
-        lhs.z.data[tid] = fq_gpu::to_monty(c[tid], res[tid]);
-        rhs.x.data[tid] = fq_gpu::to_monty(x[tid], res[tid]);
-        rhs.y.data[tid] = fq_gpu::to_monty(y[tid], res[tid]);
-        rhs.z.data[tid] = fq_gpu::to_monty(z[tid], res[tid]);
+        // lhs + rhs
+        g1::add(
+            lhs.x.data[tid], lhs.y.data[tid], lhs.z.data[tid], 
+            rhs.x.data[tid], rhs.y.data[tid], rhs.z.data[tid], 
+            expected_x[tid], expected_y[tid], expected_z[tid]
+        );
+        // lhs.doubling
+        g1::doubling(
+            lhs.x.data[tid], lhs.y.data[tid], lhs.z.data[tid], 
+            expected_x[tid], expected_y[tid], expected_z[tid]
+        );
 
-        g1::add(lhs.x.data[tid], lhs.y.data[tid], lhs.z.data[tid], rhs.x.data[tid], rhs.y.data[tid], rhs.z.data[tid], expected_x[tid], expected_y[tid], expected_z[tid]);
-        // g1::doubling(lhs.x.data[tid], lhs.y.data[tid], lhs.z.data[tid], expected_x[tid], expected_y[tid], expected_z[tid]);
-            
-        expected_x[tid] = fq_gpu::from_monty(expected_x[tid], expected_x[tid]);
-        expected_y[tid] = fq_gpu::from_monty(expected_y[tid], expected_y[tid]);
-        expected_z[tid] = fq_gpu::from_monty(expected_z[tid], expected_z[tid]);
+        // lsh + rhs == lhs.doubling
 
-        // EXPECT_EQ(result == expected, true);
+        // Return results from montgomery form 
+        fq_gpu::from_monty(expected_x[tid], expected_x[tid]);
+        fq_gpu::from_monty(expected_y[tid], expected_y[tid]);
+        fq_gpu::from_monty(expected_z[tid], expected_z[tid]);
+    }
+}
+
+/* -------------------------- Add Double Consistency Test ---------------------------------------------- */
+__global__ void initialize_add_dbl_consistency
+(var *a, var *b, var *c, var *x, var *y, var *z, var *expected_x, var *expected_y, var *expected_z, var *res) {
+    fq_gpu a_x{ 0x184b38afc6e2e09a, 0x4965cd1c3687f635, 0x334da8e7539e71c4, 0xf708d16cfe6e14 };
+    fq_gpu a_y{ 0x2a6ff6ffc739b3b6, 0x70761d618b513b9, 0xbf1645401de26ba1, 0x114a1616c164b980 };
+    fq_gpu a_z{ 0x10143ade26bbd57a, 0x98cf4e1f6c214053, 0x6bfdc534f6b00006, 0x1875e5068ababf2c };
+    fq_gpu b_x{ 0x184b38afc6e2e09a, 0x4965cd1c3687f635, 0x334da8e7539e71c4, 0xf708d16cfe6e14 };
+    fq_gpu b_y{ 0x2a6ff6ffc739b3b6, 0x70761d618b513b9, 0xbf1645401de26ba1, 0x114a1616c164b980 };
+    fq_gpu b_z{ 0x10143ade26bbd57a, 0x98cf4e1f6c214053, 0x6bfdc534f6b00006, 0x1875e5068ababf24 };
+
+    for (int i = 0; i < LIMBS_NUM; i++) {
+        a[i] = a_x.data[i];
+        b[i] = a_y.data[i];
+        c[i] = a_z.data[i];
+        x[i] = b_x.data[i];
+        y[i] = b_y.data[i];
+        z[i] = b_z.data[i];
+    }
+}
+
+__global__ void add_dbl_consistency
+(var *a, var *b, var *c, var *x, var *y, var *z, var *expected_x, var *expected_y, var *expected_z, var *res) {
+    g1::element a_element;
+    g1::element b_element;
+    g1::element c_element;
+    g1::element d_element;
+    g1::element add_result;
+    g1::element dbl_result;
+
+    // Calculate global thread ID, and boundry check
+    int tid = (blockDim.x * blockIdx.x) + threadIdx.x;
+    if (tid < LIMBS) {
+        a_element.x.data[tid] = fq_gpu::load(a[tid], res[tid]);
+        a_element.y.data[tid] = fq_gpu::load(b[tid], res[tid]);
+        a_element.z.data[tid] = fq_gpu::load(c[tid], res[tid]);
+        b_element.x.data[tid] = fq_gpu::load(x[tid], res[tid]);
+        b_element.y.data[tid] = fq_gpu::load(y[tid], res[tid]);
+        b_element.z.data[tid] = fq_gpu::load(z[tid], res[tid]);
+
+        // c = a + b
+        g1::add(
+            a_element.x.data[tid], a_element.y.data[tid], a_element.z.data[tid], 
+            b_element.x.data[tid], b_element.y.data[tid], b_element.z.data[tid], 
+            c_element.x.data[tid], c_element.y.data[tid], c_element.z.data[tid]
+        ); 
+        // b = -b
+        fq_gpu::neg(b_element.y.data[tid], b_element.y.data[tid]);                                                                                                                                                      
+        // d = a + b
+        g1::add(
+            a_element.x.data[tid], a_element.y.data[tid], a_element.z.data[tid], 
+            b_element.x.data[tid], b_element.y.data[tid], b_element.z.data[tid], 
+            d_element.x.data[tid], d_element.y.data[tid], d_element.z.data[tid]
+        );
+        // result + c + d
+        g1::add(
+            c_element.x.data[tid], c_element.y.data[tid], c_element.z.data[tid], 
+            d_element.x.data[tid], d_element.y.data[tid], d_element.z.data[tid], 
+            expected_x[tid], expected_y[tid], expected_z[tid]
+        );
+        // a.doubling
+        g1::doubling(
+            a_element.x.data[tid], a_element.y.data[tid], a_element.z.data[tid], 
+            expected_x[tid], expected_y[tid], expected_z[tid]
+        );
+         
+        // result + c + d == a.doubling
+
+        // Return results from montgomery form 
+        fq_gpu::from_monty(expected_x[tid], expected_x[tid]);
+        fq_gpu::from_monty(expected_y[tid], expected_y[tid]);
+        fq_gpu::from_monty(expected_z[tid], expected_z[tid]);
+    }
+}
+
+/* -------------------------- Add Double Consistency Repeated Test ---------------------------------------------- */
+__global__ void initialize_add_dbl_consistency_repeated
+(var *a, var *b, var *c, var *x, var *y, var *z, var *expected_x, var *expected_y, var *expected_z, var *res) {
+    fq_gpu a_x{ 0x184b38afc6e2e09a, 0x4965cd1c3687f635, 0x334da8e7539e71c4, 0xf708d16cfe6e14 };
+    fq_gpu a_y{ 0x2a6ff6ffc739b3b6, 0x70761d618b513b9, 0xbf1645401de26ba1, 0x114a1616c164b980 };
+    fq_gpu a_z{ 0x10143ade26bbd57a, 0x98cf4e1f6c214053, 0x6bfdc534f6b00006, 0x1875e5068ababf2c };
+    fq_gpu b_x{ 0x184b38afc6e2e09a, 0x4965cd1c3687f635, 0x334da8e7539e71c4, 0xf708d16cfe6e14 };
+    fq_gpu b_y{ 0x2a6ff6ffc739b3b6, 0x70761d618b513b9, 0xbf1645401de26ba1, 0x114a1616c164b980 };
+    fq_gpu b_z{ 0x10143ade26bbd57a, 0x98cf4e1f6c214053, 0x6bfdc534f6b00006, 0x1875e5068ababf24 };
+
+    for (int i = 0; i < LIMBS_NUM; i++) {
+        a[i] = a_x.data[i];
+        b[i] = a_y.data[i];
+        c[i] = a_z.data[i];
+        x[i] = b_x.data[i];
+        y[i] = b_y.data[i];
+        z[i] = b_z.data[i];
+    }
+}
+
+__global__ void add_dbl_consistency_repeated
+(var *a, var *b, var *c, var *x, var *y, var *z, var *expected_x, var *expected_y, var *expected_z, var *res) {
+    g1::element a_element;
+    g1::element b_element;
+    g1::element c_element;
+    g1::element d_element;
+    g1::element add_result;
+    g1::element dbl_result;
+
+    // Calculate global thread ID, and boundry check
+    int tid = (blockDim.x * blockIdx.x) + threadIdx.x;
+    if (tid < LIMBS) {
+        a_element.x.data[tid] = fq_gpu::load(a[tid], res[tid]);
+        a_element.y.data[tid] = fq_gpu::load(b[tid], res[tid]);
+        a_element.z.data[tid] = fq_gpu::load(c[tid], res[tid]);
+        b_element.x.data[tid] = fq_gpu::load(x[tid], res[tid]);
+        b_element.y.data[tid] = fq_gpu::load(y[tid], res[tid]);
+        b_element.z.data[tid] = fq_gpu::load(z[tid], res[tid]);
+
+        // c = a + b
+        g1::add(
+            a_element.x.data[tid], a_element.y.data[tid], a_element.z.data[tid], 
+            b_element.x.data[tid], b_element.y.data[tid], b_element.z.data[tid], 
+            c_element.x.data[tid], c_element.y.data[tid], c_element.z.data[tid]
+        ); 
+        // b = -b
+        fq_gpu::neg(b_element.y.data[tid], b_element.y.data[tid]);                                                                                                                                                      
+        // d = a + b
+        g1::add(
+            a_element.x.data[tid], a_element.y.data[tid], a_element.z.data[tid], 
+            b_element.x.data[tid], b_element.y.data[tid], b_element.z.data[tid], 
+            d_element.x.data[tid], d_element.y.data[tid], d_element.z.data[tid]
+        );
+        // result + c + d
+        g1::add(
+            c_element.x.data[tid], c_element.y.data[tid], c_element.z.data[tid], 
+            d_element.x.data[tid], d_element.y.data[tid], d_element.z.data[tid], 
+            expected_x[tid], expected_y[tid], expected_z[tid]
+        );
+        // a.doubling
+        g1::doubling(
+            a_element.x.data[tid], a_element.y.data[tid], a_element.z.data[tid], 
+            expected_x[tid], expected_y[tid], expected_z[tid]
+        );
+         
+        // result + c + d == a.doubling
+
+        // Return results from montgomery form 
+        fq_gpu::from_monty(expected_x[tid], expected_x[tid]);
+        fq_gpu::from_monty(expected_y[tid], expected_y[tid]);
+        fq_gpu::from_monty(expected_z[tid], expected_z[tid]);
     }
 }
 
 
-/* -------------------------- Main -- Executing Kernels ---------------------------------------------- */
-
-void execute_kernels(var *a, var *b, var *c, var *x, var *y, var *z, var *expected_x, var *expected_y, var *expected_z, var *res) {
+/* -------------------------- Kernel Execution ---------------------------------------------- */
+void execute_kernels
+(var *a, var *b, var *c, var *x, var *y, var *z, var *expected_x, var *expected_y, var *expected_z, var *res) {
     // Initialization kernels
     // initialize_mixed_add_check_against_constants<<<BLOCKS, THREADS>>>(a, b, c, x, y, z, expected_x, expected_y, expected_z, res);
     // initialize_dbl_check_against_constants<<<BLOCKS, THREADS>>>(a, b, c, x, y, z, expected_x, expected_y, expected_z, res);
     // initialize_add_check_against_constants<<<BLOCKS, THREADS>>>(a, b, c, x, y, z, expected_x, expected_y, expected_z, res);
-    initialize_add_exception_test_dbl<<<BLOCKS, THREADS>>>(a, b, c, x, y, z, expected_x, expected_y, expected_z, res);
+    // initialize_add_exception_test_dbl<<<BLOCKS, THREADS>>>(a, b, c, x, y, z, expected_x, expected_y, expected_z, res);
+    initialize_add_dbl_consistency<<<BLOCKS, THREADS>>>(a, b, c, x, y, z, expected_x, expected_y, expected_z, res);
+    // initialize_add_dbl_consistency_repeated<<<BLOCKS, THREADS>>>(a, b, c, x, y, z, expected_x, expected_y, expected_z, res);
 
     // Workload kernels
     // mixed_add_check_against_constants<<<BLOCKS, LIMBS_NUM>>>(a, b, c, x, y, z, expected_x, expected_y, expected_z, res);
     // dbl_check_against_constants<<<BLOCKS, LIMBS_NUM>>>(a, b, c, x, y, z, expected_x, expected_y, expected_z, res);
     // add_check_against_constants<<<BLOCKS, LIMBS_NUM>>>(a, b, c, x, y, z, expected_x, expected_y, expected_z, res);
-    add_exception_test_dbl<<<BLOCKS, LIMBS_NUM>>>(a, b, c, x, y, z, expected_x, expected_y, expected_z, res);
+    // add_exception_test_dbl<<<BLOCKS, LIMBS_NUM>>>(a, b, c, x, y, z, expected_x, expected_y, expected_z, res);
+    add_dbl_consistency<<<BLOCKS, LIMBS_NUM>>>(a, b, c, x, y, z, expected_x, expected_y, expected_z, res);
+    // add_dbl_consistency_repeated<<<BLOCKS, LIMBS_NUM>>>(a, b, c, x, y, z, expected_x, expected_y, expected_z, res);
 }
 
 int main(int, char**) {
@@ -241,6 +418,7 @@ int main(int, char**) {
     // Explicit synchronization barrier
     cudaDeviceSynchronize();
 
+    // Print results returned from kernel execution 
     printf("expected_x[0] is: %zu\n", expected_x[0]);
     printf("expected_x[1] is: %zu\n", expected_x[1]);
     printf("expected_x[2] is: %zu\n", expected_x[2]);

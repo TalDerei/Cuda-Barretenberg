@@ -431,7 +431,7 @@ constexpr element<Fq, Fr, T> element<Fq, Fr, T>::operator+=(const element& other
     z += other.z;
 
     Z1Z1 += Z2Z2;
-
+    
     z.self_sqr();
     z -= Z1Z1;
     z *= H;

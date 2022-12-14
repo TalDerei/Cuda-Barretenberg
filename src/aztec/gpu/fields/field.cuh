@@ -167,8 +167,6 @@ class field_gpu {
 
         __device__ static var sub(const var x, const var y, var &z);
 
-        __device__ static var sub_coarse(const var x, const var y, var &z);
-
         __device__ static var square(var x, var &y);   
 
         __device__ static var mul(const var a, const var b, var &res);
@@ -176,6 +174,8 @@ class field_gpu {
         __device__ static var to_monty(var x, var &res);
         
         __device__ static var from_monty(var x, var &res);
+
+        __device__ static var neg(var &x, var &res);
     };
     typedef field_gpu<BN254_MOD_BASE, BN254_MOD_SCALAR> fq_gpu;
 }

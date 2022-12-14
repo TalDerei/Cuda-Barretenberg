@@ -148,20 +148,20 @@ __device__ void group_gpu<fq_gpu>::add(var X1, var Y1, var Z1, var X2, var Y2, v
     fq_gpu::load(X1, res_x);             // res_x = X1
 
     // Y Element
-    fq_gpu::mul(J, S1, J);              // J = J * S1
-    fq_gpu::add(J, J, J);               // J = J + J
-    fq_gpu::sub(U1, X1, Y1);            // Y1 = U1 - X1
-    fq_gpu::mul(Y1, F, Y1);             // Y1 = Y1 + F
-    fq_gpu::sub(Y1, J, Y1);             // Y1 = Y1 - J
-    fq_gpu::load(Y1, res_y);            // res_y = Y1
+    fq_gpu::mul(J, S1, J);               // J = J * S1
+    fq_gpu::add(J, J, J);                // J = J + J
+    fq_gpu::sub(U1, X1, Y1);             // Y1 = U1 - X1
+    fq_gpu::mul(Y1, F, Y1);              // Y1 = Y1 + F
+    fq_gpu::sub(Y1, J, Y1);              // Y1 = Y1 - J
+    fq_gpu::load(Y1, res_y);             // res_y = Y1
 
     // Z Element
-    fq_gpu::add(Z1, Z2, Z1);            // Z1 = Z1 + Z2
-    fq_gpu::add(Z1Z1, Z2Z2, Z1Z1);      // Z1Z1 = Z2Z2 + Z1Z1
-    fq_gpu::square(Z1, Z1);             // Z1 = Z1^2
-    fq_gpu::sub(Z1, Z1Z1, Z1);          // Z1 = Z1 - Z1Z1
-    fq_gpu::mul(Z1, H, Z1);             // Z1 = Z1 * H
-    fq_gpu::load(Z1, res_z);            // res_z = Z1;
+    fq_gpu::add(Z1, Z2, Z1);             // Z1 = Z1 + Z2
+    fq_gpu::add(Z1Z1, Z2Z2, Z1Z1);       // Z1Z1 = Z2Z2 + Z1Z1
+    fq_gpu::square(Z1, Z1);              // Z1 = Z1^2
+    fq_gpu::sub(Z1, Z1Z1, Z1);           // Z1 = Z1 - Z1Z1
+    fq_gpu::mul(Z1, H, Z1);              // Z1 = Z1 * H
+    fq_gpu::load(Z1, res_z);             // res_z = Z1;
 }
 
 // TODO: add is_zero() tests
