@@ -7,17 +7,23 @@
     - [x] Extract the montogomery multiplication (CIOS) implementation to a seperate benchmarking file and get it compiling
     - [x] Implement addition/subtraction operations on GPU
     - [x] Understand Barretenberg's C++ implementation, and benchmark for correctness and performance
-    - [x] Implement unit tests logic for fq / fr (base and scalar fields)
 - [ ] Implement BN254 / Grumpkin ECs logic on the GPU   
     - [x] Understand the differences between BN-254 and Grumpkin ECs
-    - [ ] Implement unit tests logic for BN-254
-    - [ ] Implement unit tests logic for Grumpkin
+    - [x] Implement unit tests logic for BN-254
+- [ ] Implement FF and EC unit testing
+    - [x] Implement unit tests logic for fq / fr (base and scalar fields)
+    - [x] Implement unit tests logic for Grumpkin
 - [ ] Benchmark FF and ECC implementations for CPU / GPU
-    - [ ] Benchmark decrypt_bench folder for initial baselines
-    - [ ] Reimplement logic for decrypt_bench for GPU and check for correctness
-    - [ ] Benchmark GPU implementation
+    - [ ] Benchmark finite field arithemtic to establish CPU baseline (bench suite already created)
+    - [ ] Create elliptic curve bench suite for CPU
+    - [ ] Benchmark elliptic curve operatons to establish CPU baseline
+    - [ ] Create finite field bench suite for GPU
+    - [ ] Create elliptic curve bench suite for GPU
+    - [ ] Benchmark finite field arithemtic and elliptic curve operations to establish GPU baseline
 - [ ] Multi-scalar multiplication
-    - [ ] Understand the multi exponentiation scheme
-    - [ ] Understand more complex parallelism schemes w/ grids and streams
+    - [ ] Implement simple map-reduce in Cuda
+    - [ ] Understand Barretenberg’s multi-exponentiation implementation
+    - [ ] Understand Supranational’s MSM kernel module
+    - [ ] Adapt Supranational’s MSM scheme into Barretenberg
 - [x] Set up Nvsight Compute profiling software
 - [x] Downgrade GPU from A10 to V100 to save on cloud computing costs, and create custom images to clone machines
