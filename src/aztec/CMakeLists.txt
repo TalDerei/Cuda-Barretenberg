@@ -29,7 +29,6 @@ add_subdirectory(polynomials)
 add_subdirectory(plonk)
 add_subdirectory(stdlib)
 add_subdirectory(rollup)
-add_subdirectory(cuda-fixnum)
 add_subdirectory(gpu)
 
 # if(BENCHMARKS)

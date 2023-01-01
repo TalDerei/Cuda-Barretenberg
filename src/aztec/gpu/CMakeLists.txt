@@ -1,3 +1,4 @@
+add_subdirectory(arithmetic)
 add_subdirectory(fields)
-add_subdirectory(bench)
-add_subdirectory(tests)
+add_subdirectory(groups)
+add_subdirectory(benchmark)

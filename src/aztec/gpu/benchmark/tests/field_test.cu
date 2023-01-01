@@ -1,4 +1,4 @@
-#include "../fields/field.cu"
+#include "field.cu"
 
 using namespace std;
 using namespace std::chrono;

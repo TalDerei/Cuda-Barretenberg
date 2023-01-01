@@ -3,7 +3,6 @@
 #include <cstdio>
 #include <chrono>
 #include <iostream>
-
 #include "field.cu"
 #include "element.cuh"
 

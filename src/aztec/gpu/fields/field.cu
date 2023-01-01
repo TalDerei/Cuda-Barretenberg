@@ -1,6 +1,5 @@
 #include <cstdint>
 #include <stdio.h>
-
 #include "field.cuh"
 
 using namespace std;

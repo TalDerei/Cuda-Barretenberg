@@ -1,4 +1,4 @@
-project(cuda-fixnum CXX CUDA)
+project(cuda-barretenberg CXX CUDA)
 
 set(CMAKE_CXX_STANDARD 20)
 

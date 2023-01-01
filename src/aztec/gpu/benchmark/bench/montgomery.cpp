@@ -189,9 +189,9 @@ int main() {
     printf("%" PRIu64 "\n", const_result.data[3]);
 
     // Benchmarking large executions 
-    // for (int i = 0; i < 10240000; i++) {
-    //     const_result = a * b; 
-    // }
+    for (int i = 0; i < 10240000; i++) {
+        const_result = a * b; 
+    }
 
     // End timer
     auto stop = high_resolution_clock::now();

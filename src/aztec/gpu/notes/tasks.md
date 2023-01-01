@@ -17,8 +17,8 @@
     - [x] Benchmark finite field arithemtic to establish CPU baseline (bench suite already created)
     - [x] Benchmark elliptic curve operations to establish CPU baseline
 - [x] Benchmark Aztec's MSM, FFT, and Plonk algorithms on CPU
-    - [x] Benchmarks Pippenger's bucket algorithm
-    - [x] Benchmarks Fast Fourier Transform algorithm
+    - [x] Benchmark Pippenger's bucket algorithm
+    - [x] Benchmark Fast Fourier Transform algorithm
     - [x] Benchmark Plonk prover
 - [ ] Benchmark FF and ECC implementations on GPU
     - [ ] Create finite field bench suite for GPU
