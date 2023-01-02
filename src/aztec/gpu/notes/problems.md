@@ -45,7 +45,7 @@
 
 ```Execution times need to be looked further into + optimized down the line, as I'm only focusing on correctness right now.```
 
-    - Firstly, need to research the limitations around running more threads. Currently running 4 threads, and the execution is running sequentially in a single SM. Also unsure why the execution times are so drastic, as there seems to be some caching built in that's speeding up subsequent runs of the same computation. Only remember to enable compiler optimizations -03 during benchmarking!
+    - Firstly, need to research the limitations around running more threads. Currently running 4 threads, and the execution is running sequentially in a single SM. Also unsure why the execution times are so drastic, as there seems to be some caching built in that's speeding up subsequent runs of the same computation. Also remember to enable compiler optimizations -03 during benchmarking! Update: “just-in-time” compiling PTX code to SASS assembly instructions slows down the first kernel invocation, so need to pass in "-gencode arch=compute_86,code=sm_86" to get around that. 
 
 ```Need to figure out why the pippenger and polynomial bench isn't working```
 

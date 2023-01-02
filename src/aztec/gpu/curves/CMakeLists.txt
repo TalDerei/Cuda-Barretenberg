@@ -6,12 +6,12 @@ set(CMAKE_CUDA_STANDARD 17)
 include_directories(../fields)
 include_directories(../arithmetic)
 
-add_library(group_library STATIC 
+add_library(curve_library STATIC 
     ./group.cu
     ./element.cu
 )
 
 target_link_libraries(
-    group_library
+    curve_library
     fixnum_library
 )

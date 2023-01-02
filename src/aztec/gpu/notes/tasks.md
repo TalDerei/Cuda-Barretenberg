@@ -12,7 +12,6 @@
 - [x] Implement BN254 / Grumpkin elliptic curve (EC) logic on the GPU   
     - [x] Understand the differences between BN-254 and Grumpkin ECs
     - [x] Implement unit tests for G1 BN-254
-    - [ ] Implement unit tests for Grumpkin
 - [x] Benchmark FF and ECC implementations on CPU
     - [x] Benchmark finite field arithemtic to establish CPU baseline (bench suite already created)
     - [x] Benchmark elliptic curve operations to establish CPU baseline

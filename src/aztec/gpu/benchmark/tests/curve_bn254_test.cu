@@ -277,7 +277,7 @@ __global__ void add_dbl_consistency
             b_element.x.data[tid], b_element.y.data[tid], b_element.z.data[tid], 
             d_element.x.data[tid], d_element.y.data[tid], d_element.z.data[tid]
         );
-        // result + c + d
+        // result = c + d
         g1::add(
             c_element.x.data[tid], c_element.y.data[tid], c_element.z.data[tid], 
             d_element.x.data[tid], d_element.y.data[tid], d_element.z.data[tid], 
@@ -289,7 +289,7 @@ __global__ void add_dbl_consistency
             expected_x[tid], expected_y[tid], expected_z[tid]
         );
          
-        // result + c + d == a.doubling
+        // result: c + d == a.doubling
 
         // Return results from montgomery form 
         fq_gpu::from_monty(expected_x[tid], expected_x[tid]);
@@ -301,20 +301,14 @@ __global__ void add_dbl_consistency
 /* -------------------------- Add Double Consistency Repeated Test ---------------------------------------------- */
 __global__ void initialize_add_dbl_consistency_repeated
 (var *a, var *b, var *c, var *x, var *y, var *z, var *expected_x, var *expected_y, var *expected_z, var *res) {
-    fq_gpu a_x{ 0x184b38afc6e2e09a, 0x4965cd1c3687f635, 0x334da8e7539e71c4, 0xf708d16cfe6e14 };
-    fq_gpu a_y{ 0x2a6ff6ffc739b3b6, 0x70761d618b513b9, 0xbf1645401de26ba1, 0x114a1616c164b980 };
-    fq_gpu a_z{ 0x10143ade26bbd57a, 0x98cf4e1f6c214053, 0x6bfdc534f6b00006, 0x1875e5068ababf2c };
-    fq_gpu b_x{ 0x184b38afc6e2e09a, 0x4965cd1c3687f635, 0x334da8e7539e71c4, 0xf708d16cfe6e14 };
-    fq_gpu b_y{ 0x2a6ff6ffc739b3b6, 0x70761d618b513b9, 0xbf1645401de26ba1, 0x114a1616c164b980 };
-    fq_gpu b_z{ 0x10143ade26bbd57a, 0x98cf4e1f6c214053, 0x6bfdc534f6b00006, 0x1875e5068ababf24 };
+    fq_gpu a_x{ 0x92716caa6cac6d26, 0x1e6e234136736544, 0x1bb04588cde00af0, 0x9a2ac922d97e6f4 };
+    fq_gpu a_y{ 0x9e693aeb52d79d2d, 0xf0c1895a61e5e975, 0x18cd7f5310ced70f, 0xac67920a22939a2 };
+    fq_gpu a_z{ 0xfef593c9ce1df132, 0xe0486f801303c27d, 0x9bbd01ab881dc08e, 0x2a589badf38ec0f3 };
 
     for (int i = 0; i < LIMBS_NUM; i++) {
         a[i] = a_x.data[i];
         b[i] = a_y.data[i];
         c[i] = a_z.data[i];
-        x[i] = b_x.data[i];
-        y[i] = b_y.data[i];
-        z[i] = b_z.data[i];
     }
 }
 
@@ -324,8 +318,9 @@ __global__ void add_dbl_consistency_repeated
     g1::element b_element;
     g1::element c_element;
     g1::element d_element;
-    g1::element add_result;
-    g1::element dbl_result;
+    g1::element e_element;
+    g1::element result;
+    g1::element expected;
 
     // Calculate global thread ID, and boundry check
     int tid = (blockDim.x * blockIdx.x) + threadIdx.x;
@@ -333,37 +328,46 @@ __global__ void add_dbl_consistency_repeated
         a_element.x.data[tid] = fq_gpu::load(a[tid], res[tid]);
         a_element.y.data[tid] = fq_gpu::load(b[tid], res[tid]);
         a_element.z.data[tid] = fq_gpu::load(c[tid], res[tid]);
-        b_element.x.data[tid] = fq_gpu::load(x[tid], res[tid]);
-        b_element.y.data[tid] = fq_gpu::load(y[tid], res[tid]);
-        b_element.z.data[tid] = fq_gpu::load(z[tid], res[tid]);
 
-        // c = a + b
-        g1::add(
+        // b = 2a
+        g1::doubling(
             a_element.x.data[tid], a_element.y.data[tid], a_element.z.data[tid], 
+            b_element.x.data[tid], b_element.y.data[tid], b_element.z.data[tid]
+        );
+
+        // c = 4a
+        g1::doubling(
             b_element.x.data[tid], b_element.y.data[tid], b_element.z.data[tid], 
             c_element.x.data[tid], c_element.y.data[tid], c_element.z.data[tid]
-        ); 
-        // b = -b
-        fq_gpu::neg(b_element.y.data[tid], b_element.y.data[tid]);                                                                                                                                                      
-        // d = a + b
+        );
+         
+        // d = 3a
         g1::add(
             a_element.x.data[tid], a_element.y.data[tid], a_element.z.data[tid], 
             b_element.x.data[tid], b_element.y.data[tid], b_element.z.data[tid], 
             d_element.x.data[tid], d_element.y.data[tid], d_element.z.data[tid]
-        );
-        // result + c + d
+        ); 
+
+        // e = 5a
         g1::add(
-            c_element.x.data[tid], c_element.y.data[tid], c_element.z.data[tid], 
-            d_element.x.data[tid], d_element.y.data[tid], d_element.z.data[tid], 
-            expected_x[tid], expected_y[tid], expected_z[tid]
-        );
-        // a.doubling
-        g1::doubling(
             a_element.x.data[tid], a_element.y.data[tid], a_element.z.data[tid], 
+            c_element.x.data[tid], c_element.y.data[tid], c_element.z.data[tid], 
+            e_element.x.data[tid], e_element.y.data[tid], e_element.z.data[tid]
+        ); 
+  
+        // result = 8a
+        g1::add(
+            d_element.x.data[tid], d_element.y.data[tid], d_element.z.data[tid], 
+            e_element.x.data[tid], e_element.y.data[tid], e_element.z.data[tid], 
             expected_x[tid], expected_y[tid], expected_z[tid]
         );
-         
-        // result + c + d == a.doubling
+        // c.doubling
+        g1::doubling(
+            c_element.x.data[tid], c_element.y.data[tid], c_element.z.data[tid], 
+            expected_x[tid], expected_y[tid], expected_z[tid]
+        );
+
+        // result: d + e == c.doubling
 
         // Return results from montgomery form 
         fq_gpu::from_monty(expected_x[tid], expected_x[tid]);
@@ -377,20 +381,20 @@ __global__ void add_dbl_consistency_repeated
 void execute_kernels
 (var *a, var *b, var *c, var *x, var *y, var *z, var *expected_x, var *expected_y, var *expected_z, var *res) {
     // Initialization kernels
-    initialize_mixed_add_check_against_constants<<<BLOCKS, THREADS>>>(a, b, c, x, y, z, expected_x, expected_y, expected_z, res);
+    // initialize_mixed_add_check_against_constants<<<BLOCKS, THREADS>>>(a, b, c, x, y, z, expected_x, expected_y, expected_z, res);
     // initialize_dbl_check_against_constants<<<BLOCKS, THREADS>>>(a, b, c, x, y, z, expected_x, expected_y, expected_z, res);
     // initialize_add_check_against_constants<<<BLOCKS, THREADS>>>(a, b, c, x, y, z, expected_x, expected_y, expected_z, res);
     // initialize_add_exception_test_dbl<<<BLOCKS, THREADS>>>(a, b, c, x, y, z, expected_x, expected_y, expected_z, res);
     // initialize_add_dbl_consistency<<<BLOCKS, THREADS>>>(a, b, c, x, y, z, expected_x, expected_y, expected_z, res);
-    // initialize_add_dbl_consistency_repeated<<<BLOCKS, THREADS>>>(a, b, c, x, y, z, expected_x, expected_y, expected_z, res);
+    initialize_add_dbl_consistency_repeated<<<BLOCKS, THREADS>>>(a, b, c, x, y, z, expected_x, expected_y, expected_z, res);
 
     // Workload kernels
-    mixed_add_check_against_constants<<<BLOCKS, LIMBS_NUM>>>(a, b, c, x, y, z, expected_x, expected_y, expected_z, res);
+    // mixed_add_check_against_constants<<<BLOCKS, LIMBS_NUM>>>(a, b, c, x, y, z, expected_x, expected_y, expected_z, res);
     // dbl_check_against_constants<<<BLOCKS, LIMBS_NUM>>>(a, b, c, x, y, z, expected_x, expected_y, expected_z, res);
     // add_check_against_constants<<<BLOCKS, LIMBS_NUM>>>(a, b, c, x, y, z, expected_x, expected_y, expected_z, res);
     // add_exception_test_dbl<<<BLOCKS, LIMBS_NUM>>>(a, b, c, x, y, z, expected_x, expected_y, expected_z, res);
-    //add_dbl_consistency<<<BLOCKS, LIMBS_NUM>>>(a, b, c, x, y, z, expected_x, expected_y, expected_z, res);
-    // add_dbl_consistency_repeated<<<BLOCKS, LIMBS_NUM>>>(a, b, c, x, y, z, expected_x, expected_y, expected_z, res);
+    // add_dbl_consistency<<<BLOCKS, LIMBS_NUM>>>(a, b, c, x, y, z, expected_x, expected_y, expected_z, res);
+    add_dbl_consistency_repeated<<<BLOCKS, LIMBS_NUM>>>(a, b, c, x, y, z, expected_x, expected_y, expected_z, res);
 }
 
 int main(int, char**) {

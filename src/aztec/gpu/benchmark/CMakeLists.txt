@@ -5,7 +5,7 @@ set(CMAKE_CUDA_STANDARD 17)
 
 include_directories(../arithmetic)
 include_directories(../fields)
-include_directories(../groups)
+include_directories(../curves)
 
 # montgomery bench
 add_executable(
@@ -28,39 +28,39 @@ add_custom_target(
 
 # field bench
 add_executable(
-    field_cu_test
+    field_test
     tests/field_test.cu
 )
 
 target_link_libraries(
-    field_cu_test
+    field_test
     PUBLIC
     field_library
     fixnum_library
 )
 
 add_custom_target(
-    run_field_cu_test
-    COMMAND field_cu_test
+    run_field_test
+    COMMAND field_test
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
 )
 
-# group test
+# BN254 curve test
 add_executable(
-    group_test_cu
-    tests/group_test.cu
+    curve_bn254_test
+    tests/curve_bn254_test.cu
 )
 
 target_link_libraries(
-    group_test_cu
+    curve_bn254_test
     PUBLIC
-    group_library
+    curve_library
     field_library
     fixnum_library
 )
 
 add_custom_target(
-    run_group_test_cu
-    COMMAND group_test_cu
+    run_curve_bn254_test
+    COMMAND curve_bn254_test
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
 )

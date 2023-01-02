@@ -3,7 +3,9 @@ project(cuda-barretenberg CUDA)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CUDA_STANDARD 17)
 
-# Bypass JIT compilation of PTX code to SASS instructions
+# Bypass JIT compilation of PTX code to SASS assembly instructions at runtime.
+# This auto-detects the gpu architecture and generates assembly instructions
+# during compilation-time instead. 
 find_package(CUDA REQUIRED)
 set(CUDA_ARCH_LIST Auto CACHE LIST
     "List of CUDA architectures (e.g. Pascal, Volta, etc) or \
@@ -19,5 +21,5 @@ set(CMAKE_CUDA_FLAGS_DEBUG "-g -G")
 
 add_subdirectory(arithmetic)
 add_subdirectory(fields)
-add_subdirectory(groups)
+add_subdirectory(curves)
 add_subdirectory(benchmark)
