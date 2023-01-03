@@ -189,7 +189,7 @@ int main() {
     printf("%" PRIu64 "\n", const_result.data[3]);
 
     // Benchmarking large executions 
-    for (int i = 0; i < 10240000; i++) {
+    for (int i = 0; i < 33554432; i++) {
         const_result = a * b; 
     }
 

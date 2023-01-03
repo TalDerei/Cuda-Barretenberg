@@ -4,6 +4,6 @@ endif()
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
 if(CMAKE_BUILD_TYPE STREQUAL "RelWithAssert")
-  # add_compile_options(-O3)
+  add_compile_options(-O3)
   remove_definitions(-DNDEBUG)
 endif()
