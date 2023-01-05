@@ -7,6 +7,11 @@ namespace test_g1 {
 TEST(g1, random_element)
 {
     g1::element result = g1::element::random_element();
+    
+    printf("result x is: %zu\n", result.x);
+    printf("result y is: %zu\n", result.y);
+    printf("result z is: %zu\n", result.z);
+
     EXPECT_EQ(result.on_curve(), true);
 }
 
@@ -58,7 +63,67 @@ TEST(g1, mixed_add_check_against_constants)
     expected.x = expected_x.to_montgomery_form();
     expected.y = expected_y.to_montgomery_form();
     expected.z = expected_z.to_montgomery_form();
+    
     result = lhs + rhs;
+
+    result.x = result.x.from_montgomery_form();
+    result.y = result.y.from_montgomery_form();
+    result.z = result.z.from_montgomery_form();
+
+    printf("lhs.x.data[0] is: %zu\n", lhs.x.data[0]);
+    printf("lhs.x.data[1] is: %zu\n", lhs.x.data[1]);
+    printf("lhs.x.data[2] is: %zu\n", lhs.x.data[2]);
+    printf("lhs.x.data[3] is: %zu\n", lhs.x.data[3]);
+
+    printf("lhs.y.data[0] is: %zu\n", lhs.y.data[0]);
+    printf("lhs.y.data[1] is: %zu\n", lhs.y.data[1]);
+    printf("lhs.y.data[2] is: %zu\n", lhs.y.data[2]);
+    printf("lhs.y.data[3] is: %zu\n", lhs.y.data[3]);
+
+    printf("lhs.z.data[0] is: %zu\n", lhs.z.data[0]);
+    printf("lhs.z.data[1] is: %zu\n", lhs.z.data[1]);
+    printf("lhs.z.data[2] is: %zu\n", lhs.z.data[2]);
+    printf("lhs.z.data[3] is: %zu\n", lhs.z.data[3]);
+
+    printf("rhs.x.data[0] is: %zu\n", rhs.x.data[0]);
+    printf("rhs.x.data[1] is: %zu\n", rhs.x.data[1]);
+    printf("rhs.x.data[2] is: %zu\n", rhs.x.data[2]);
+    printf("rhs.x.data[3] is: %zu\n", rhs.x.data[3]);
+
+    printf("rhs.y.data[0] is: %zu\n", rhs.y.data[0]);
+    printf("rhs.y.data[1] is: %zu\n", rhs.y.data[1]);
+    printf("rhs.y.data[2] is: %zu\n", rhs.y.data[2]);
+    printf("rhs.y.data[3] is: %zu\n", rhs.y.data[3]);
+
+    printf("expected_x.data[0] is: %zu\n", expected.x.data[0]);
+    printf("expected_x.data[1] is: %zu\n", expected.x.data[1]);
+    printf("expected_x.data[2] is: %zu\n", expected.x.data[2]);
+    printf("expected_x.data[3] is: %zu\n", expected.x.data[3]);
+
+    printf("expected_y.data[0] is: %zu\n", expected.y.data[0]);
+    printf("expected_y.data[1] is: %zu\n", expected.y.data[1]);
+    printf("expected_y.data[2] is: %zu\n", expected.y.data[2]);
+    printf("expected_y.data[3] is: %zu\n", expected.y.data[3]);
+
+    printf("expected_z.data[0] is: %zu\n", expected.z.data[0]);
+    printf("expected_z.data[1] is: %zu\n", expected.z.data[1]);
+    printf("expected_z.data[2] is: %zu\n", expected.z.data[2]);
+    printf("expected_z.data[3] is: %zu\n", expected.z.data[3]);
+
+    printf("result.x.data[0] is: %zu\n", result.x.data[0]);
+    printf("result.x.data[1] is: %zu\n", result.x.data[1]);
+    printf("result.x.data[2] is: %zu\n", result.x.data[2]);
+    printf("result.x.data[3] is: %zu\n", result.x.data[3]);
+
+    printf("result.y.data[0] is: %zu\n", result.y.data[0]);
+    printf("result.y.data[1] is: %zu\n", result.y.data[1]);
+    printf("result.y.data[2] is: %zu\n", result.y.data[2]);
+    printf("result.y.data[3] is: %zu\n", result.y.data[3]);
+
+    printf("result.z.data[0] is: %zu\n", result.z.data[0]);
+    printf("result.z.data[1] is: %zu\n", result.z.data[1]);
+    printf("result.z.data[2] is: %zu\n", result.z.data[2]);
+    printf("result.z.data[3] is: %zu\n", result.z.data[3]);
 
     EXPECT_EQ(result == expected, true);
 }
@@ -84,6 +149,40 @@ TEST(g1, dbl_check_against_constants)
     result = lhs.dbl();
     result.self_dbl();
     result.self_dbl();
+
+    result.x = result.x.from_montgomery_form();
+    result.y = result.y.from_montgomery_form();
+    result.z = result.z.from_montgomery_form();
+
+    printf("expected.x.data[0] is: %zu\n", expected.x.data[0]);
+    printf("expected.x.data[1] is: %zu\n", expected.x.data[1]);
+    printf("expected.x.data[2] is: %zu\n", expected.x.data[2]);
+    printf("expected.x.data[3] is: %zu\n", expected.x.data[3]);
+
+    printf("expected.y.data[0] is: %zu\n", expected.y.data[0]);
+    printf("expected.y.data[1] is: %zu\n", expected.y.data[1]);
+    printf("expected.y.data[2] is: %zu\n", expected.y.data[2]);
+    printf("expected.y.data[3] is: %zu\n", expected.y.data[3]);
+
+    printf("expected.a.data[0] is: %zu\n", expected.z.data[0]);
+    printf("expected.a.data[1] is: %zu\n", expected.z.data[1]);
+    printf("expected.a.data[2] is: %zu\n", expected.z.data[2]);
+    printf("expected.z.data[3] is: %zu\n", expected.z.data[3]);
+
+    printf("result.x.data[0] is: %zu\n", result.x.data[0]);
+    printf("result.x.data[1] is: %zu\n", result.x.data[1]);
+    printf("result.x.data[2] is: %zu\n", result.x.data[2]);
+    printf("result.x.data[3] is: %zu\n", result.x.data[3]);
+
+    printf("result.y.data[0] is: %zu\n", result.y.data[0]);
+    printf("result.y.data[1] is: %zu\n", result.y.data[1]);
+    printf("result.y.data[2] is: %zu\n", result.y.data[2]);
+    printf("result.y.data[3] is: %zu\n", result.y.data[3]);
+
+    printf("result.z.data[0] is: %zu\n", result.z.data[0]);
+    printf("result.z.data[1] is: %zu\n", result.z.data[1]);
+    printf("result.z.data[2] is: %zu\n", result.z.data[2]);
+    printf("result.z.data[3] is: %zu\n", result.z.data[3]);
 
     EXPECT_EQ(result == expected, true);
 }
@@ -116,6 +215,40 @@ TEST(g1, add_check_against_constants)
 
     result = lhs + rhs;
 
+    result.x = result.x.from_montgomery_form();
+    result.y = result.y.from_montgomery_form();
+    result.z = result.z.from_montgomery_form();
+    
+    printf("expected.x.data[0] is: %zu\n", expected.x.data[0]);
+    printf("expected.x.data[1] is: %zu\n", expected.x.data[1]);
+    printf("expected.x.data[2] is: %zu\n", expected.x.data[2]);
+    printf("expected.x.data[3] is: %zu\n", expected.x.data[3]);
+
+    printf("expected.y.data[0] is: %zu\n", expected.y.data[0]);
+    printf("expected.y.data[1] is: %zu\n", expected.y.data[1]);
+    printf("expected.y.data[2] is: %zu\n", expected.y.data[2]);
+    printf("expected.y.data[3] is: %zu\n", expected.y.data[3]);
+
+    printf("expected.a.data[0] is: %zu\n", expected.z.data[0]);
+    printf("expected.a.data[1] is: %zu\n", expected.z.data[1]);
+    printf("expected.a.data[2] is: %zu\n", expected.z.data[2]);
+    printf("expected.z.data[3] is: %zu\n", expected.z.data[3]);
+
+    printf("result.x.data[0] is: %zu\n", result.x.data[0]);
+    printf("result.x.data[1] is: %zu\n", result.x.data[1]);
+    printf("result.x.data[2] is: %zu\n", result.x.data[2]);
+    printf("result.x.data[3] is: %zu\n", result.x.data[3]);
+
+    printf("result.y.data[0] is: %zu\n", result.y.data[0]);
+    printf("result.y.data[1] is: %zu\n", result.y.data[1]);
+    printf("result.y.data[2] is: %zu\n", result.y.data[2]);
+    printf("result.y.data[3] is: %zu\n", result.y.data[3]);
+
+    printf("result.z.data[0] is: %zu\n", result.z.data[0]);
+    printf("result.z.data[1] is: %zu\n", result.z.data[1]);
+    printf("result.z.data[2] is: %zu\n", result.z.data[2]);
+    printf("result.z.data[3] is: %zu\n", result.z.data[3]);
+
     EXPECT_EQ(result == expected, true);
 }
 
@@ -147,28 +280,90 @@ TEST(g1, add_exception_test_infinity)
 
 TEST(g1, add_exception_test_dbl)
 {
-    g1::element lhs = g1::element::random_element();
-    g1::element rhs;
-    rhs = lhs;
+    fq a_x{ 0x184b38afc6e2e09a, 0x4965cd1c3687f635, 0x334da8e7539e71c4, 0xf708d16cfe6e14 };
+    fq a_y{ 0x2a6ff6ffc739b3b6, 0x70761d618b513b9, 0xbf1645401de26ba1, 0x114a1616c164b980 };
+    fq a_z{ 0x10143ade26bbd57a, 0x98cf4e1f6c214053, 0x6bfdc534f6b00006, 0x1875e5068ababf2c };
+    fq b_x{ 0x184b38afc6e2e09a, 0x4965cd1c3687f635, 0x334da8e7539e71c4, 0xf708d16cfe6e14 };
+    fq b_y{ 0x2a6ff6ffc739b3b6, 0x70761d618b513b9, 0xbf1645401de26ba1, 0x114a1616c164b980 };
+    fq b_z{ 0x10143ade26bbd57a, 0x98cf4e1f6c214053, 0x6bfdc534f6b00006, 0x1875e5068ababf24 };
 
+    g1::element lhs;
+    g1::element rhs;
     g1::element result;
     g1::element expected;
 
+    lhs.x = a_x;
+    lhs.y = a_y;
+    lhs.z = a_z;
+    rhs.x = b_x;
+    rhs.y = b_y;
+    rhs.z = b_z;
+
     result = lhs + rhs;
     expected = lhs.dbl();
+
+    result.x = result.x.from_montgomery_form();
+    result.y = result.y.from_montgomery_form();
+    result.z = result.z.from_montgomery_form();
+    expected.x = expected.x.from_montgomery_form();
+    expected.y = expected.y.from_montgomery_form();
+    expected.z = expected.z.from_montgomery_form();
+    
+    printf("expected.x.data[0] is: %zu\n", expected.x.data[0]);
+    printf("expected.x.data[1] is: %zu\n", expected.x.data[1]);
+    printf("expected.x.data[2] is: %zu\n", expected.x.data[2]);
+    printf("expected.x.data[3] is: %zu\n", expected.x.data[3]);
+
+    printf("expected.y.data[0] is: %zu\n", expected.y.data[0]);
+    printf("expected.y.data[1] is: %zu\n", expected.y.data[1]);
+    printf("expected.y.data[2] is: %zu\n", expected.y.data[2]);
+    printf("expected.y.data[3] is: %zu\n", expected.y.data[3]);
+
+    printf("expected.z.data[0] is: %zu\n", expected.z.data[0]);
+    printf("expected.z.data[1] is: %zu\n", expected.z.data[1]);
+    printf("expected.z.data[2] is: %zu\n", expected.z.data[2]);
+    printf("expected.z.data[3] is: %zu\n", expected.z.data[3]);
+
+    printf("result.x.data[0] is: %zu\n", result.x.data[0]);
+    printf("result.x.data[1] is: %zu\n", result.x.data[1]);
+    printf("result.x.data[2] is: %zu\n", result.x.data[2]);
+    printf("result.x.data[3] is: %zu\n", result.x.data[3]);
+
+    printf("result.y.data[0] is: %zu\n", result.y.data[0]);
+    printf("result.y.data[1] is: %zu\n", result.y.data[1]);
+    printf("result.y.data[2] is: %zu\n", result.y.data[2]);
+    printf("result.y.data[3] is: %zu\n", result.y.data[3]);
+
+    printf("result.z.data[0] is: %zu\n", result.z.data[0]);
+    printf("result.z.data[1] is: %zu\n", result.z.data[1]);
+    printf("result.z.data[2] is: %zu\n", result.z.data[2]);
+    printf("result.z.data[3] is: %zu\n", result.z.data[3]);
 
     EXPECT_EQ(result == expected, true);
 }
 
 TEST(g1, add_dbl_consistency)
 {
-    g1::element a = g1::element::random_element();
-    g1::element b = g1::element::random_element();
+    fq a_x{ 0x184b38afc6e2e09a, 0x4965cd1c3687f635, 0x334da8e7539e71c4, 0xf708d16cfe6e14 };
+    fq a_y{ 0x2a6ff6ffc739b3b6, 0x70761d618b513b9, 0xbf1645401de26ba1, 0x114a1616c164b980 };
+    fq a_z{ 0x10143ade26bbd57a, 0x98cf4e1f6c214053, 0x6bfdc534f6b00006, 0x1875e5068ababf2c };
+    fq b_x{ 0x184b38afc6e2e09a, 0x4965cd1c3687f635, 0x334da8e7539e71c4, 0xf708d16cfe6e14 };
+    fq b_y{ 0x2a6ff6ffc739b3b6, 0x70761d618b513b9, 0xbf1645401de26ba1, 0x114a1616c164b980 };
+    fq b_z{ 0x10143ade26bbd57a, 0x98cf4e1f6c214053, 0x6bfdc534f6b00006, 0x1875e5068ababf24 };
 
+    g1::element a;
+    g1::element b;
     g1::element c;
     g1::element d;
     g1::element add_result;
     g1::element dbl_result;
+
+    a.x = a_x;
+    a.y = a_y;
+    a.z = a_z;
+    b.x = b_x;
+    b.y = b_y;
+    b.z = b_z;
 
     c = a + b;
     b = -b;
@@ -177,28 +372,109 @@ TEST(g1, add_dbl_consistency)
     add_result = c + d;
     dbl_result = a.dbl();
 
+    add_result.x = add_result.x.from_montgomery_form();
+    add_result.y = add_result.y.from_montgomery_form();
+    add_result.z = add_result.z.from_montgomery_form();
+    dbl_result.x = dbl_result.x.from_montgomery_form();
+    dbl_result.y = dbl_result.y.from_montgomery_form();
+    dbl_result.z = dbl_result.z.from_montgomery_form();
+
+    printf("add_result.x.data[0] is: %zu\n", add_result.x.data[0]);
+    printf("add_result.x.data[1] is: %zu\n", add_result.x.data[1]);
+    printf("add_result.x.data[2] is: %zu\n", add_result.x.data[2]);
+    printf("add_result.x.data[3] is: %zu\n", add_result.x.data[3]);
+
+    printf("add_result.y.data[0] is: %zu\n", add_result.y.data[0]);
+    printf("add_result.y.data[1] is: %zu\n", add_result.y.data[1]);
+    printf("add_result.y.data[2] is: %zu\n", add_result.y.data[2]);
+    printf("add_result.y.data[3] is: %zu\n", add_result.y.data[3]);
+
+    printf("add_result.z.data[0] is: %zu\n", add_result.z.data[0]);
+    printf("add_result.z.data[1] is: %zu\n", add_result.z.data[1]);
+    printf("add_result.z.data[2] is: %zu\n", add_result.z.data[2]);
+    printf("add_result.z.data[3] is: %zu\n", add_result.z.data[3]);
+    
+    printf("dbl_result.x.data[0] is: %zu\n", dbl_result.x.data[0]);
+    printf("dbl_result.x.data[1] is: %zu\n", dbl_result.x.data[1]);
+    printf("dbl_result.x.data[2] is: %zu\n", dbl_result.x.data[2]);
+    printf("dbl_result.x.data[3] is: %zu\n", dbl_result.x.data[3]);
+
+    printf("dbl_result.y.data[0] is: %zu\n", dbl_result.y.data[0]);
+    printf("dbl_result.y.data[1] is: %zu\n", dbl_result.y.data[1]);
+    printf("dbl_result.y.data[2] is: %zu\n", dbl_result.y.data[2]);
+    printf("dbl_result.y.data[3] is: %zu\n", dbl_result.y.data[3]);
+
+    printf("dbl_result.z.data[0] is: %zu\n", dbl_result.z.data[0]);
+    printf("dbl_result.z.data[1] is: %zu\n", dbl_result.z.data[1]);
+    printf("dbl_result.z.data[2] is: %zu\n", dbl_result.z.data[2]);
+    printf("dbl_result.z.data[3] is: %zu\n", dbl_result.z.data[3]);
+
     EXPECT_EQ(add_result == dbl_result, true);
 }
 
 TEST(g1, add_dbl_consistency_repeated)
 {
-    g1::element a = g1::element::random_element();
+    fq a_x{ 0x92716caa6cac6d26, 0x1e6e234136736544, 0x1bb04588cde00af0, 0x9a2ac922d97e6f4 };
+    fq a_y{ 0x9e693aeb52d79d2d, 0xf0c1895a61e5e975, 0x18cd7f5310ced70f, 0xac67920a22939a2 };
+    fq a_z{ 0xfef593c9ce1df132, 0xe0486f801303c27d, 0x9bbd01ab881dc08e, 0x2a589badf38ec0f3 };
+    
+    g1::element a;
     g1::element b;
     g1::element c;
     g1::element d;
     g1::element e;
-
     g1::element result;
     g1::element expected;
+   
+    a.x = a_x;
+    a.y = a_y;
+    a.z = a_z;
 
-    b = a.dbl(); // b = 2a
-    c = b.dbl(); // c = 4a
+    b = a.dbl();    // b = 2a
+    c = b.dbl();    // c = 4a
 
     d = a + b;      // d = 3a
     e = a + c;      // e = 5a
     result = d + e; // result = 8a
 
     expected = c.dbl(); // expected = 8a
+
+    result.x = result.x.from_montgomery_form();
+    result.y = result.y.from_montgomery_form();
+    result.z = result.z.from_montgomery_form();
+    expected.x = expected.x.from_montgomery_form();
+    expected.y = expected.y.from_montgomery_form();
+    expected.z = expected.z.from_montgomery_form();
+    
+    printf("result.x.data[0] is: %zu\n", result.x.data[0]);
+    printf("result.x.data[1] is: %zu\n", result.x.data[1]);
+    printf("result.x.data[2] is: %zu\n", result.x.data[2]);
+    printf("result.x.data[3] is: %zu\n", result.x.data[3]);
+
+    printf("result.y.data[0] is: %zu\n", result.y.data[0]);
+    printf("result.y.data[1] is: %zu\n", result.y.data[1]);
+    printf("result.y.data[2] is: %zu\n", result.y.data[2]);
+    printf("result.y.data[3] is: %zu\n", result.y.data[3]);
+
+    printf("result.z.data[0] is: %zu\n", result.z.data[0]);
+    printf("result.z.data[1] is: %zu\n", result.z.data[1]);
+    printf("result.z.data[2] is: %zu\n", result.z.data[2]);
+    printf("result.z.data[3] is: %zu\n", result.z.data[3]);
+    
+    printf("expected.x.data[0] is: %zu\n", expected.x.data[0]);
+    printf("expected.x.data[1] is: %zu\n", expected.x.data[1]);
+    printf("expected.x.data[2] is: %zu\n", expected.x.data[2]);
+    printf("expected.x.data[3] is: %zu\n", expected.x.data[3]);
+
+    printf("expected.y.data[0] is: %zu\n", expected.y.data[0]);
+    printf("expected.y.data[1] is: %zu\n", expected.y.data[1]);
+    printf("expected.y.data[2] is: %zu\n", expected.y.data[2]);
+    printf("expected.y.data[3] is: %zu\n", expected.y.data[3]);
+
+    printf("expected.z.data[0] is: %zu\n", expected.z.data[0]);
+    printf("expected.z.data[1] is: %zu\n", expected.z.data[1]);
+    printf("expected.z.data[2] is: %zu\n", expected.z.data[2]);
+    printf("expected.z.data[3] is: %zu\n", expected.z.data[3]);
 
     EXPECT_EQ(result == expected, true);
 }
@@ -300,13 +576,15 @@ TEST(g1, group_exponentiation_check_against_constants)
 
 TEST(g1, operator_ordering)
 {
-    // fq a_x{ 0x92716caa6cac6d26, 0x1e6e234136736544, 0x1bb04588cde00af0, 0x9a2ac922d97e6f5 };
+    fq a_x{ 0x92716caa6cac6d26, 0x1e6e234136736544, 0x1bb04588cde00af0, 0x9a2ac922d97e6f5 };
     // fq a_y{ 0x9e693aeb52d79d2d, 0xf0c1895a61e5e975, 0x18cd7f5310ced70f, 0xac67920a22939ad };
     // fq a_z{ 0xfef593c9ce1df132, 0xe0486f801303c27d, 0x9bbd01ab881dc08e, 0x2a589badf38ec0f9 };
     fr scalar{ 0xcfbfd4441138823e, 0xb5f817e28a1ef904, 0xefb7c5629dcc1c42, 0x1a9ed3d6f846230e };
     // fq expected_x{ 0x2a9d0201fccca20, 0x36f969b294f31776, 0xee5534422a6f646, 0x911dbc6b02310b6 };
     // fq expected_y{ 0x14c30aaeb4f135ef, 0x9c27c128ea2017a1, 0xf9b7d80c8315eabf, 0x35e628df8add760 };
     // fq expected_z{ 0xa43fe96673d10eb3, 0x88fbe6351753d410, 0x45c21cc9d99cb7d, 0x3018020aa6e9ede5 };
+
+    fq::one();
 
     g1::element a = g1::one;
     g1::affine_element b(a);

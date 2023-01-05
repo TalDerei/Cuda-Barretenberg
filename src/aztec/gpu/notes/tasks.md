@@ -1,0 +1,30 @@
+# Implementation Plan
+- [x] Set up a cloud infrastructure (NVIDIA A10 (Ampere) w/ 24 GB VRAM) on Oracle Cloud
+- [x] Initialize Barretenberg repo
+- [x] Integrate cuda-fixnum external library and add cuda / nvcc support
+- [x] Set up Nvsight Compute profiling software
+- [x] Implement finite field (FF) logic on the GPU
+    - [x] Understand the algorithm, and the difference between montogomery multiplication and montogomery reduction schemes
+    - [x] Extract the montogomery multiplication (CIOS) implementation to a seperate benchmarking file and get it compiling
+    - [x] Implement addition/subtraction operations on GPU
+    - [x] Understand Barretenberg's C++ implementation, and benchmark for correctness and performance
+    - [x] Implement unit tests for fq / fr (base and scalar fields)
+- [x] Implement BN254 / Grumpkin elliptic curve (EC) logic on the GPU   
+    - [x] Understand the differences between BN-254 and Grumpkin ECs
+    - [x] Implement unit tests for G1 BN-254
+- [x] Benchmark FF and ECC implementations on CPU
+    - [x] Benchmark finite field arithemtic to establish CPU baseline (bench suite already created)
+    - [x] Benchmark elliptic curve operations to establish CPU baseline
+- [x] Benchmark Aztec's MSM, FFT, and Plonk algorithms on CPU
+    - [x] Benchmark Pippenger's bucket algorithm
+    - [x] Benchmark Fast Fourier Transform algorithm
+    - [x] Benchmark Plonk prover
+- [ ] Benchmark FF and ECC implementations on GPU
+    - [ ] Create finite field bench suite for GPU
+    - [ ] Create elliptic curve bench suite for GPU
+    - [ ] Benchmark finite field arithemtic and elliptic curve operations to establish GPU baseline
+- [ ] Multi-scalar multiplication (MSM)
+    - [ ] Understand Barretenberg’s multi-exponentiation CPU implementation 
+    - [ ] Understand Supranational’s MSM GPU kernel (sppark) module
+    - [x] Benchmark Zprize MSM implementation on GPU 
+    - [ ] Adapt Supranational’s MSM scheme into Barretenberg
