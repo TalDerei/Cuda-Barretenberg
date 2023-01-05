@@ -48,7 +48,7 @@ int main(int, char**) {
     cudaMallocManaged(&b, LIMBS_NUM * sizeof(uint64_t));
     cudaMallocManaged(&res, LIMBS * sizeof(uint64_t));
 
-    // dim3 variables
+    // Dim3 variables
     dim3 THREADS(LIMBS_NUM);
     dim3 GRID(POINTS);
 

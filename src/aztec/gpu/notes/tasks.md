@@ -24,7 +24,7 @@
     - [ ] Create elliptic curve bench suite for GPU
     - [ ] Benchmark finite field arithemtic and elliptic curve operations to establish GPU baseline
 - [ ] Multi-scalar multiplication (MSM)
-    - [ ] Implement simple map-reduce in Cuda
     - [ ] Understand Barretenberg’s multi-exponentiation CPU implementation 
-    - [ ] Understand Supranational’s MSM GPU kernel module
+    - [ ] Understand Supranational’s MSM GPU kernel (sppark) module
+    - [x] Benchmark Zprize MSM implementation on GPU 
     - [ ] Adapt Supranational’s MSM scheme into Barretenberg
