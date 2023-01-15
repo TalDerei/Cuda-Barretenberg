@@ -2,6 +2,7 @@
 #include <ecc/curves/bn254/fr.hpp>
 #include <numeric/bitop/get_msb.hpp>
 #include <plonk/composer/standard_composer.hpp>
+#include <plonk/composer/turbo_composer.hpp>
 #include <plonk/proof_system/prover/prover.hpp>
 #include <plonk/proof_system/verifier/verifier.hpp>
 #include <stdlib/primitives/field/field.hpp>

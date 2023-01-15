@@ -24,7 +24,7 @@
     - [ ] Create elliptic curve bench suite for GPU
     - [ ] Benchmark finite field arithemtic and elliptic curve operations to establish GPU baseline
 - [ ] Multi-scalar multiplication (MSM)
-    - [ ] Understand Barretenberg’s multi-exponentiation CPU implementation 
-    - [ ] Understand Supranational’s MSM GPU kernel (sppark) module
+    - [x] Understand Barretenberg’s multi-exponentiation CPU implementation 
     - [x] Benchmark Zprize MSM implementation on GPU 
+    - [ ] Understand Supranational’s MSM GPU kernel (sppark) module
     - [ ] Adapt Supranational’s MSM scheme into Barretenberg

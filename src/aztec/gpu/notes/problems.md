@@ -50,4 +50,3 @@
 ```Need to figure out why the pippenger and polynomial bench isn't working```
 
     - Ignition trusted setup ceremony says 100.8M (~2^26-2^27). It’s split up across 20 files, and ./bootstrap.sh was only configured to download the first 3 transcripts. Running “./download_ignition.sh” downloads the rest of the transcripts. Still, the pippenger bench is segfaulting (core dumped) for some reason. Update: I fixed the seg faults by pointing to the correct srs_db directory and commenting out some benchmark tests. Need to also figure out the difference in execution times between the pippenger and polynomial benches for Multi-scalar multiplication...update: seems like std::chrono time is generally slower in benchmarking. 
-
