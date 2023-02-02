@@ -28,3 +28,7 @@
     - [x] Benchmark Zprize MSM implementation on GPU 
     - [ ] Understand Supranational’s MSM GPU kernel (sppark) module
     - [ ] Adapt Supranational’s MSM scheme into Barretenberg
+        - [ ] Add comments to understand code
+        - [ ] Remove rust bindings
+        - [ ] Implement arithmetic over BN-254 curve
+        - [ ] Switch to Lagrange SRS over monomial SRS

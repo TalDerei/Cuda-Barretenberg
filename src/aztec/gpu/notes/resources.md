@@ -10,7 +10,6 @@ Hardware Acceleration Resources:
 7. Hardware Acceleration for Zero Knowledge Proofs: https://www.paradigm.xyz/2022/04/zk-hardware
 8. Accelerating ZKP's through Specialized Hardware (Chain Reaction): https://www.youtube.com/watch?v=nPJTi11vAsg&ab_channel=ZeroKnowledge
 9. Hardware Accelerated Modular Multiplication for ZKProofs: https://www.youtube.com/watch?v=iffJnjbeeag&ab_channel=ZKProofStandards
-10. Measuring SNARK performance: Frontends, Backends, and the Future: https://a16zcrypto.com/measuring-snark-performance-frontends-backends-and-the-future/
 11. Cloud-ZK: A Toolkit for Developing ZKP Acceleration in the Cloud: https://medium.com/@ingonyama/cloud-zk-a-toolkit-for-developing-zkp-acceleration-in-the-cloud-3d670c09c6ed
 12. Need for Speed Zero-Knowledge: https://amberlabs.substack.com/p/need-for-speed-zero-knowledge?r=12mhg4&utm_medium=ios
 13. Zero Knowledge Proof — FPGA or GPU: https://trapdoortech.medium.com/zero-knowledge-proof-fpga-or-gpu-97b96ffbf0f
@@ -41,6 +40,12 @@ Plonk Resources:
 14. ZK Whiteboard Sessions – Module Five: PLONK and Custom Gates with Adrian Hamelink: https://www.youtube.com/watch?v=Uldlq35Se3k
 15. PlonK Extensions - Ying Tong Lai: https://www.youtube.com/watch?v=NnN86f6wADk
 16. The Anatomy of Proof Generation: https://scroll.io/blog/proofGeneration
+17. Proof Compression: https://medium.com/aztec-protocol/proof-compression-a318f478d575
+18. Measuring SNARK Performance: Frontends, Backends, and the Future: https://a16zcrypto.com/measuring-snark-performance-frontends-backends-and-the-future/
+19. SNARK Security and Performance: https://a16zcrypto.com/snark-security-and-performance/
+SNARK Design with Justin Thaler | a16z Crypto Research Talks:
+20. https://www.youtube.com/watch?v=tg6lKPdR_e4
+From AIRs to RAPs - how PLONK-style arithmetization works: https://hackmd.io/@aztec-network/plonk-arithmetiization-air
 
 Multi-Scalar Multiplication (MSM) Resources: 
 1. Speeding Up Multi-Scalar Multiplication over Fixed Points: https://www.youtube.com/watch?v=nhA6hBGq3Xk
@@ -50,8 +55,8 @@ Multi-Scalar Multiplication (MSM) Resources:
 5. ZPrize MSM: https://github.com/z-prize/2022-entries/tree/main/open-division/prize1-msm/prize1a-msm-gpu
 6. LedgerFest22 Multi-scalar Multiplications on Elliptic Curves: https://www.youtube.com/watch?v=_fGXz_pnj6g
 7. FPGA Acceleration of Multi-Scalar Multiplication - Emanuele Cesena (Jump): https://www.youtube.com/watch?v=aZ3CzKZBK38
-8. Multiscalar Multiplication: Strategies and Challenges: https://www.entropy1729.com/multiscalar-multiplication/
-9. Eyes on the prize: an overview of ZPrize solutions for the MSM challenge using CUDA: https://www.entropy1729.com/eyes-on-the-prize-an-overview-of-zprize-solutions-on-the-msm-challenge-using-cuda/
+8. Multiscalar Multiplication: Strategies and Challenges: https://www.notamonadtutorial.com/multiscalar-multiplication-strategies-and-challenges/
+9. Eyes on the prize: an overview of ZPrize solutions for the MSM challenge using CUDA: https://www.notamonadtutorial.com/eyes-on-the-prize/?ref=not-a-monad-tutorial-newsletter&attribution_id=63b22aa8b01a7b003d656e7b&attribution_type=post
 
 Fast-Fourier Transforms (FFT) Resources: 
 1. Weird ways to multiply really fast with Karatsuba, Toom–Cook and Fourier: 

@@ -25,8 +25,8 @@
     Usually we're used to working 32-bit/64-bit integers. With SNARK provers, the integers are much larger. The integers are 256 bits and represented using arrays of integers. For example, we could represent them using an array of 4 64-bit integers (since 4 * 64 = 256 > 254). 
 
     Q. Difference between BN-254 and Grumpkin curves?
-        BN-254 is pairing-friendly elliptic curve. Grumpkin is a curve on top of BN-254 for SNARKL efficient group operations. It forms a curve cycle with BN-254, so the field and group order of Grumpkin are equal group and field order of BN-254. 
+        BN-254 is pairing-friendly elliptic curve. Grumpkin is a curve on top of BN-254 for SNARK efficient group operations. It forms a curve cycle with BN-254, so the field and group order of Grumpkin are equal group and field order of BN-254. 
 
 ```3. SRS for MSM```
     ## SRS
-    Q. Why does lagrange base vs monomial bases for SRS work better for MSM, and what are the proving times?
+    Q. Why does lagrange base vs monomial bases for SRS work better for MSM, conceptually?
