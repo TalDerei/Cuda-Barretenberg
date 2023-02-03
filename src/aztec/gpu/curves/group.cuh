@@ -1,10 +1,10 @@
+#include "field.cu"
+#include "element.cu"
 #include <cstdint>
 #include <stdio.h>
 #include <cstdio>
 #include <chrono>
 #include <iostream>
-#include "field.cu"
-#include "element.cuh"
 
 using namespace std;
 
@@ -21,8 +21,8 @@ __device__ __constant__ var b_bn_254 [LIMBS] {
 };
 
 __device__ __constant__ var one_x_bn_254[LIMBS] = {
-    1UL, 0UL, 
-    0UL, 0UL
+    0xd35d438dc58f0d9dUL, 0xa78eb28f5c70b3dUL, 
+    0x666ea36f7879462cUL, 0xe0a77c19a07df2fUL
 };
 
 __device__ __constant__ var one_y_bn_254 [LIMBS] = {
@@ -37,8 +37,8 @@ __device__ __constant__ bool has_a_bn_254 = false;
 
 /* -------------------------- Grumpkin G1 Parameters ---------------------------------------------- */
 namespace grumpkin {
-    // typedef barretenberg::fr fq;
-    // typedef barretenberg::fq fr;
+    typedef gpu_barretenberg::fr_gpu fq;
+    typedef gpu_barretenberg::fq_gpu fr;
 
     __device__ __constant__ var b_grumpkin[LIMBS] = {
         0xdd7056026000005a, 0x223fa97acb319311, 
@@ -52,8 +52,8 @@ namespace grumpkin {
 
     // Generator point = (x, y) = (1, sqrt(-15))
     __device__ __constant__ var one_x_grumpkin[LIMBS] = {
-        1UL, 0UL, 
-        0UL, 0UL
+        0xac96341c4ffffffbUL, 0x36fc76959f60cd29UL, 
+        0x666ea36f7879462eUL, 0xe0a77c19a07df2fUL
     };
 
     __device__ __constant__ var one_y_grumpkin[LIMBS] = {
@@ -68,7 +68,7 @@ namespace grumpkin {
 }
 
 /* -------------------------- G1 Elliptic Curve Operations ---------------------------------------------- */
-// Group class. Represents an elliptic curve group element
+// Group class that represents an elliptic curve group element
 template < typename fq_gpu > 
 class group_gpu {
     public:    
@@ -98,6 +98,7 @@ class group_gpu {
         __device__ static void doubling(var X, var Y, var Z, var &res_x, var &res_y, var &res_z) noexcept;
         
         __device__ static void add(var X1, var Y1, var Z1, var X2, var Y2, var Z2, var &res_x, var &res_y, var &res_z) noexcept;
-    };
-    typedef group_gpu<fq_gpu> g1;
+};
+typedef group_gpu<fq_gpu> g1;
+
 }

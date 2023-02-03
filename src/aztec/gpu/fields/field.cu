@@ -6,36 +6,36 @@ using namespace std;
 using namespace gpu_barretenberg;
 
 // Templated with base and scalar fields
-template<class params, class _params> 
-__device__ field_gpu<params, _params>::field_gpu(var a, var b, var c, var d) noexcept
+template<class params> 
+__device__ field_gpu<params>::field_gpu(var a, var b, var c, var d) noexcept
     : data{ a, b, c, d } {};
     
-template<class params, class _params> 
-__device__ field_gpu<params, _params> field_gpu<params, _params>::zero() noexcept {
+template<class params> 
+__device__ field_gpu<params> field_gpu<params>::zero() noexcept {
     return field_gpu(0, 0, 0, 0); 
 }
 
-template<class params, class _params> 
-__device__ bool field_gpu<params, _params>::is_zero() const noexcept {
+template<class params> 
+__device__ bool field_gpu<params>::is_zero() const noexcept {
     return ((data[0] | data[1] | data[2] | data[3]) == 0);
 }
 
-template<class params, class _params> 
-__device__ var field_gpu<params, _params>::equal(const var x, const var y) { 
+template<class params> 
+__device__ var field_gpu<params>::equal(const var x, const var y) { 
     return fixnum::cmp(x, y) == 0; 
 }
 
 // Load operation copies data from main memory into a register
-template<class params, class _params> 
-__device__ var field_gpu<params, _params>::load(var x, var &res) {
+template<class params> 
+__device__ var field_gpu<params>::load(var x, var &res) {
     int id = params::lane();
     res = x;
     return res;
 }
 
 // Store operation copies data from a register into main memory
-template<class params, class _params> 
-__device__ void field_gpu<params, _params>::store(var *mem, const field_gpu &x) {
+template<class params> 
+__device__ void field_gpu<params>::store(var *mem, const field_gpu &x) {
     int id = params::lane();
     if (id < LIMBS) {
         mem[id] = x.data;
@@ -43,8 +43,8 @@ __device__ void field_gpu<params, _params>::store(var *mem, const field_gpu &x) 
 }
 
 // Addition operation
-template<class params, class _params> 
-__device__ var field_gpu<params, _params>::add(const var a, const var b, var &res) {
+template<class params> 
+__device__ var field_gpu<params>::add(const var a, const var b, var &res) {
     int br;
     var x = a, y = b, z, r;
     var mod = params::mod();
@@ -55,8 +55,8 @@ __device__ var field_gpu<params, _params>::add(const var a, const var b, var &re
 }
 
 // Subtraction operation
-template<class params, class _params> 
-__device__ var field_gpu<params, _params>::sub(const var x, const var y, var &res) {
+template<class params> 
+__device__ var field_gpu<params>::sub(const var x, const var y, var &res) {
     int br;
     var r, mod = params::mod();
     fixnum::sub_br(r, br, x, y);
@@ -67,37 +67,37 @@ __device__ var field_gpu<params, _params>::sub(const var x, const var y, var &re
 }
 
 // Square operation -- worth special casing for 1.5 - 2x speed improvement
-template<class params, class _params> 
-__device__ var field_gpu<params, _params>::square(var x, var &y) {
+template<class params> 
+__device__ var field_gpu<params>::square(var x, var &y) {
     field_gpu::mul(x, x, y);
     return y;
 }
 
-template<class params, class _params> 
-__device__ var field_gpu<params, _params>::to_monty(var x, var &res) {
+template<class params> 
+__device__ var field_gpu<params>::to_monty(var x, var &res) {
     var r_sqr_mod = params::monty();
     field_gpu::mul(x, r_sqr_mod, res);
     return res;
 }
 
-template<class params, class _params> 
-__device__ var field_gpu<params, _params>::from_monty(var x, var &res) {
+template<class params> 
+__device__ var field_gpu<params>::from_monty(var x, var &res) {
     var mont;
     mont = fixnum::one();
     mul(x, mont, res);
     return res;
 }
 
-template<class params, class _params> 
-__device__ var field_gpu<params, _params>::neg(var &x, var &res) {
+template<class params> 
+__device__ var field_gpu<params>::neg(var &x, var &res) {
     var mod = params::mod();
     fixnum::sub(res, mod, x);
     return res;
 }
 
 // Mongomery multiplication (CIOS) operation
-template<class params, class _params> 
-__device__ var field_gpu<params, _params>::mul(const var a, const var b, var &res) {
+template<class params> 
+__device__ var field_gpu<params>::mul(const var a, const var b, var &res) {
     auto grp = fixnum::layout();
     int L = grp.thread_rank();
     var mod = params::mod();

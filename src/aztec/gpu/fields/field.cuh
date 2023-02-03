@@ -143,7 +143,7 @@ struct BN254_MOD_SCALAR {
 };
 
 /* -------------------------- Finite Field Arithmetic for G1 ---------------------------------------------- */
-template < typename params, typename _params > 
+template < typename params > 
 class field_gpu {
     public:    
         var data[4];    
@@ -176,8 +176,10 @@ class field_gpu {
         __device__ static var from_monty(var x, var &res);
 
         __device__ static var neg(var &x, var &res);
-    };
-    typedef field_gpu<BN254_MOD_BASE, BN254_MOD_SCALAR> fq_gpu;
+};
+typedef field_gpu<BN254_MOD_BASE> fq_gpu;
+typedef field_gpu<BN254_MOD_SCALAR> fr_gpu;
+
 }
 
 // TODO: Need to add extension fields (quadtratic and cubic)

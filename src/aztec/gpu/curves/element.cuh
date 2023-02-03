@@ -15,12 +15,13 @@ class element {
     public:    
         fq_gpu x, y, z;
 
-        // Constructor 
         __device__ element() noexcept {}
+        
         __device__ element(const fq_gpu &a, const fq_gpu &b, const fq_gpu &c) noexcept;
+        
         __device__ element(const element& other) noexcept;
 
-    };
+};
 
 /* -------------------------- Affine Representation ---------------------------------------------- */
 // Affine element class. Implements elliptic curve group arithmetic using Affine coordinates
@@ -34,6 +35,7 @@ class affine_element {
         __device__ affine_element(const fq_gpu &a, const fq_gpu &b) noexcept;
 
         __device__ affine_element(const affine_element &other) noexcept;
-    };
+};
+
 }
 }
