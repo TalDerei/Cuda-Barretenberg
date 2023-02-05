@@ -1,17 +1,27 @@
-// #include "field.cu"
-// #include "element.cu"
+#include "./common.cuh"
 
-// // Typedef points, scalars, and buckets
-// typedef element<fq_gpu> point_t;
-// typedef fq_gpu scalar_t;
-// typedef affine_element<fq_gpu> bucket_t;
+using namespace std;
 
-// // Typedef 
-// typedef pippenger_t<bucket_t, point_t, affine_t, scalar_t> pipp_t;
+namespace pippenger_common {
 
-// // MSM context used store persistent state
-// template < typename bucket_t, typename affine_t, typename scalar_t > 
-// class Context {
-//     pipp_t pipp;
-//     typename pipp_t::MSMConfig config;
-    
+/**
+ * Initialize parameters for MSM
+*/
+template <class bucket_t, class point_t, class scalar_t>
+pippenger_t<bucket_t, point_t, scalar_t> pippenger_t<bucket_t, point_t, scalar_t>::initialize_msm(size_t npoints) {
+    // Set cuda device parameters    
+    cudaSetDevice(0);
+    cudaDeviceProp prop;
+    cudaGetDeviceProperties(&prop, 0);
+    sm_count = prop.multiProcessorCount;
+
+    // Set MSM parameters
+    pippenger_t config;
+    config.npoints = npoints;
+    config.n = (npoints + WARP - 1) & ((size_t)0 - WARP);
+    config.N = (sm_count * 256) / (NTHREADS * NWINS);
+
+    return config;
+}
+
+}

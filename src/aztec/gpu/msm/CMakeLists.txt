@@ -6,7 +6,7 @@ set(CMAKE_CUDA_STANDARD 17)
 include_directories(../arithmetic)
 include_directories(../fields)
 include_directories(../curves)
-include_directories(../reference_string)
+include_directories(../srs)
 
 # Pippenger's bucket method
 add_executable(
