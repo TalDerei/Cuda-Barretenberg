@@ -12,35 +12,92 @@ namespace pippenger_common {
 #define WBITS 17
 #define NWINS ((NBITS + WBITS - 1) / WBITS)   
 
+size_t NUM_POINTS = 1 << 15;
 static const size_t NUM_BATCH_THREADS = 2;
 
 /**
  * Typedef points, scalars, and buckets 
 */
 typedef element<fq_gpu> point_t;
-typedef fq_gpu scalar_t;
+typedef fr_gpu scalar_t;
 typedef affine_element<fq_gpu> bucket_t;
+typedef affine_element<fq_gpu> affine_t;
 
 /**
- * Pippenger MSM class
+ * Allocate device storage and buffers
 */
-template <typename bucket_t, typename point_t, typename scalar_t> 
+template < typename T >
+class device_ptr {
+    public:
+        vector<T*> d_ptrs;
+
+        device_ptr() {}
+        
+        ~device_ptr() {}
+
+        size_t allocate(size_t bytes);
+
+        size_t size();
+};
+
+/**
+ * Allocate cuda streams
+*/
+template < typename T >
+class stream_t {
+    public:
+        cudaStream_t stream;
+
+        stream_t(int device);
+
+        ~stream_t() {}
+};
+
+/**
+ * Pippenger MSM 
+*/
+template < typename bucket_t, typename point_t, typename scalar_t, typename affine_t > 
 class pippenger_t {
     private:
         size_t sm_count;
+        device_ptr<affine_t> device_base_ptrs;
+        device_ptr<scalar_t> device_scalar_ptrs;
+        device_ptr<bucket_t> device_bucket_ptrs;
     public: 
         size_t npoints;        
         size_t N;
         size_t n;        
     
         pippenger_t initialize_msm(size_t npoints);
+        
+        size_t get_size_bases(pippenger_t &config);
+
+        size_t get_size_scalars(pippenger_t &config);
+
+        size_t get_size_buckets(pippenger_t &config);
+
+        size_t allocate_bases(pippenger_t &config);
+
+        size_t allocate_scalars(pippenger_t &config);
+        
+        size_t allocate_buckets(pippenger_t &config);
+
+        size_t num_base_ptrs();
+
+        size_t num_scalar_ptrs();
+
+        size_t num_bucket_ptrs();
+
+        void transfer_bases_to_device(pippenger_t &config, size_t d_points_idx, const affine_t points[], size_t ffi_affine_sz, cudaStream_t s);
+
+        void transfer_scalars_to_device(pippenger_t &config, size_t d_scalars_idx, const scalar_t scalars[], cudaStream_t s);
 };
-typedef pippenger_t<bucket_t, point_t, scalar_t> pipp_t;
+typedef pippenger_t<bucket_t, point_t, scalar_t, affine_t> pipp_t;
 
 /**
- * MSM context used to store persistent state
+ * Context used to store persistent state
 */
-template <typename bucket_t, typename point_t, typename scalar_t> 
+template < typename bucket_t, typename point_t, typename scalar_t, typename affine_t > 
 struct Context {
     public: 
         pipp_t pipp;
