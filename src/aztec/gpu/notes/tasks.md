@@ -18,17 +18,20 @@
 - [x] Benchmark Aztec's MSM, FFT, and Plonk algorithms on CPU
     - [x] Benchmark Pippenger's bucket algorithm
     - [x] Benchmark Fast Fourier Transform algorithm
-    - [x] Benchmark Plonk prover
+    - [x] Benchmark vanilla Plonk prover
+    - [ ] Benchmark TurboPlonk and UltraPlonk provers
 - [ ] Benchmark FF and ECC implementations on GPU
     - [ ] Create finite field bench suite for GPU
     - [ ] Create elliptic curve bench suite for GPU
     - [ ] Benchmark finite field arithemtic and elliptic curve operations to establish GPU baseline
+- [ ] Benchmark MSM Pippenger implementation on GPU
 - [ ] Multi-scalar multiplication (MSM)
     - [x] Understand Barretenberg’s multi-exponentiation CPU implementation 
     - [x] Benchmark Zprize MSM implementation on GPU 
     - [ ] Understand Supranational’s MSM GPU kernel (sppark) module
     - [ ] Adapt Supranational’s MSM scheme into Barretenberg
         - [ ] Add comments to understand code
-        - [ ] Remove rust bindings
-        - [ ] Implement arithmetic over BN-254 curve
+        - [x] Remove rust bindings
+        - [ ] Implement field arithmetic over different base and scalar fields
+        - [ ] Implement curve arithmetic over different BN-254 curve 
         - [ ] Switch to Lagrange SRS over monomial SRS

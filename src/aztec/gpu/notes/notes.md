@@ -28,5 +28,4 @@
         BN-254 is pairing-friendly elliptic curve. Grumpkin is a curve on top of BN-254 for SNARK efficient group operations. It forms a curve cycle with BN-254, so the field and group order of Grumpkin are equal group and field order of BN-254. 
 
 ```3. SRS for MSM```
-    ## SRS
     Q. Why does lagrange base vs monomial bases for SRS work better for MSM, conceptually?
