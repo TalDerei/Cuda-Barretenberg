@@ -3,14 +3,13 @@
 using namespace std;
 
 namespace pippenger_common {
-
 /***************************************** Function declerations for 'pippenger_t' class  *****************************************/
 
 /**
- * Initialize parameters for MSM
+ * Initialize parameters for MSM via specialized initialization 
 */
-template <class bucket_t, class point_t, class scalar_t, class affine_t>
-pippenger_t<bucket_t, point_t, scalar_t, affine_t> pippenger_t<bucket_t, point_t, scalar_t, affine_t>::initialize_msm(size_t npoints) {
+template <>
+pipp_t pipp_t::initialize_msm(size_t npoints) {
     // Set cuda device parameters    
     cudaSetDevice(0);
     cudaDeviceProp prop;
@@ -18,7 +17,7 @@ pippenger_t<bucket_t, point_t, scalar_t, affine_t> pippenger_t<bucket_t, point_t
     sm_count = prop.multiProcessorCount;
 
     // Set MSM parameters
-    pippenger_t config;
+    pipp_t config;
     config.npoints = npoints;
     config.n = (npoints + WARP - 1) & ((size_t)0 - WARP);
     config.N = (sm_count * 256) / (NTHREADS * NWINS);
@@ -98,9 +97,12 @@ size_t pippenger_t<bucket_t, point_t, scalar_t, affine_t>::num_bucket_ptrs() {
     return device_bucket_ptrs.size();
 }
 
+/**
+ * Transfer base points to GPU device
+*/
 template <class bucket_t, class point_t, class scalar_t, class affine_t>
 void pippenger_t<bucket_t, point_t, scalar_t, affine_t>::transfer_bases_to_device(
-pippenger_t &config, size_t d_points_idx, const affine_t points[], size_t ffi_affine_sz, cudaStream_t s) {
+pippenger_t &config, size_t d_points_idx, const affine_t points[], size_t ffi_affine_sz) {
     cudaSetDevice(0);
     cudaStream_t stream = 0; // default stream
     affine_t *d_points = device_base_ptrs[d_points_idx];
@@ -113,13 +115,16 @@ pippenger_t &config, size_t d_points_idx, const affine_t points[], size_t ffi_af
         }
     }
     else {
-        cudaError_t status = cudaMemcpy2DAsync(d_points, points, config.npoints*sizeof(*d_points), cudaMemcpyHostToDevice, stream);
+        cudaError_t status = cudaMemcpyAsync(d_points, points, config.npoints * sizeof(*d_points), cudaMemcpyHostToDevice, stream);
         if (status != cudaSuccess) {
             printf("Error copying bases to device\n");
         } 
     }
 }
 
+/**
+ * Transfer scalars to GPU device
+*/
 template <class bucket_t, class point_t, class scalar_t, class affine_t>
 void pippenger_t<bucket_t, point_t, scalar_t, affine_t>::transfer_scalars_to_device(
 pippenger_t &config, size_t d_scalars_idx, const scalar_t scalars[], cudaStream_t s) {
@@ -135,6 +140,9 @@ pippenger_t &config, size_t d_scalars_idx, const scalar_t scalars[], cudaStream_
 
 /***************************************** Function declerations for 'device_ptr' class  *****************************************/
 
+/**
+ * Allocate memory using cudaMalloc
+*/
 template <class T>
 size_t device_ptr<T>::allocate(size_t bytes) {
     T* d_ptr;
@@ -143,9 +151,33 @@ size_t device_ptr<T>::allocate(size_t bytes) {
     return d_ptrs.size() - 1;
 }
 
+/**
+ * Get size of d_ptrs vector
+*/
 template <class T>
 size_t device_ptr<T>::size() {
     return d_ptrs.size();
+}
+
+/**
+ * Operator overloading for device_ptr
+*/
+template <class T>
+T* device_ptr<T>::operator[](size_t i) {
+    if (i > d_ptrs.size() - 1) {
+        cout << cudaErrorInvalidDevicePointer << endl;
+    }
+    return d_ptrs[i];
+}
+
+/***************************************** Function declerations for 'result_t' class  *****************************************/
+
+/**
+ * Get results container
+*/
+template <class T>
+result_t<T>::result_container_t result_t<T>::get_results_container(pipp_t &config) {
+    result_container_t res(config.N);
 }
 
 }

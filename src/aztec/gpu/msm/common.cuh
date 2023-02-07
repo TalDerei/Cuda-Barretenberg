@@ -38,6 +38,8 @@ class device_ptr {
         size_t allocate(size_t bytes);
 
         size_t size();
+
+        T* operator[](size_t i);
 };
 
 /**
@@ -88,7 +90,7 @@ class pippenger_t {
 
         size_t num_bucket_ptrs();
 
-        void transfer_bases_to_device(pippenger_t &config, size_t d_points_idx, const affine_t points[], size_t ffi_affine_sz, cudaStream_t s);
+        void transfer_bases_to_device(pippenger_t &config, size_t d_points_idx, const affine_t points[], size_t ffi_affine_sz);
 
         void transfer_scalars_to_device(pippenger_t &config, size_t d_scalars_idx, const scalar_t scalars[], cudaStream_t s);
 };
@@ -107,5 +109,20 @@ struct Context {
         size_t d_buckets_idx; 
         size_t d_scalar_idx[NUM_BATCH_THREADS];  
         scalar_t *h_scalars;
-    };
+};
+
+/**
+ * Result containers
+*/
+template < typename T >
+class result_t {
+    T ret[NWINS][NTHREADS][2];
+    public:
+        result_t() {}
+        
+        typedef vector<result_t<bucket_t>> result_container_t;
+
+        result_container_t get_results_container(pipp_t &config);
+};
+
 }
