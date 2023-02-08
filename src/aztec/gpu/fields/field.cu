@@ -104,7 +104,14 @@ __device__ var field_gpu<params>::mul(const var a, const var b, var &res) {
 
     var x = a, y = b, z = digit::zero();
     var tmp;
-    digit::mul_lo(tmp, x, gpu_barretenberg::r_inv_base);
+
+    if (is_same<params, BN254_MOD_BASE>::value) {
+        digit::mul_lo(tmp, x, gpu_barretenberg::r_inv_base);    
+    }
+    else {
+         digit::mul_lo(tmp, x, gpu_barretenberg::r_inv_scalar);    
+    }
+
     digit::mul_lo(tmp, tmp, grp.shfl(y, 0));
     int cy = 0;
 
@@ -114,7 +121,13 @@ __device__ var field_gpu<params>::mul(const var a, const var b, var &res) {
         var z0 = grp.shfl(z, 0);
         var tmpi = grp.shfl(tmp, i);
 
-        digit::mad_lo(u, z0, gpu_barretenberg::r_inv_base, tmpi);
+        if (is_same<params, BN254_MOD_BASE>::value) {
+            digit::mad_lo(u, z0, gpu_barretenberg::r_inv_base, tmpi);
+        }
+        else {
+            digit::mad_lo(u, z0, gpu_barretenberg::r_inv_scalar, tmpi);
+        }
+
         digit::mad_lo_cy(z, cy, mod, u, z);
         digit::mad_lo_cy(z, cy, y, xi, z);
 
