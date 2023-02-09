@@ -26,22 +26,41 @@ add_custom_target(
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
 )
 
-# field test
+# fq field test
 add_executable(
-    field_test
-    tests/field_test.cu
+    field_fq_test
+    tests/field_fq_test.cu
 )
 
 target_link_libraries(
-    field_test
+    field_fq_test
     PUBLIC
     field_library
     fixnum_library
 )
 
 add_custom_target(
-    run_field_test
-    COMMAND field_test
+    run_field_fq_test
+    COMMAND field_fq_test
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+)
+
+# fr field test
+add_executable(
+    field_fr_test
+    tests/field_fr_test.cu
+)
+
+target_link_libraries(
+    field_fr_test
+    PUBLIC
+    field_library
+    fixnum_library
+)
+
+add_custom_target(
+    run_field_fr_test
+    COMMAND field_fr_test
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
 )
 
