@@ -7,7 +7,7 @@ namespace pippenger_common {
 
 /**
  * Initialize parameters for MSM via specialized initialization 
-*/
+ */
 template <>
 pipp_t pipp_t::initialize_msm(size_t npoints) {
     // Set cuda device parameters    
@@ -27,7 +27,7 @@ pipp_t pipp_t::initialize_msm(size_t npoints) {
 
 /**
  * Calculate the amount of storage neccessary to store bases 
-*/
+ */
 template <class bucket_t, class point_t, class scalar_t, class affine_t>
 size_t pippenger_t<bucket_t, point_t, scalar_t, affine_t>::get_size_bases(pippenger_t &config) {
     return config.n * sizeof(point_t);
@@ -35,7 +35,7 @@ size_t pippenger_t<bucket_t, point_t, scalar_t, affine_t>::get_size_bases(pippen
 
 /**
  * Calculate the amount of storage neccessary to store scalars 
-*/
+ */
 template <class bucket_t, class point_t, class scalar_t, class affine_t>
 size_t pippenger_t<bucket_t, point_t, scalar_t, affine_t>::get_size_scalars(pippenger_t &config) {
     return config.n * sizeof(scalar_t);
@@ -43,7 +43,7 @@ size_t pippenger_t<bucket_t, point_t, scalar_t, affine_t>::get_size_scalars(pipp
 
 /**
  * Calculate the amount of storage neccessary to store buckets 
-*/
+ */
 template <class bucket_t, class point_t, class scalar_t, class affine_t>
 size_t pippenger_t<bucket_t, point_t, scalar_t, affine_t>::get_size_buckets(pippenger_t &config) {
     return config.N * sizeof(bucket_t) * NWINS * (1 << WBITS);
@@ -51,7 +51,7 @@ size_t pippenger_t<bucket_t, point_t, scalar_t, affine_t>::get_size_buckets(pipp
 
 /**
  * Allocate device storage for bases
-*/
+ */
 template <class bucket_t, class point_t, class scalar_t, class affine_t>
 size_t pippenger_t<bucket_t, point_t, scalar_t, affine_t>::allocate_bases(pippenger_t &config) {
     return device_base_ptrs.allocate(get_size_bases(config));
@@ -59,7 +59,7 @@ size_t pippenger_t<bucket_t, point_t, scalar_t, affine_t>::allocate_bases(pippen
 
 /**
  * Allocate device storage for scalars
-*/
+ */
 template <class bucket_t, class point_t, class scalar_t, class affine_t>
 size_t pippenger_t<bucket_t, point_t, scalar_t, affine_t>::allocate_scalars(pippenger_t &config) {
     return device_scalar_ptrs.allocate(get_size_scalars(config));
@@ -67,7 +67,7 @@ size_t pippenger_t<bucket_t, point_t, scalar_t, affine_t>::allocate_scalars(pipp
 
 /**
  * Allocate device storage for buckets
-*/
+ */
 template <class bucket_t, class point_t, class scalar_t, class affine_t>
 size_t pippenger_t<bucket_t, point_t, scalar_t, affine_t>::allocate_buckets(pippenger_t &config) {
     return device_bucket_ptrs.allocate(get_size_buckets(config));
@@ -75,7 +75,7 @@ size_t pippenger_t<bucket_t, point_t, scalar_t, affine_t>::allocate_buckets(pipp
 
 /**
  * Return size of base pointers
-*/
+ */
 template <class bucket_t, class point_t, class scalar_t, class affine_t>
 size_t pippenger_t<bucket_t, point_t, scalar_t, affine_t>::num_base_ptrs() {
     return device_base_ptrs.size();
@@ -83,7 +83,7 @@ size_t pippenger_t<bucket_t, point_t, scalar_t, affine_t>::num_base_ptrs() {
 
 /**
  * Return size of scalar pointers
-*/
+ */
 template <class bucket_t, class point_t, class scalar_t, class affine_t>
 size_t pippenger_t<bucket_t, point_t, scalar_t, affine_t>::num_scalar_ptrs() {
     return device_scalar_ptrs.size();
@@ -91,7 +91,7 @@ size_t pippenger_t<bucket_t, point_t, scalar_t, affine_t>::num_scalar_ptrs() {
 
 /**
  * Return size of bucket pointers
-*/
+ */
 template <class bucket_t, class point_t, class scalar_t, class affine_t>
 size_t pippenger_t<bucket_t, point_t, scalar_t, affine_t>::num_bucket_ptrs() {
     return device_bucket_ptrs.size();
@@ -99,7 +99,7 @@ size_t pippenger_t<bucket_t, point_t, scalar_t, affine_t>::num_bucket_ptrs() {
 
 /**
  * Transfer base points to GPU device
-*/
+ */
 template <class bucket_t, class point_t, class scalar_t, class affine_t>
 void pippenger_t<bucket_t, point_t, scalar_t, affine_t>::transfer_bases_to_device(
 pippenger_t &config, size_t d_points_idx, const affine_t points[], size_t ffi_affine_sz) {
@@ -124,7 +124,7 @@ pippenger_t &config, size_t d_points_idx, const affine_t points[], size_t ffi_af
 
 /**
  * Transfer scalars to GPU device
-*/
+ */
 template <class bucket_t, class point_t, class scalar_t, class affine_t>
 void pippenger_t<bucket_t, point_t, scalar_t, affine_t>::transfer_scalars_to_device(
 pippenger_t &config, size_t d_scalars_idx, const scalar_t scalars[], cudaStream_t s) {
@@ -142,7 +142,7 @@ pippenger_t &config, size_t d_scalars_idx, const scalar_t scalars[], cudaStream_
 
 /**
  * Allocate memory using cudaMalloc
-*/
+ */
 template <class T>
 size_t device_ptr<T>::allocate(size_t bytes) {
     T* d_ptr;
@@ -153,7 +153,7 @@ size_t device_ptr<T>::allocate(size_t bytes) {
 
 /**
  * Get size of d_ptrs vector
-*/
+ */
 template <class T>
 size_t device_ptr<T>::size() {
     return d_ptrs.size();
@@ -161,7 +161,7 @@ size_t device_ptr<T>::size() {
 
 /**
  * Operator overloading for device_ptr
-*/
+ */
 template <class T>
 T* device_ptr<T>::operator[](size_t i) {
     if (i > d_ptrs.size() - 1) {
@@ -174,7 +174,7 @@ T* device_ptr<T>::operator[](size_t i) {
 
 /**
  * Get results container
-*/
+ */
 template <class T>
 result_t<T>::result_container_t result_t<T>::get_results_container(pipp_t &config) {
     result_container_t res(config.N);

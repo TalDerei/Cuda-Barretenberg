@@ -9,7 +9,8 @@
 using namespace std;
 
 namespace gpu_barretenberg {
-/* -------------------------- BN254 G1 Parameters ---------------------------------------------- */
+/* -------------------------- BN-254 G1 Elliptic Curve Parameters ---------------------------------------------- */
+
 __device__ __constant__ var a_bn_254 [LIMBS] = { 
     0UL, 0UL, 
     0UL, 0UL
@@ -35,22 +36,25 @@ __device__ __constant__ bool can_hash_to_curve_bn_254 = true;
 __device__ __constant__ bool small_elements_bn_254 = true;
 __device__ __constant__ bool has_a_bn_254 = false;
 
-/* -------------------------- Grumpkin G1 Parameters ---------------------------------------------- */
+/* -------------------------- Grumpkin G1 Elliptic Curve Parameters ---------------------------------------------- */
+
 namespace grumpkin {
     typedef gpu_barretenberg::fr_gpu fq;
     typedef gpu_barretenberg::fq_gpu fr;
-
-    __device__ __constant__ var b_grumpkin[LIMBS] = {
-        0xdd7056026000005a, 0x223fa97acb319311, 
-        0xcc388229877910c0, 0x34394632b724eaa
-    };
 
     __device__ __constant__ var a_grumpkin[LIMBS] = {
         0UL, 0UL, 
         0UL, 0UL
     };
 
-    // Generator point = (x, y) = (1, sqrt(-15))
+    __device__ __constant__ var b_grumpkin[LIMBS] = {
+        0xdd7056026000005a, 0x223fa97acb319311, 
+        0xcc388229877910c0, 0x34394632b724eaa
+    };
+
+    /**
+     * Generator point = (x, y) = (1, sqrt(-15))
+     */
     __device__ __constant__ var one_x_grumpkin[LIMBS] = {
         0xac96341c4ffffffbUL, 0x36fc76959f60cd29UL, 
         0x666ea36f7879462eUL, 0xe0a77c19a07df2fUL
@@ -68,7 +72,10 @@ namespace grumpkin {
 }
 
 /* -------------------------- G1 Elliptic Curve Operations ---------------------------------------------- */
-// Group class that represents an elliptic curve group element
+
+/**
+ * Group class that represents an elliptic curve group element
+ */
 template < typename fq_gpu > 
 class group_gpu {
     public:    
@@ -89,15 +96,11 @@ class group_gpu {
 
         __device__ static void store_jacobian(const element &X, const var *y);
 
-        __device__ static void set_zero(const element &X);
+        __device__ static void mixed_add(var X1, var Y1, var Z1, var X2, var Y2, var &res_x, var &res_y, var &res_z);
 
-        __device__ static void is_zero(const element &X);
-
-        __device__ static void mixed_add(var X1, var Y1, var Z1, var X2, var Y2, var &res_x, var &res_y, var &res_z) noexcept;
-
-        __device__ static void doubling(var X, var Y, var Z, var &res_x, var &res_y, var &res_z) noexcept;
+        __device__ static void doubling(var X, var Y, var Z, var &res_x, var &res_y, var &res_z);
         
-        __device__ static void add(var X1, var Y1, var Z1, var X2, var Y2, var Z2, var &res_x, var &res_y, var &res_z) noexcept;
+        __device__ static void add(var X1, var Y1, var Z1, var X2, var Y2, var Z2, var &res_x, var &res_y, var &res_z);
 };
 typedef group_gpu<fq_gpu> g1;
 

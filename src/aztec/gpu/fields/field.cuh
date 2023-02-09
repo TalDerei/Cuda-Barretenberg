@@ -21,7 +21,9 @@ __device__ __constant__ static var MOD_Q_BASE[LIMBS] = {
     0xb85045b68181585dUL, 0x30644e72e131a029UL
 };
 
-// R^2 where R = 2^256 mod Q
+/**
+ * R^2 where R = 2^256 mod Q
+ */
 __device__ __constant__ static var R_SQUARED_BASE[LIMBS] = {
     0xF32CFC5B538AFA89UL, 0xB5E71911D44501FBUL,
     0x47AB1EFF0A417FF6UL, 0x06D89F71CAB8351FUL
@@ -57,7 +59,9 @@ __device__ __constant__ static var COSET_GENERATORS_BASE_3[8]{
     0x180a96573d3d9f8ULL,  0xf8b21270ddbb927ULL,  0x1d9598e8a7e39857ULL, 0x2ba010aa41eb7786ULL,
 };
 
-// -Q^{-1} (mod 2^256)
+/**
+ * -Q^{-1} (mod 2^256)
+ */ 
 __device__ __constant__ static constexpr var r_inv_base = 0x87d20782e4866389UL;
 
 __device__ __constant__ static var endo_g1_lo_base = 0x7a7bd9d4391eb18d;
@@ -77,7 +81,9 @@ const var MOD_Q_SCALAR[LIMBS] = {
     0xB85045B68181585DUL, 0x30644E72E131A029UL
 };
 
-// R^2 where R = 2^256 mod Q
+/**
+ * R^2 where R = 2^256 mod Q
+ */
 __device__ __constant__
 const var R_SQUARED_SCALAR[LIMBS] = {
     0x1BB8E645AE216DA7UL, 0x53FE3AB1E35C59E3UL,
@@ -123,7 +129,9 @@ __device__ __constant__ static var endo_minus_b1_mid_scalar = 0x6f4d8248eeb859fc
 __device__ __constant__ static var endo_b2_lo_scalar = 0x89d3256894d213e3UL;
 __device__ __constant__ static var endo_b2_mid_scalar = 0UL;
 
-// -Q^{-1} (mod 2^256)
+/**
+ * -Q^{-1} (mod 2^256)
+ */
 __device__ __constant__ static var r_inv_scalar = 0xc2e1f593efffffffUL;
 
 struct BN254_MOD_BASE {
@@ -148,14 +156,16 @@ class field_gpu {
     public:    
         var data[4];    
     
-        // Constructor 
+        /**
+         * Constructor
+        */
         __device__ field_gpu() noexcept {}
         
         __device__ field_gpu(const var a, const var b, const var c, const var d) noexcept;
 
-        __device__ static field_gpu zero() noexcept;
+        __device__ static field_gpu zero();
         
-        __device__ bool is_zero() const noexcept;
+        __device__ static bool is_zero(const var &x);
 
         __device__ static var equal(const var x, const var y);
 
@@ -181,6 +191,3 @@ typedef field_gpu<BN254_MOD_BASE> fq_gpu;
 typedef field_gpu<BN254_MOD_SCALAR> fr_gpu;
 
 }
-
-// TODO: Need to add extension fields (quadtratic and cubic)
-// TODO: Need to add rest of unit tests for Fq and Fr

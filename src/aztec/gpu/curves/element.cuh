@@ -9,7 +9,10 @@ using namespace std;
 namespace gpu_barretenberg {
 namespace group_elements { 
 /* -------------------------- Jacobian Representation ---------------------------------------------- */
-// Element class. Implements elliptic curve group arithmetic using Jacobian coordinates
+
+/**
+ * Element class. Implements elliptic curve group arithmetic using Jacobian coordinates
+ */
 template < typename fq_gpu > 
 class element {
     public:    
@@ -24,7 +27,10 @@ class element {
 };
 
 /* -------------------------- Affine Representation ---------------------------------------------- */
-// Affine element class. Implements elliptic curve group arithmetic using Affine coordinates
+
+/**
+ * Affine element class. Implements elliptic curve group arithmetic using Affine coordinates
+ */
 template < typename fq_gpu > 
 class affine_element {
     public:    

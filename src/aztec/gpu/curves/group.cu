@@ -4,12 +4,12 @@ using namespace std;
 using namespace gpu_barretenberg;
 
 template <class fq_gpu> 
-__device__ void group_gpu<fq_gpu>::load_affine(affine_element & X, const var * y) {
+__device__ void group_gpu<fq_gpu>::load_affine(affine_element &X, const var *y) {
 
 }
 
 template <class fq_gpu> 
-__device__ void group_gpu<fq_gpu>::load_jacobian(element & X, const var * y) {
+__device__ void group_gpu<fq_gpu>::load_jacobian(element &X, const var *y) {
 
 }
 
@@ -19,12 +19,12 @@ __device__ void group_gpu<fq_gpu>::is_affine(const affine_element &X) {
 }
 
 template <class fq_gpu> 
-__device__ void group_gpu<fq_gpu>::is_affine_equal(const affine_element & X) {
+__device__ void group_gpu<fq_gpu>::is_affine_equal(const affine_element &X) {
 
 }
 
 template <class fq_gpu> 
-__device__ void group_gpu<fq_gpu>::is_jacobian_equal(const affine_element & X) {
+__device__ void group_gpu<fq_gpu>::is_jacobian_equal(const affine_element &X) {
 
 }
 
@@ -38,19 +38,9 @@ __device__ void group_gpu<fq_gpu>::store_jacobian(const element &X, const var *y
 
 }
 
-template <class fq_gpu> 
-__device__ void group_gpu<fq_gpu>::set_zero(const element &X) {
-
-}
-
-template <class fq_gpu> 
-__device__ void group_gpu<fq_gpu>::is_zero(const element &X) {
-
-}
-
 // Elliptic curve algorithms: https://hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-0.html#addition-zadd-2007-m
 template <class fq_gpu>
-__device__ void group_gpu<fq_gpu>::mixed_add(var X, var Y, var Z, var A, var B, var &res_x, var &res_y, var &res_z) noexcept {
+__device__ void group_gpu<fq_gpu>::mixed_add(var X, var Y, var Z, var A, var B, var &res_x, var &res_y, var &res_z) {
     var z1z1, u2, s2, h, hh, i, j, r, v, t0, t1;
     
     // X Element
@@ -58,9 +48,7 @@ __device__ void group_gpu<fq_gpu>::mixed_add(var X, var Y, var Z, var A, var B, 
     fq_gpu::mul(A, z1z1, u2); 
     fq_gpu::mul(B, Z, s2);
     fq_gpu::mul(s2, z1z1, s2); 
-    // if (fq_gpu::equal(u2, X) && fq_gpu::equal(s2, Y)) {
-    //     // double
-    // }
+
     fq_gpu::sub(u2, X, h);   
     fq_gpu::square(h, hh);    
     fq_gpu::add(hh, hh, i);     
@@ -89,7 +77,7 @@ __device__ void group_gpu<fq_gpu>::mixed_add(var X, var Y, var Z, var A, var B, 
 }
 
 template <class fq_gpu>
-__device__ void group_gpu<fq_gpu>::doubling(var X, var Y, var Z, var &res_x, var &res_y, var &res_z) noexcept {
+__device__ void group_gpu<fq_gpu>::doubling(var X, var Y, var Z, var &res_x, var &res_y, var &res_z) {
     var T0, T1, T2, T3;
 
     // X Element
@@ -122,7 +110,7 @@ __device__ void group_gpu<fq_gpu>::doubling(var X, var Y, var Z, var &res_x, var
 }
 
 template <class fq_gpu>
-__device__ void group_gpu<fq_gpu>::add(var X1, var Y1, var Z1, var X2, var Y2, var Z2, var &res_x, var &res_y, var &res_z) noexcept {
+__device__ void group_gpu<fq_gpu>::add(var X1, var Y1, var Z1, var X2, var Y2, var Z2, var &res_x, var &res_y, var &res_z) {
     var Z1Z1, Z2Z2, U1, U2, S1, S2, F, H, I, J;
 
     // X Element
@@ -164,5 +152,7 @@ __device__ void group_gpu<fq_gpu>::add(var X1, var Y1, var Z1, var X2, var Y2, v
     fq_gpu::load(Z1, res_z);             // res_z = Z1;
 }
 
-// TODO: add is_zero() tests
-// TODO: add inifinty check tests
+/**
+ * TODO: Need to add extension fields (quadtratic and cubic)
+ * TODO: Need to add rest of unit tests for Fq and Fr
+*/

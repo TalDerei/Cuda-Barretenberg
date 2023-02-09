@@ -8,7 +8,7 @@ namespace pippenger_common {
 
 /**
  * Consume elliptic curve points and scalars
- */ 
+ */
 g1::affine_element* read_points_scalars() {
     auto reference_string = std::make_shared<gpu_waffle::FileReferenceString>(NUM_POINTS, "../srs_db");
     g1::affine_element* points = reference_string->get_monomials();

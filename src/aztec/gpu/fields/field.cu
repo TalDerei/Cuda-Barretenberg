@@ -5,19 +5,24 @@
 using namespace std;
 using namespace gpu_barretenberg;
 
-// Templated with base and scalar fields
+/**
+ * Function declerations are templated with base 
+ * and scalar fields represented as 'params'
+ */
+
 template<class params> 
 __device__ field_gpu<params>::field_gpu(var a, var b, var c, var d) noexcept
     : data{ a, b, c, d } {};
     
+
 template<class params> 
-__device__ field_gpu<params> field_gpu<params>::zero() noexcept {
+__device__ field_gpu<params> field_gpu<params>::zero() {
     return field_gpu(0, 0, 0, 0); 
 }
 
 template<class params> 
-__device__ bool field_gpu<params>::is_zero() const noexcept {
-    return ((data[0] | data[1] | data[2] | data[3]) == 0);
+__device__ bool field_gpu<params>::is_zero(const var &x) {
+    return fixnum::is_zero(x); 
 }
 
 template<class params> 
@@ -25,7 +30,9 @@ __device__ var field_gpu<params>::equal(const var x, const var y) {
     return fixnum::cmp(x, y) == 0; 
 }
 
-// Load operation copies data from main memory into a register
+/**
+ * Load operation copies data from main memory into a register
+ */
 template<class params> 
 __device__ var field_gpu<params>::load(var x, var &res) {
     int id = params::lane();
@@ -33,7 +40,9 @@ __device__ var field_gpu<params>::load(var x, var &res) {
     return res;
 }
 
-// Store operation copies data from a register into main memory
+/**
+ * Store operation copies data from a register into main memory
+ */
 template<class params> 
 __device__ void field_gpu<params>::store(var *mem, const field_gpu &x) {
     int id = params::lane();
@@ -42,7 +51,6 @@ __device__ void field_gpu<params>::store(var *mem, const field_gpu &x) {
     }
 }
 
-// Addition operation
 template<class params> 
 __device__ var field_gpu<params>::add(const var a, const var b, var &res) {
     int br;
@@ -54,7 +62,6 @@ __device__ var field_gpu<params>::add(const var a, const var b, var &res) {
     return res;
 }
 
-// Subtraction operation
 template<class params> 
 __device__ var field_gpu<params>::sub(const var x, const var y, var &res) {
     int br;
@@ -66,13 +73,18 @@ __device__ var field_gpu<params>::sub(const var x, const var y, var &res) {
     return r;
 }
 
-// Square operation -- worth special casing for 1.5 - 2x speed improvement
+/**
+ * Square operation (special casing may yield 1.5 - 2x speed improvement)
+ */
 template<class params> 
 __device__ var field_gpu<params>::square(var x, var &y) {
     field_gpu::mul(x, x, y);
     return y;
 }
 
+/**
+ * Convert to montgomery representation 
+ */
 template<class params> 
 __device__ var field_gpu<params>::to_monty(var x, var &res) {
     var r_sqr_mod = params::monty();
@@ -80,6 +92,9 @@ __device__ var field_gpu<params>::to_monty(var x, var &res) {
     return res;
 }
 
+/**
+ * Convert from montgomery representation 
+ */
 template<class params> 
 __device__ var field_gpu<params>::from_monty(var x, var &res) {
     var mont;
@@ -95,7 +110,9 @@ __device__ var field_gpu<params>::neg(var &x, var &res) {
     return res;
 }
 
-// Mongomery multiplication (CIOS) operation
+/**
+ * Mongomery multiplication (CIOS algorithm) for modular multiplications
+ */
 template<class params> 
 __device__ var field_gpu<params>::mul(const var a, const var b, var &res) {
     auto grp = fixnum::layout();
@@ -131,29 +148,28 @@ __device__ var field_gpu<params>::mul(const var a, const var b, var &res) {
         digit::mad_lo_cy(z, cy, mod, u, z);
         digit::mad_lo_cy(z, cy, y, xi, z);
 
-        assert(L || z == 0);  // z[0] must be 0
-        z = grp.shfl_down(z, 1); // Shift right one word
+        assert(L || z == 0);  
+        z = grp.shfl_down(z, 1); 
         z = (L >= LIMBS - 1) ? 0 : z;
 
         digit::add_cy(z, cy, z, cy);
         digit::mad_hi_cy(z, cy, mod, u, z);
         digit::mad_hi_cy(z, cy, y, xi, z);
     }
+    
     // Resolve carries
     int msb = grp.shfl(cy, LIMBS - 1);
-    cy = grp.shfl_up(cy, 1); // left shift by 1
+    cy = grp.shfl_up(cy, 1); 
     cy = (L == 0) ? 0 : cy;
 
     fixnum::add_cy(z, cy, z, cy);
     msb += cy;
-    assert(msb == !!msb); // msb = 0 or 1.
+    assert(msb == !!msb);
 
-    // br = 0 ==> z >= mod
     var r;
     int br;
     fixnum::sub_br(r, br, z, mod);
     if (msb || br == 0) {
-        // If the msb was set, then we must have had to borrow.
         assert(!msb || msb == br);
         z = r;
     }

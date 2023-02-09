@@ -17,7 +17,7 @@ static const size_t NUM_BATCH_THREADS = 2;
 
 /**
  * Typedef points, scalars, and buckets 
-*/
+ */
 typedef element<fq_gpu> point_t;
 typedef fr_gpu scalar_t;
 typedef affine_element<fq_gpu> bucket_t;
@@ -25,7 +25,7 @@ typedef affine_element<fq_gpu> affine_t;
 
 /**
  * Allocate device storage and buffers
-*/
+ */
 template < typename T >
 class device_ptr {
     public:
@@ -44,7 +44,7 @@ class device_ptr {
 
 /**
  * Allocate cuda streams
-*/
+ */
 template < typename T >
 class stream_t {
     public:
@@ -57,7 +57,7 @@ class stream_t {
 
 /**
  * Pippenger MSM 
-*/
+ */
 template < typename bucket_t, typename point_t, typename scalar_t, typename affine_t > 
 class pippenger_t {
     private:
@@ -98,7 +98,7 @@ typedef pippenger_t<bucket_t, point_t, scalar_t, affine_t> pipp_t;
 
 /**
  * Context used to store persistent state
-*/
+ */
 template < typename bucket_t, typename point_t, typename scalar_t, typename affine_t > 
 struct Context {
     public: 
@@ -113,7 +113,7 @@ struct Context {
 
 /**
  * Result containers
-*/
+ */
 template < typename T >
 class result_t {
     T ret[NWINS][NTHREADS][2];
