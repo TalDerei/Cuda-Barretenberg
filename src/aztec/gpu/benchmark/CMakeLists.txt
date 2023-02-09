@@ -29,7 +29,7 @@ add_custom_target(
 # fq field test
 add_executable(
     field_fq_test
-    tests/field_fq_test.cu
+    tests/fields/field_fq_test.cu
 )
 
 target_link_libraries(
@@ -48,7 +48,7 @@ add_custom_target(
 # fr field test
 add_executable(
     field_fr_test
-    tests/field_fr_test.cu
+    tests/fields/field_fr_test.cu
 )
 
 target_link_libraries(
@@ -67,7 +67,7 @@ add_custom_target(
 # curve test
 add_executable(
     curve_bn254_test
-    tests/curve_test.cu
+    tests/curves/curve_test.cu
 )
 
 target_link_libraries(
@@ -101,5 +101,24 @@ target_link_libraries(
 add_custom_target(
     run_arithmetic_cuda
     COMMAND arithmetic_cuda
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+)
+
+# msm test
+add_executable(
+    msm_test
+    tests/msm/msm_test.cu
+)
+
+target_link_libraries(
+    msm_test
+    PUBLIC
+    field_library
+    fixnum_library
+)
+
+add_custom_target(
+    run_msm_test
+    COMMAND msm_test
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
 )
