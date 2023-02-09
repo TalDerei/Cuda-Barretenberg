@@ -428,7 +428,8 @@ int main(int, char**) {
     // Execute kernel functions
     execute_kernels(a, b, expected, result);
 
-    cout << "******* All unit tests passed! **********" << endl;
+    // Successfull execution of unit tests
+    cout << "******* All 'Fr' unit tests passed! **********" << endl;
 
     // End timer
     auto stop = high_resolution_clock::now();

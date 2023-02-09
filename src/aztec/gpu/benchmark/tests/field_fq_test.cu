@@ -14,12 +14,12 @@ static constexpr size_t THREADS = 1;
 __global__ void initialize_mont_mult(uint64_t *a, uint64_t *b, uint64_t *expected) {
     fq_gpu a_field{ 0x2523b6fa3956f038, 0x158aa08ecdd9ec1d, 0xf48216a4c74738d4, 0x2514cc93d6f0a1bf };
     fq_gpu b_field{ 0xb68aee5e4c8fc17c, 0xc5193de7f401d5e8, 0xb8777d4dde671db3, 0xe513e75c087b0bb };
-    fq_gpu expecteded{ 0x7ed4174114b521c4, 0x58f5bd1d4279fdc2, 0x6a73ac09ee843d41, 0x687a76ae9b3425c };
+    fq_gpu expect{ 0x7ed4174114b521c4, 0x58f5bd1d4279fdc2, 0x6a73ac09ee843d41, 0x687a76ae9b3425c };
 
     for (int i = 0; i < LIMBS_NUM; i++) {
         a[i] = a_field.data[i];
         b[i] = b_field.data[i];
-        expected[i] = expecteded.data[i];
+        expected[i] = expect.data[i];
     }
 }
 
@@ -36,12 +36,12 @@ __global__ void mont_mult(uint64_t *a, uint64_t *b, uint64_t *result) {
 __global__ void initialize_mont_mult_short(uint64_t *a, uint64_t *b, uint64_t *expected) {
     fq_gpu a_field{ 0xa, 0, 0, 0 };
     fq_gpu b_field{ 0xb, 0, 0, 0 };
-    fq_gpu expecteded = { 0x65991a6dc2f3a183, 0xe3ba1f83394a2d08, 0x8401df65a169db3f, 0x1727099643607bba };
+    fq_gpu expect = { 0x65991a6dc2f3a183, 0xe3ba1f83394a2d08, 0x8401df65a169db3f, 0x1727099643607bba };
 
     for (int i = 0; i < LIMBS; i++) {
         a[i] = a_field.data[i];
         b[i] = b_field.data[i];
-        expected[i] = expecteded.data[i];
+        expected[i] = expect.data[i];
     }
 }
 
@@ -86,11 +86,11 @@ __global__ void mul_square_consistency(uint64_t *a, uint64_t *b, uint64_t *expec
 
 __global__ void initialize_sqr_check_against_constants(uint64_t *a, uint64_t *expected) {
     fq_gpu a_field{ 0x329596aa978981e8, 0x8542e6e254c2a5d0, 0xc5b687d82eadb178, 0x2d242aaf48f56b8a };
-    fq_gpu expecteded = { 0xbf4fb34e120b8b12, 0xf64d70efbf848328, 0xefbb6a533f2e7d89, 0x1de50f941425e4aa };
+    fq_gpu expect = { 0xbf4fb34e120b8b12, 0xf64d70efbf848328, 0xefbb6a533f2e7d89, 0x1de50f941425e4aa };
 
     for (int i = 0; i < LIMBS; i++) {
         a[i] = a_field.data[i];
-        expected[i] = expecteded.data[i];
+        expected[i] = expect.data[i];
     }
 }
 
@@ -107,12 +107,12 @@ __global__ void sqr_check_against_constants(uint64_t *a, uint64_t *result) {
 __global__ void initialize_add_check_against_constants(uint64_t *a, uint64_t *b, uint64_t *expected) {
     fq_gpu a_field{ 0x7d2e20e82f73d3e8, 0x8e50616a7a9d419d, 0xcdc833531508914b, 0xd510253a2ce62c };
     fq_gpu b_field{ 0x2829438b071fd14e, 0xb03ef3f9ff9274e, 0x605b671f6dc7b209, 0x8701f9d971fbc9 };
-    fq_gpu expecteded{ 0xa55764733693a536, 0x995450aa1a9668eb, 0x2e239a7282d04354, 0x15c121f139ee1f6 };
+    fq_gpu expect{ 0xa55764733693a536, 0x995450aa1a9668eb, 0x2e239a7282d04354, 0x15c121f139ee1f6 };
 
     for (int i = 0; i < LIMBS; i++) {
         a[i] = a_field.data[i];
         b[i] = b_field.data[i];
-        expected[i] = expecteded.data[i];
+        expected[i] = expect.data[i];
     }
 }
 
@@ -129,12 +129,12 @@ __global__ void add_check_against_constants(uint64_t *a, uint64_t *b, uint64_t *
 __global__ void initialize_sub_check_against_constants(uint64_t *a, uint64_t *b, uint64_t *expected) {
     fq_gpu a_field{ 0xd68d01812313fb7c, 0x2965d7ae7c6070a5, 0x08ef9af6d6ba9a48, 0x0cb8fe2108914f53 };
     fq_gpu b_field{ 0x2cd2a2a37e9bf14a, 0xebc86ef589c530f6, 0x75124885b362b8fe, 0x1394324205c7a41d };
-    fq_gpu expecteded{ 0xe5daeaf47cf50779, 0xd51ed34a5b0d0a3c, 0x4c2d9827a4d939a6, 0x29891a51e3fb4b5f };
+    fq_gpu expect{ 0xe5daeaf47cf50779, 0xd51ed34a5b0d0a3c, 0x4c2d9827a4d939a6, 0x29891a51e3fb4b5f };
 
     for (int i = 0; i < LIMBS; i++) {
         a[i] = a_field.data[i];
         b[i] = b_field.data[i];
-        expected[i] = expecteded.data[i];
+        expected[i] = expect.data[i];
     }
 }
 
@@ -150,11 +150,11 @@ __global__ void sub_check_against_constants(uint64_t *a, uint64_t *b, uint64_t *
 
 __global__ void initialize_to_montgomery_form(uint64_t *a, uint64_t *expected) {
     fq_gpu a_field{ 0x01, 0x00, 0x00, 0x00 };
-    fq_gpu expecteded{ 0xd35d438dc58f0d9d, 0xa78eb28f5c70b3d, 0x666ea36f7879462c, 0xe0a77c19a07df2f };
+    fq_gpu expect{ 0xd35d438dc58f0d9d, 0xa78eb28f5c70b3d, 0x666ea36f7879462c, 0xe0a77c19a07df2f };
 
     for (int i = 0; i < LIMBS; i++) {
         a[i] = a_field.data[i];
-        expected[i] = expecteded.data[i];
+        expected[i] = expect.data[i];
     }
 }
 
@@ -170,11 +170,11 @@ __global__ void to_montgomery_form(uint64_t *a, uint64_t *result) {
 
 __global__ void initialize_from_montgomery_form(uint64_t *a, uint64_t *expected) {
     fq_gpu a_field{ 0x01, 0x00, 0x00, 0x00 };
-    fq_gpu expecteded{ 0x01, 0x00, 0x00, 0x00 };
+    fq_gpu expect{ 0x01, 0x00, 0x00, 0x00 };
 
     for (int i = 0; i < LIMBS; i++) {
         a[i] = a_field.data[i];
-        expected[i] = expecteded.data[i];        
+        expected[i] = expect.data[i];        
     }
 }
 
@@ -338,7 +338,6 @@ void assert_checks(var *expected, var *result) {
     // printf("expected[1] is: %zu\n", expected[1]);
     // printf("expected[2] is: %zu\n", expected[2]);
     // printf("expected[3] is: %zu\n", expected[3]);
-
     // printf("result[0] is: %zu\n", result[0]);
     // printf("result[1] is: %zu\n", result[1]);
     // printf("result[2] is: %zu\n", result[2]);
@@ -425,7 +424,8 @@ int main(int, char**) {
     // Execute kernel functions
     execute_kernels(a, b, expected, result);
 
-    cout << "******* All unit tests passed! **********" << endl;
+    // Successfull execution of unit tests
+    cout << "******* All 'Fq' unit tests passed! **********" << endl;
 
     // End timer
     auto stop = high_resolution_clock::now();
