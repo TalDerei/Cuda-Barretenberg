@@ -435,14 +435,14 @@ void assert_checks(var *expected, var *result) {
     assert(expected[3] == result[3]);
 
     // Print statements
-    printf("expected[0] is: %zu\n", expected[0]);
-    printf("expected[1] is: %zu\n", expected[1]);
-    printf("expected[2] is: %zu\n", expected[2]);
-    printf("expected[3] is: %zu\n", expected[3]);
-    printf("result[0] is: %zu\n", result[0]);
-    printf("result[1] is: %zu\n", result[1]);
-    printf("result[2] is: %zu\n", result[2]);
-    printf("result[3] is: %zu\n", result[3]);
+    // printf("expected[0] is: %zu\n", expected[0]);
+    // printf("expected[1] is: %zu\n", expected[1]);
+    // printf("expected[2] is: %zu\n", expected[2]);
+    // printf("expected[3] is: %zu\n", expected[3]);
+    // printf("result[0] is: %zu\n", result[0]);
+    // printf("result[1] is: %zu\n", result[1]);
+    // printf("result[2] is: %zu\n", result[2]);
+    // printf("result[3] is: %zu\n", result[3]);
 }
 
 void execute_kernels
