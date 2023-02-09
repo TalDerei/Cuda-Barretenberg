@@ -6,17 +6,15 @@ namespace pippenger_common {
 /***************************************** Function declerations for 'pippenger_t' class  *****************************************/
 
 /**
- * Initialize parameters for MSM via specialized initialization 
+ * Initialize cuda device and MSM parameters
  */
 template <>
 pipp_t pipp_t::initialize_msm(size_t npoints) {
-    // Set cuda device parameters    
     cudaSetDevice(0);
     cudaDeviceProp prop;
     cudaGetDeviceProperties(&prop, 0);
     sm_count = prop.multiProcessorCount;
 
-    // Set MSM parameters
     pipp_t config;
     config.npoints = npoints;
     config.n = (npoints + WARP - 1) & ((size_t)0 - WARP);
@@ -138,6 +136,16 @@ pippenger_t &config, size_t d_scalars_idx, const scalar_t scalars[], cudaStream_
     }
 }
 
+/**
+ * Result container
+ */
+template <class bucket_t, class point_t, class scalar_t, class affine_t>
+pippenger_t<bucket_t, point_t, scalar_t, affine_t>::result_container_t 
+pippenger_t<bucket_t, point_t, scalar_t, affine_t>::result_container(pippenger_t &config) {
+    result_container_t res(config.N);
+    return res;
+}
+
 /***************************************** Function declerations for 'device_ptr' class  *****************************************/
 
 /**
@@ -168,16 +176,6 @@ T* device_ptr<T>::operator[](size_t i) {
         cout << cudaErrorInvalidDevicePointer << endl;
     }
     return d_ptrs[i];
-}
-
-/***************************************** Function declerations for 'result_t' class  *****************************************/
-
-/**
- * Get results container
- */
-template <class T>
-result_t<T>::result_container_t result_t<T>::get_results_container(pipp_t &config) {
-    result_container_t res(config.N);
 }
 
 }

@@ -4,7 +4,15 @@ using namespace std;
 using namespace pippenger_common;
 
 int main(int, char**) {
-    g1::affine_element* points = read_points_scalars();
+    // Dynamically initialize new msm_t object
+     msm_t<g1::affine_element *> *msm = new msm_t<g1::affine_element *>();
+
+    // Read points and scalars
+    g1::affine_element* points = msm->read_points_scalars();
     
-    pippenger_init(points);
+    // Initlize MSM
+    msm->pippenger_init(points);
+
+    // Perform MSM
+    msm->pippenger_execute(points);
 }

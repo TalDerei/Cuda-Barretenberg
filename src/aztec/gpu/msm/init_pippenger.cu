@@ -1,4 +1,4 @@
-#include "./common.cu"
+#include "./init_pippenger.cuh"
 #include <iostream>
 #include <memory>
 
@@ -7,9 +7,10 @@ using namespace std;
 namespace pippenger_common {
 
 /**
- * Consume elliptic curve points and scalars
+ * Consume elliptic curve points (from SRS) and scalars
  */
-g1::affine_element* read_points_scalars() {
+template <class T>
+T msm_t<T>::read_points_scalars() {
     auto reference_string = std::make_shared<gpu_waffle::FileReferenceString>(NUM_POINTS, "../srs_db");
     g1::affine_element* points = reference_string->get_monomials();
     return points;
@@ -18,11 +19,12 @@ g1::affine_element* read_points_scalars() {
 /**
  * Entry point into "Pippenger's Bucket Method"
  */ 
-void pippenger_init(g1::affine_element* points) {
-    // Dynamically initialize new context
+template <class T>
+void msm_t<T>::pippenger_init(T points) {
+    // Dynamically initialize new context object
     Context<bucket_t, point_t, scalar_t, affine_t> *context = new Context<bucket_t, point_t, scalar_t, affine_t>();
 
-    // try {
+    try {
         // Initialize parameters for MSM  
         context->pipp = context->pipp.initialize_msm(NUM_POINTS);    
 
@@ -43,12 +45,20 @@ void pippenger_init(g1::affine_element* points) {
         context->pipp.transfer_bases_to_device(context->pipp, context->d_points_idx, points, context->ffi_affine_sz);
 
         // Create results container
-        // context->pipp.res0 = context->pipp.get_results_container(context->pipp);
-        // context->pipp.res1 = context->pipp.get_results_container(context->pipp);
-    // }
-    // catch (const cuda_error& e) {
-    //     cout << "Error!" << endl;
-    // }
+        context->result0 = context->pipp.result_container(context->pipp);
+        context->result1 = context->pipp.result_container(context->pipp);
+    }
+    catch (cudaError_t) {
+        cout << "ADD CUDA ERROR MESSAGE!" << endl;
+    }
+}
+
+/**
+ * Perform MSM
+ */ 
+template <class T>
+void msm_t<T>::pippenger_execute(T points) {
+    
 }
 
 }
