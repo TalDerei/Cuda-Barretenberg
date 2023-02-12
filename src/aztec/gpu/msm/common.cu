@@ -10,11 +10,23 @@ namespace pippenger_common {
  */
 template <>
 pipp_t pipp_t::initialize_msm(size_t npoints) {
-    cudaSetDevice(0);
+    cudaError_t status = cudaSetDevice(device);
+    if (status != cudaSuccess) {
+        cout << "CUDA error from 'cudaSetDevice': " << cudaGetErrorString(status) << endl;
+        throw cudaGetErrorString(status);
+    }
+
     cudaDeviceProp prop;
-    cudaGetDeviceProperties(&prop, 0);
+    cudaError_t status_prop = cudaGetDeviceProperties(&prop, device);
+    if (status_prop != cudaSuccess) {
+        cout << "CUDA error from 'cudaGetDeviceProperties': " << cudaGetErrorString(status_prop) << endl;
+        throw cudaGetErrorString(status_prop);
+    }
+
+    // Set streaming multiprocessor count, where each SM contains N cuda cores
     sm_count = prop.multiProcessorCount;
 
+    // Set MSM parameters 
     pipp_t config;
     config.npoints = npoints;
     config.n = (npoints + WARP - 1) & ((size_t)0 - WARP);
@@ -24,7 +36,7 @@ pipp_t pipp_t::initialize_msm(size_t npoints) {
 }
 
 /**
- * Calculate the amount of storage neccessary to store bases 
+ * Calculate the amount of device storage required to store bases 
  */
 template <class bucket_t, class point_t, class scalar_t, class affine_t>
 size_t pippenger_t<bucket_t, point_t, scalar_t, affine_t>::get_size_bases(pippenger_t &config) {
@@ -32,7 +44,7 @@ size_t pippenger_t<bucket_t, point_t, scalar_t, affine_t>::get_size_bases(pippen
 }
 
 /**
- * Calculate the amount of storage neccessary to store scalars 
+ * Calculate the amount of device storage required to store scalars 
  */
 template <class bucket_t, class point_t, class scalar_t, class affine_t>
 size_t pippenger_t<bucket_t, point_t, scalar_t, affine_t>::get_size_scalars(pippenger_t &config) {
@@ -40,10 +52,10 @@ size_t pippenger_t<bucket_t, point_t, scalar_t, affine_t>::get_size_scalars(pipp
 }
 
 /**
- * Calculate the amount of storage neccessary to store buckets 
+ * Calculate the amount of device storage required to store buckets 
  */
 template <class bucket_t, class point_t, class scalar_t, class affine_t>
-size_t pippenger_t<bucket_t, point_t, scalar_t, affine_t>::get_size_buckets(pippenger_t &config) {
+size_t pippenger_t<bucket_t, point_t, scalar_t, affine_t>::get_size_buckets(pippenger_t &config) {    
     return config.N * sizeof(bucket_t) * NWINS * (1 << WBITS);
 }
 
@@ -100,24 +112,20 @@ size_t pippenger_t<bucket_t, point_t, scalar_t, affine_t>::num_bucket_ptrs() {
  */
 template <class bucket_t, class point_t, class scalar_t, class affine_t>
 void pippenger_t<bucket_t, point_t, scalar_t, affine_t>::transfer_bases_to_device(
-pippenger_t &config, size_t d_points_idx, const affine_t points[], size_t ffi_affine_sz) {
-    cudaSetDevice(0);
-    cudaStream_t stream = 0; // default stream
+pippenger_t &config, size_t d_points_idx, const affine_t points[]) {
+    // Set cuda device and default stream
+    cudaSetDevice(device);
+    cudaStream_t stream = 0; 
+    
     affine_t *d_points = device_base_ptrs[d_points_idx];
-
-    if (ffi_affine_sz != sizeof(*d_points)) {
-        cudaError_t status = cudaMemcpy2DAsync(
-            d_points, sizeof(*d_points), points, ffi_affine_sz,ffi_affine_sz, config.npoints,cudaMemcpyHostToDevice, stream);
-        if (status != cudaSuccess) {
-            printf("Error copying bases to device\n");
-        }
-    }
-    else {
-        cudaError_t status = cudaMemcpyAsync(d_points, points, config.npoints * sizeof(*d_points), cudaMemcpyHostToDevice, stream);
-        if (status != cudaSuccess) {
-            printf("Error copying bases to device\n");
-        } 
-    }
+    
+    // cudaMemcpyAsync() is non-blocking and asynchronous variant of cudaMemcpy() that requires pinned memory.
+    // Asynchronous transfers enable overalapping data transfers with kernel execution.
+    cudaError_t status = cudaMemcpyAsync(d_points, points, config.npoints * sizeof(*d_points), cudaMemcpyHostToDevice, stream);
+    if (status != cudaSuccess) {
+        cout << "CUDA error: " << cudaGetErrorString(status) << endl;
+        throw cudaGetErrorString(status);
+    } 
 }
 
 /**
@@ -125,14 +133,17 @@ pippenger_t &config, size_t d_points_idx, const affine_t points[], size_t ffi_af
  */
 template <class bucket_t, class point_t, class scalar_t, class affine_t>
 void pippenger_t<bucket_t, point_t, scalar_t, affine_t>::transfer_scalars_to_device(
-pippenger_t &config, size_t d_scalars_idx, const scalar_t scalars[], cudaStream_t s) {
-    cudaSetDevice(0);
-    cudaStream_t stream = 0; // default stream
+pippenger_t &config, size_t d_scalars_idx, const scalar_t scalars[], cudaStream_t aux_stream) {
+    // Set cuda device and auxilary stream
+    cudaSetDevice(device);
+    cudaStream_t stream = aux_stream;
+
     scalar_t *d_scalars = device_scalar_ptrs[d_scalars_idx];
 
-    cudaError_t status = cudaMemcpy2DAsync(d_scalars, scalars, config.npoints*sizeof(*d_scalars), cudaMemcpyHostToDevice, stream);
+    cudaError_t status = cudaMemcpyAsync(d_scalars, scalars, config.npoints * sizeof(*d_scalars), cudaMemcpyHostToDevice, stream);
     if (status != cudaSuccess) {
-        printf("Error copying bases to device\n");
+        cout << "CUDA error: " << cudaGetErrorString(status) << endl;
+        throw cudaGetErrorString(status);
     }
 }
 
@@ -154,8 +165,13 @@ pippenger_t<bucket_t, point_t, scalar_t, affine_t>::result_container(pippenger_t
 template <class T>
 size_t device_ptr<T>::allocate(size_t bytes) {
     T* d_ptr;
-    cudaMalloc(&d_ptr, bytes);
+    cudaError_t error = cudaMalloc(&d_ptr, bytes);
+    if (error != cudaSuccess) {
+        cout << "CUDA error from 'cudaMalloc': " << cudaGetErrorString(error) << endl;
+        throw cudaErrorMemoryAllocation; 
+    }
     d_ptrs.push_back(d_ptr);
+    cout << " d_ptrs.size() - 1 size is: " <<  d_ptrs.size() - 1 << endl;
     return d_ptrs.size() - 1;
 }
 
@@ -173,7 +189,8 @@ size_t device_ptr<T>::size() {
 template <class T>
 T* device_ptr<T>::operator[](size_t i) {
     if (i > d_ptrs.size() - 1) {
-        cout << cudaErrorInvalidDevicePointer << endl;
+        cout << "CUDA error from 'cudaGetDeviceProperties': " << cudaGetErrorString(cudaErrorInvalidDevicePointer) << endl;
+        throw cudaGetErrorString(cudaErrorInvalidDevicePointer);
     }
     return d_ptrs[i];
 }

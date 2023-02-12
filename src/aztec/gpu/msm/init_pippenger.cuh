@@ -14,11 +14,11 @@ class msm_t {
     public: 
         msm_t() {}
 
-        T read_points_scalars();
+        T* read_points_scalars();
 
-        void pippenger_init(T points);
+        Context<bucket_t, point_t, scalar_t, affine_t>* pippenger_initialize(T* points);
         
-        void pippenger_execute(T points);
+        void pippenger_execute(Context<bucket_t, point_t, scalar_t, affine_t> *context, size_t npoints, T* points);
 };
 
 }

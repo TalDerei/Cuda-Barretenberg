@@ -1,4 +1,5 @@
 #include "reference_string.cu"
+#include "util/thread_pool.hpp"
 #include <cuda.h>
 
 namespace pippenger_common {
@@ -6,11 +7,11 @@ namespace pippenger_common {
 /**
  * Global variables
 */
-#define WARP 32
-#define NTHREADS 256
-#define NBITS 253
-#define WBITS 17
-#define NWINS ((NBITS + WBITS - 1) / WBITS)   
+#define WARP 32                               // Warp size 
+#define NTHREADS 256                          // Thread count      
+#define NBITS 253                             // Field elements size
+#define WBITS 17                              // Scalar size
+#define NWINS ((NBITS + WBITS - 1) / WBITS)   // Windowing size 
 
 size_t NUM_POINTS = 1 << 15;
 static const size_t NUM_BATCH_THREADS = 2;
@@ -29,6 +30,7 @@ typedef affine_element<fq_gpu> affine_t;
 template < typename T >
 class device_ptr {
     public:
+        // Vector of initialized pointers to memory locations
         vector<T*> d_ptrs;
 
         device_ptr() {}
@@ -43,16 +45,20 @@ class device_ptr {
 };
 
 /**
- * Allocate cuda streams
+ * Create and destroy cuda streams
  */
-template < typename T >
 class stream_t {
     public:
         cudaStream_t stream;
 
-        stream_t(int device);
+        stream_t(int device) {
+            cudaSetDevice(device);
+            cudaStreamCreateWithFlags(&stream, cudaStreamNonBlocking);
+        }
 
-        ~stream_t() {}
+        ~stream_t() {
+            cudaStreamDestroy(stream);
+        }
 };
 
 /**
@@ -71,15 +77,22 @@ class result_t {
 template < typename bucket_t, typename point_t, typename scalar_t, typename affine_t > 
 class pippenger_t {
     private:
-        size_t sm_count;
         device_ptr<affine_t> device_base_ptrs;
         device_ptr<scalar_t> device_scalar_ptrs;
         device_ptr<bucket_t> device_bucket_ptrs;
     public: 
         typedef vector<result_t<bucket_t>> result_container_t;
+        stream_t default_stream;
+        int device;
+        size_t sm_count;
         size_t npoints;        
+        size_t n;
         size_t N;
-        size_t n;        
+
+        // Constructor method
+        pippenger_t() : default_stream(0) {
+            device = 0;
+        }        
     
         pippenger_t initialize_msm(size_t npoints);
         
@@ -101,9 +114,9 @@ class pippenger_t {
 
         size_t num_bucket_ptrs();
 
-        void transfer_bases_to_device(pippenger_t &config, size_t d_points_idx, const affine_t points[], size_t ffi_affine_sz);
+        void transfer_bases_to_device(pippenger_t &config, size_t d_points_idx, const affine_t points[]);
 
-        void transfer_scalars_to_device(pippenger_t &config, size_t d_scalars_idx, const scalar_t scalars[], cudaStream_t s);
+        void transfer_scalars_to_device(pippenger_t &config, size_t d_scalars_idx, const scalar_t scalars[], cudaStream_t aux_stream);
         
         result_container_t result_container(pippenger_t &config);
 };
@@ -117,7 +130,7 @@ struct Context {
     public: 
         pipp_t pipp;
 
-        size_t ffi_affine_sz; 
+        // Indices for device_ptr
         size_t d_points_idx; 
         size_t d_buckets_idx; 
         size_t d_scalar_idx[NUM_BATCH_THREADS];  
