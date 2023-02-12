@@ -19,19 +19,19 @@
     - [x] Benchmark Pippenger's bucket algorithm
     - [x] Benchmark Fast Fourier Transform algorithm
     - [x] Benchmark vanilla Plonk prover
-    - [ ] Benchmark TurboPlonk and UltraPlonk provers
-- [ ] Benchmark FF and ECC implementations on GPU
-    - [ ] Create finite field bench suite for GPU
-    - [ ] Create elliptic curve bench suite for GPU
-    - [ ] Benchmark finite field arithemtic and elliptic curve operations to establish GPU baseline
-- [ ] Benchmark MSM Pippenger implementation on GPU
-- [ ] Multi-scalar multiplication (MSM)
+    - [x] Benchmark TurboPlonk and UltraPlonk provers
+- [ ] Benchmark FF and ECC arithmetic on GPU
+    - [ ] Create finite field bench suite 
+    - [ ] Create elliptic curve bench suite 
+- [ ] Multi-scalar multiplication (MSM) for Pippenger's Bucket Method
     - [x] Understand Barretenberg’s multi-exponentiation CPU implementation 
     - [x] Benchmark Zprize MSM implementation on GPU 
-    - [ ] Understand Supranational’s MSM GPU kernel (sppark) module
+    - [ ] Understand Supranational’s SPPARK MSM GPU kernel
     - [ ] Adapt Supranational’s MSM scheme into Barretenberg
-        - [ ] Add comments to understand code
+        - [x] Add comments to understand code
         - [x] Remove rust bindings
-        - [ ] Implement field arithmetic over different base and scalar fields
-        - [ ] Implement curve arithmetic over different BN-254 curve 
-        - [ ] Switch to Lagrange SRS over monomial SRS
+        - [ ] Port MSM over BN-254 curve
+        - [ ] Experiment between Lagrange SRS over monomial SRS
+- [ ] Test and benchmark MSM implementation on GPU
+    - [ ] Create unit test suite
+    - [ ] Create benchmarkig suite
