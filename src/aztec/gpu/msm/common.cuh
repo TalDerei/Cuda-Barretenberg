@@ -13,7 +13,7 @@ namespace pippenger_common {
 #define WBITS 17                              // Scalar size
 #define NWINS ((NBITS + WBITS - 1) / WBITS)   // Windowing size 
 
-size_t NUM_POINTS = 1 << 15;
+size_t NUM_POINTS = 1 << 10;
 static const size_t NUM_BATCH_THREADS = 2;
 
 /**

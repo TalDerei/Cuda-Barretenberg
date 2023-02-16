@@ -30,8 +30,15 @@
     - [ ] Adapt Supranational’s MSM scheme into Barretenberg
         - [x] Add comments to understand code
         - [x] Remove rust bindings
-        - [ ] Port MSM over BN-254 curve
+        - [x] Read in curve points and scalars
+        - [ ] Port MSM implemenation over BN-254 curve
         - [ ] Experiment between Lagrange SRS over monomial SRS
-- [ ] Test and benchmark MSM implementation on GPU
+- [ ] Test and benchmark MSM kernel implementation on GPU
     - [ ] Create unit test suite
-    - [ ] Create benchmarkig suite
+    - [ ] Create benchmarking suite
+- [ ] Implement remaining G1 arthmetic
+    - [ ] Finish adding missing elliptic curve functions
+- [ ] Implement G2 arithmetic
+    - [ ] Add extension fields
+    - [ ] Add zero and infinity checks 
+    - [ ] Create unit test suite

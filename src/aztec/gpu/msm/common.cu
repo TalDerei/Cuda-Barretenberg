@@ -112,7 +112,7 @@ size_t pippenger_t<bucket_t, point_t, scalar_t, affine_t>::num_bucket_ptrs() {
  */
 template <class bucket_t, class point_t, class scalar_t, class affine_t>
 void pippenger_t<bucket_t, point_t, scalar_t, affine_t>::transfer_bases_to_device(
-pippenger_t &config, size_t d_points_idx, const affine_t points[]) {
+pippenger_t &config, size_t d_points_idx, const affine_t points[]) {    
     // Set cuda device and default stream
     cudaSetDevice(device);
     cudaStream_t stream = 0; 
@@ -171,7 +171,6 @@ size_t device_ptr<T>::allocate(size_t bytes) {
         throw cudaErrorMemoryAllocation; 
     }
     d_ptrs.push_back(d_ptr);
-    cout << " d_ptrs.size() - 1 size is: " <<  d_ptrs.size() - 1 << endl;
     return d_ptrs.size() - 1;
 }
 
