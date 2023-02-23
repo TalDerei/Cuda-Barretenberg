@@ -40,7 +40,7 @@ class affine_element {
 
         __device__ affine_element(const fq_gpu &a, const fq_gpu &b) noexcept;
 
-        __device__ affine_element(const affine_element &other) noexcept;
+        __device__ affine_element(const affine_element &other) noexcept;        
 };
 
 }
