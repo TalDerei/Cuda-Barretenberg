@@ -11,7 +11,7 @@ include_directories(../srs)
 # Pippenger's bucket method
 add_executable(
     pippenger_cu
-    pippenger.cu
+    main.cu
 )
 
 target_link_libraries(

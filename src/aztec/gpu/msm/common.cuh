@@ -1,5 +1,6 @@
 #include "reference_string.cu"
 #include "util/thread_pool.hpp"
+#include "error.cuh"
 #include <cuda.h>
 
 namespace pippenger_common {
@@ -15,6 +16,7 @@ namespace pippenger_common {
 
 size_t NUM_POINTS = 1 << 10;
 static const size_t NUM_BATCH_THREADS = 2;
+static thread_pool_t batch_pool(NUM_BATCH_THREADS);
 
 /**
  * Typedef points, scalars, and buckets 
@@ -52,12 +54,15 @@ class stream_t {
         cudaStream_t stream;
 
         stream_t(int device) {
-            cudaSetDevice(device);
-            cudaStreamCreateWithFlags(&stream, cudaStreamNonBlocking);
+            // Set GPU device
+            CUDA_WRAPPER(cudaSetDevice(device));
+
+            // Creates a new asynchronous stream
+            CUDA_WRAPPER(cudaStreamCreateWithFlags(&stream, cudaStreamNonBlocking));
         }
 
-        ~stream_t() {
-            cudaStreamDestroy(stream);
+        inline operator decltype(stream)() { 
+            return stream; 
         }
 };
 
@@ -77,7 +82,7 @@ class result_t {
 template < typename bucket_t, typename point_t, typename scalar_t, typename affine_t > 
 class pippenger_t {
     private:
-        device_ptr<affine_t> device_base_ptrs;
+        device_ptr<point_t> device_base_ptrs;
         device_ptr<scalar_t> device_scalar_ptrs;
         device_ptr<bucket_t> device_bucket_ptrs;
     public: 
@@ -94,7 +99,7 @@ class pippenger_t {
             device = 0;
         }        
     
-        pippenger_t initialize_msm(size_t npoints);
+        pippenger_t initialize_msm(pippenger_t &config, size_t npoints);
         
         size_t get_size_bases(pippenger_t &config);
 
@@ -119,6 +124,13 @@ class pippenger_t {
         void transfer_scalars_to_device(pippenger_t &config, size_t d_scalars_idx, const scalar_t scalars[], cudaStream_t aux_stream);
         
         result_container_t result_container(pippenger_t &config);
+
+        void launch_kernel(pippenger_t &config, size_t d_bases_idx, size_t d_scalar_idx, size_t d_buckets_idx);
+
+        template <typename... Types>
+        void launch_coop(void(*f)(Types...), dim3 gridDim, dim3 blockDim, cudaStream_t stream, Types... args);
+
+        void synchronize_stream(pippenger_t &config);
 };
 typedef pippenger_t<bucket_t, point_t, scalar_t, affine_t> pipp_t;
 

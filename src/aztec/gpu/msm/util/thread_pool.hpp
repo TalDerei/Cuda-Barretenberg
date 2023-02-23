@@ -12,9 +12,12 @@
 #include <vector>
 #include <deque>
 #include <functional>
+#include <iostream>
 #ifdef _GNU_SOURCE
 # include <sched.h>
 #endif
+
+using namespace std;
 
 class thread_pool_t {
 private:

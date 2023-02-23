@@ -1,4 +1,4 @@
-#include "./common.cu"
+#include "common.cu"
 #include <iostream>
 #include <memory>
 
