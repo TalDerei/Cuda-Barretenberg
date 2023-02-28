@@ -116,50 +116,6 @@ __global__ void sqr_check_against_constants(uint64_t *a, uint64_t *result) {
     }
 }
 
-/* -------------------------- Add - Check Against Constants ---------------------------------------------- */
-
-__global__ void initialize_add_check_against_constants(uint64_t *a, uint64_t *b, uint64_t *expected) {
-    fr_gpu a_field{ 0x7d2e20e82f73d3e8, 0x8e50616a7a9d419d, 0xcdc833531508914b, 0xd510253a2ce62c };
-    fr_gpu b_field{ 0x2829438b071fd14e, 0xb03ef3f9ff9274e, 0x605b671f6dc7b209, 0x8701f9d971fbc9 };
-    fr_gpu expecteded{ 0xa55764733693a536, 0x995450aa1a9668eb, 0x2e239a7282d04354, 0x15c121f139ee1f6 };
-
-    for (int i = 0; i < LIMBS; i++) {
-        a[i] = a_field.data[i];
-        b[i] = b_field.data[i];
-        expected[i] = expecteded.data[i];
-    }
-}
-
-__global__ void add_check_against_constants(uint64_t *a, uint64_t *b, uint64_t *result) {
-    // Calculate global thread ID, and boundry check
-    int tid = (blockDim.x * blockIdx.x) + threadIdx.x;
-    if (tid < LIMBS) {
-        fr_gpu::add(a[tid], b[tid], result[tid]);
-    }
-}
-
-/* -------------------------- Subtract - Check Against Constants ---------------------------------------------- */
-
-__global__ void initialize_sub_check_against_constants(uint64_t *a, uint64_t *b, uint64_t *expected) {
-    fr_gpu a_field{ 0xd68d01812313fb7c, 0x2965d7ae7c6070a5, 0x08ef9af6d6ba9a48, 0x0cb8fe2108914f53 };
-    fr_gpu b_field{ 0x2cd2a2a37e9bf14a, 0xebc86ef589c530f6, 0x75124885b362b8fe, 0x1394324205c7a41d };
-    fr_gpu expecteded{ 0xe5daeaf47cf50779, 0xd51ed34a5b0d0a3c, 0x4c2d9827a4d939a6, 0x29891a51e3fb4b5f };
-
-    for (int i = 0; i < LIMBS; i++) {
-        a[i] = a_field.data[i];
-        b[i] = b_field.data[i];
-        expected[i] = expecteded.data[i];
-    }
-}
-
-__global__ void sub_check_against_constants(uint64_t *a, uint64_t *b, uint64_t *result) {
-    // Calculate global thread ID, and boundry check
-    int tid = (blockDim.x * blockIdx.x) + threadIdx.x;
-    if (tid < LIMBS) {
-        fr_gpu::sub(a[tid], b[tid], result[tid]);
-    }
-}
-
 /* -------------------------- Convert To Montgomery Form ---------------------------------------------- */
 
 __global__ void initialize_to_montgomery_form(uint64_t *a, uint64_t *expected) {
