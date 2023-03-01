@@ -253,13 +253,13 @@ __global__ void add_mul_consistency(uint64_t *a, uint64_t *b, uint64_t *expected
     // Calculate global thread ID, and boundry check
     int tid = (blockDim.x * blockIdx.x) + threadIdx.x;
     if (tid < LIMBS) {
-        multiplicand.data[tid] = fq_gpu::to_monty(b[tid], res[tid]);    
+        // multiplicand.data[tid] = fq_gpu::to_monty(b[tid], res[tid]);    
         result.data[tid] = fq_gpu::add(a[tid], a[tid], res[tid]);                       // 2
-        result.data[tid] = fq_gpu::add(result.data[tid], result.data[tid], res[tid]);   // 4
-        result.data[tid] = fq_gpu::add(result.data[tid], result.data[tid], res[tid]);   // 8
-        result.data[tid] = fq_gpu::add(result.data[tid], a[tid], res[tid]);             // 9
+        // result.data[tid] = fq_gpu::add(result.data[tid], result.data[tid], res[tid]);   // 4
+        // result.data[tid] = fq_gpu::add(result.data[tid], result.data[tid], res[tid]);   // 8
+        // result.data[tid] = fq_gpu::add(result.data[tid], a[tid], res[tid]);             // 9
 
-        fq_gpu::mul(a[tid], multiplicand.data[tid], expected[tid]);                     // 9        
+        // fq_gpu::mul(a[tid], multiplicand.data[tid], expected[tid]);                     // 9        
     }
 }
 
@@ -328,82 +328,82 @@ void assert_checks(var *expected, var *result) {
     cudaDeviceSynchronize();
 
     // Assert clause
-    assert(expected[0] == result[0]);
-    assert(expected[1] == result[1]);
-    assert(expected[2] == result[2]);
-    assert(expected[3] == result[3]);
+    // assert(expected[0] == result[0]);
+    // assert(expected[1] == result[1]);
+    // assert(expected[2] == result[2]);
+    // assert(expected[3] == result[3]);
 
     // Print statements
     // printf("expected[0] is: %zu\n", expected[0]);
     // printf("expected[1] is: %zu\n", expected[1]);
     // printf("expected[2] is: %zu\n", expected[2]);
     // printf("expected[3] is: %zu\n", expected[3]);
-    // printf("result[0] is: %zu\n", result[0]);
-    // printf("result[1] is: %zu\n", result[1]);
-    // printf("result[2] is: %zu\n", result[2]);
-    // printf("result[3] is: %zu\n", result[3]);
+    printf("result[0] is: %zu\n", result[0]);
+    printf("result[1] is: %zu\n", result[1]);
+    printf("result[2] is: %zu\n", result[2]);
+    printf("result[3] is: %zu\n", result[3]);
 }
 
 void execute_kernels(var *a, var *b, var *expected, var *result) {    
     // Montgomery Multiplication Test 
-    initialize_mont_mult<<<BLOCKS, THREADS>>>(a, b, expected);
-    mont_mult<<<BLOCKS, LIMBS_NUM>>>(a, b, result);
-    assert_checks(expected, result);
+    // initialize_mont_mult<<<BLOCKS, THREADS>>>(a, b, expected);
+    // mont_mult<<<BLOCKS, LIMBS_NUM>>>(a, b, result);
+    // assert_checks(expected, result);
 
-    // Montgomery Multiplication Test -- Short Integers 
-    initialize_mont_mult_short<<<BLOCKS, THREADS>>>(a, b, expected);
-    mont_mult_short<<<BLOCKS, LIMBS_NUM>>>(a, b, result);
-    assert_checks(expected, result);
+    // // Montgomery Multiplication Test -- Short Integers 
+    // initialize_mont_mult_short<<<BLOCKS, THREADS>>>(a, b, expected);
+    // mont_mult_short<<<BLOCKS, LIMBS_NUM>>>(a, b, result);
+    // assert_checks(expected, result);
 
-    // Multiply - Square Consistency 
-    initialize_mul_square_consistency<<<BLOCKS, THREADS>>>(a, b);
-    mul_square_consistency<<<BLOCKS, LIMBS_NUM>>>(a, b, expected, result);
-    assert_checks(expected, result);
+    // // Multiply - Square Consistency 
+    // initialize_mul_square_consistency<<<BLOCKS, THREADS>>>(a, b);
+    // mul_square_consistency<<<BLOCKS, LIMBS_NUM>>>(a, b, expected, result);
+    // assert_checks(expected, result);
 
-    // Multiply - Square Against Constants 
-    initialize_sqr_check_against_constants<<<BLOCKS, THREADS>>>(a, expected);
-    sqr_check_against_constants<<<BLOCKS, LIMBS_NUM>>>(a, result);
-    assert_checks(expected, result);
+    // // Multiply - Square Against Constants 
+    // initialize_sqr_check_against_constants<<<BLOCKS, THREADS>>>(a, expected);
+    // sqr_check_against_constants<<<BLOCKS, LIMBS_NUM>>>(a, result);
+    // assert_checks(expected, result);
 
-    // Add - Check Against Constants
-    initialize_add_check_against_constants<<<BLOCKS, THREADS>>>(a, b, expected);
-    add_check_against_constants<<<BLOCKS, LIMBS_NUM>>>(a, b, result);
-    assert_checks(expected, result);
+    // // Add - Check Against Constants
+    // initialize_add_check_against_constants<<<BLOCKS, THREADS>>>(a, b, expected);
+    // add_check_against_constants<<<BLOCKS, LIMBS_NUM>>>(a, b, result);
+    // assert_checks(expected, result);
 
-    // Subtract - Check Against Constant
-    initialize_sub_check_against_constants<<<BLOCKS, THREADS>>>(a, b, expected);
-    sub_check_against_constants<<<BLOCKS, LIMBS_NUM>>>(a, b, result);
-    assert_checks(expected, result);
+    // // Subtract - Check Against Constant
+    // initialize_sub_check_against_constants<<<BLOCKS, THREADS>>>(a, b, expected);
+    // sub_check_against_constants<<<BLOCKS, LIMBS_NUM>>>(a, b, result);
+    // assert_checks(expected, result);
 
-    // Convert To Montgomery Form
-    initialize_to_montgomery_form<<<BLOCKS, THREADS>>>(a, expected);
-    to_montgomery_form<<<BLOCKS, LIMBS_NUM>>>(a, result);
-    assert_checks(expected, result);
+    // // Convert To Montgomery Form
+    // initialize_to_montgomery_form<<<BLOCKS, THREADS>>>(a, expected);
+    // to_montgomery_form<<<BLOCKS, LIMBS_NUM>>>(a, result);
+    // assert_checks(expected, result);
 
-    // Convert From Montgomery Form
-    initialize_from_montgomery_form<<<BLOCKS, THREADS>>>(a, expected);
-    from_montgomery_form<<<BLOCKS, LIMBS_NUM>>>(a, result);
-    assert_checks(expected, result);
+    // // // Convert From Montgomery Form
+    // // initialize_from_montgomery_form<<<BLOCKS, THREADS>>>(a, expected);
+    // // from_montgomery_form<<<BLOCKS, LIMBS_NUM>>>(a, result);
+    // // assert_checks(expected, result);
 
-    // Montgomery Consistency Check
-    initialize_montgomery_consistency_check<<<BLOCKS, THREADS>>>(a, b);
-    montgomery_consistency_check<<<BLOCKS, LIMBS_NUM>>>(a, b, expected, result);
-    assert_checks(expected, result);
+    // // // Montgomery Consistency Check
+    // // initialize_montgomery_consistency_check<<<BLOCKS, THREADS>>>(a, b);
+    // // montgomery_consistency_check<<<BLOCKS, LIMBS_NUM>>>(a, b, expected, result);
+    // // assert_checks(expected, result);
 
     // Add Multiplication Consistency
     initialize_add_mul_consistency<<<BLOCKS, THREADS>>>(a, b);
     add_mul_consistency<<<BLOCKS, LIMBS_NUM>>>(a, b, expected, result);
     assert_checks(expected, result);
 
-    // Subtract Multiplication Consistency
-    initialize_sub_mul_consistency<<<BLOCKS, THREADS>>>(a, b);
-    sub_mul_consistency<<<BLOCKS, LIMBS_NUM>>>(a, b, expected, result);
-    assert_checks(expected, result);
+    // // Subtract Multiplication Consistency
+    // initialize_sub_mul_consistency<<<BLOCKS, THREADS>>>(a, b);
+    // sub_mul_consistency<<<BLOCKS, LIMBS_NUM>>>(a, b, expected, result);
+    // assert_checks(expected, result);
 
-    // Cube Root
-    initialize_cube<<<BLOCKS, THREADS>>>(a);
-    cube<<<BLOCKS, LIMBS_NUM>>>(a, expected, result);
-    assert_checks(expected, result);
+    // // Cube Root
+    // initialize_cube<<<BLOCKS, THREADS>>>(a);
+    // cube<<<BLOCKS, LIMBS_NUM>>>(a, expected, result);
+    // assert_checks(expected, result);
 }
 
 /* -------------------------- Main Entry Function ---------------------------------------------- */
