@@ -82,7 +82,7 @@ class result_t {
 template < typename bucket_t, typename point_t, typename scalar_t, typename affine_t > 
 class pippenger_t {
     private:
-        device_ptr<point_t> device_base_ptrs;
+        device_ptr<affine_t> device_base_ptrs;
         device_ptr<scalar_t> device_scalar_ptrs;
         device_ptr<bucket_t> device_bucket_ptrs;
     public: 

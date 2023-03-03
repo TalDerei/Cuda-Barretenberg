@@ -31,7 +31,7 @@ pippenger_t<bucket_t, point_t, scalar_t, affine_t>::initialize_msm(pippenger_t &
  */
 template <class bucket_t, class point_t, class scalar_t, class affine_t>
 size_t pippenger_t<bucket_t, point_t, scalar_t, affine_t>::get_size_bases(pippenger_t &config) {
-    return config.n * sizeof(point_t);
+    return config.n * sizeof(affine_t);
 }
 
 /**
@@ -110,7 +110,7 @@ pippenger_t &config, size_t d_points_idx, const affine_t points[]) {
     cudaStream_t stream = config.default_stream;
 
     // change to affine_t, along with device_base_ptrs
-    point_t *d_points = device_base_ptrs[d_points_idx];
+    affine_t *d_points = device_base_ptrs[d_points_idx];
 
     // cudaMemcpyAsync() is non-blocking and asynchronous variant of cudaMemcpy() that requires pinned memory.
     // Asynchronous transfers enable overalapping data transfers with kernel execution.
@@ -170,7 +170,7 @@ pippenger_t &config, size_t d_bases_idx, size_t d_scalar_idx, size_t d_buckets_i
     cudaStream_t stream = config.default_stream;
 
     // Pointers to malloced memory locations
-    point_t *d_points = device_base_ptrs[d_bases_idx];
+    affine_t *d_points = device_base_ptrs[d_bases_idx];
     scalar_t *d_scalars = device_scalar_ptrs[d_scalar_idx];
 
     // Two-dimensional array of pointers to 'bucket_t' values with NWINS slices, each slice containing 1<<WBITS bucket_t pointers
@@ -181,7 +181,7 @@ pippenger_t &config, size_t d_bases_idx, size_t d_scalar_idx, size_t d_buckets_i
 
     // Helper function that triggers the kernel launch
     launch_coop(
-        pippenger, dim3(NWINS, config.N), NTHREADS, stream, (const point_t*)d_points, config.npoints, 
+        pippenger, dim3(NWINS, config.N), NTHREADS, stream, (affine_t*)d_points, config.npoints, 
         (const scalar_t*)d_scalars, d_buckets, d_none
     );
 }

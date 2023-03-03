@@ -17,14 +17,14 @@ T* msm_t<T, B>::read_curve_points() {
     auto reference_string = std::make_shared<gpu_waffle::FileReferenceString>(NUM_POINTS, "../srs_db");
     g1::affine_element* points = reference_string->get_monomials();
 
-    // cout << points[0].x.data[0] << endl;
-    // cout << points[0].x.data[1] << endl;
-    // cout << points[0].x.data[2] << endl;
-    // cout << points[0].x.data[3] << endl;
-    // cout << points[0].y.data[0] << endl;
-    // cout << points[0].y.data[1] << endl;
-    // cout << points[0].y.data[2] << endl;
-    // cout << points[0].y.data[3] << endl;
+    cout << points[0].x.data[0] << endl;
+    cout << points[0].x.data[1] << endl;
+    cout << points[0].x.data[2] << endl;
+    cout << points[0].x.data[3] << endl;
+    cout << points[0].y.data[0] << endl;
+    cout << points[0].y.data[1] << endl;
+    cout << points[0].y.data[2] << endl;
+    cout << points[0].y.data[3] << endl;
 
     return points;
 }
