@@ -13,7 +13,7 @@ namespace group_elements {
 /**
  * Element class. Implements elliptic curve group arithmetic using Jacobian coordinates
  */
-template < typename fq_gpu > 
+template < typename fq_gpu, typename fr_gpu> 
 class element {
     public:    
         fq_gpu x, y, z;
@@ -24,6 +24,7 @@ class element {
         
         __device__ element(const element& other) noexcept;
 
+        constexpr bool operator==(const element& other) const noexcept;
 };
 
 /* -------------------------- Affine Representation ---------------------------------------------- */
@@ -31,7 +32,7 @@ class element {
 /**
  * Affine element class. Implements elliptic curve group arithmetic using Affine coordinates
  */
-template < typename fq_gpu > 
+template < typename fq_gpu, typename fr_gpu> 
 class affine_element {
     public:    
         fq_gpu x, y;

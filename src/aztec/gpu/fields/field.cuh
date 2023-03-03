@@ -171,7 +171,7 @@ class field_gpu {
 
         __device__ static var load(var x, var &res);
 
-        __device__ static void store(var *mem, const field_gpu &x);
+        __device__ static void store(var *mem, const var &x);
 
         __device__ static var add(const var a, const var b, var &res);
 

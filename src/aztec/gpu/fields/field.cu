@@ -44,10 +44,10 @@ __device__ var field_gpu<params>::load(var x, var &res) {
  * Store operation copies data from a register into main memory
  */
 template<class params> 
-__device__ void field_gpu<params>::store(var *mem, const field_gpu &x) {
+__device__ void field_gpu<params>::store(var *mem, const var &x) {
     int id = params::lane();
     if (id < LIMBS) {
-        mem[id] = x.data;
+        mem[id] = x;
     }
 }
 
