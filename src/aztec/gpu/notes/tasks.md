@@ -42,3 +42,8 @@
     - [ ] Add extension fields
     - [ ] Add zero and infinity checks 
     - [ ] Create unit test suite
+- [ ] Implement simple double-and-add algorithm for correctness
+    - [x] Implement for single finite field elements
+    - [x] Implement for single elliptic curve points
+    - [ ] Implement for vector of finite field elements
+    - [ ] Implement for vector of elliptic curve points
