@@ -13,7 +13,6 @@ using namespace gpu_barretenberg;
 template<class params> 
 __device__ field_gpu<params>::field_gpu(var a, var b, var c, var d) noexcept
     : data{ a, b, c, d } {};
-    
 
 template<class params> 
 __device__ field_gpu<params> field_gpu<params>::zero() {

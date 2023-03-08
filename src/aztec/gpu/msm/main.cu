@@ -21,8 +21,9 @@ int main(int, char**) {
     msm->pippenger_execute(context, NUM_POINTS, points, scalars);
 }
 
-// TODO:
-// Implement simple double and add algorithm in gpu kernel
-// Test kernel on smaller instance size (i.e. grid and blocks)
-// Understand these kernel functions better + add comments
-// Need to figure out how to take FF elements, instead of elements of limbs
+/**
+ * TODO: Implement simple double and add algorithm in gpu kernel
+ * TODO: Test kernel on smaller instance size (i.e. grid and blocks)
+ * TODO: Understand these kernel functions better + add comments
+ * TODO: Need to figure out how to take FF elements, instead of elements of limbs
+ */

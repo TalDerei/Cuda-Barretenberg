@@ -77,6 +77,36 @@
 
     - Ignition trusted setup ceremony says 100.8M (~2^26-2^27). It’s split up across 20 files, and ./bootstrap.sh was only configured to download the first 3 transcripts. Running “./download_ignition.sh” downloads the rest of the transcripts. Still, the pippenger bench is segfaulting (core dumped) for some reason. Update: I fixed the seg faults by pointing to the correct srs_db directory and commenting out some benchmark tests. Need to also figure out the difference in execution times between the pippenger and polynomial benches for Multi-scalar multiplication...update: seems like std::chrono time is generally slower in benchmarking. 
 
+```Notes while performing simple double and add MSM```
+
+    Questions:
+    1. How to expand this to perform on an actual Fq point and Fr scalar?
+        --> They operate over different prime fields, but Fr scalar doesn't participate 
+        in the addition / multiplication calculations, only multiples of the Fq curve element. 
+    2. How to expand to add a vector of Fq points?
+    2. How to expand to add a vector of G1 curve points?
+    3. How to expand this to perform on a vector of points and scalars?
+
+    Notes:
+    - Seems like barretenberg doesn't have methods to multipliy fq * g1 or g1 * g1, or fq * g1.x or g1.x * g1.x
+    - Performing a double and then add, e.g. ec + ec = 2ec, then 2ec + ec = 3ec yields the same results in gpu tests
+    and barretenberg. But ec + ec = 2ec, then 2ec + ec = 3ec, then 3ec + ec = 4ec isn't yielding the same results
+    as 2ec + 2ec with doubling. Need to investigate, because seems like a montgomery representation problem. 
+
+    Even on Barretenberg,the results might be different. It's converting everything to montgomery form before starting the calculation,
+    and the assert check still passes. Some conversions going on in the equality '==' check. 
+
+    To standardarize the results between barretenberg and my test suites, we'll do the following:
+    1. For FF code, don't need to convert to and from montgomery representation unless it's a multiplication operation.
+    2. For ECC code, always convert to and from montgomery representation code. 
+
+    We'll follow the same spec as Barretenberg, without all of the extra confusing operator overloading ops. Need to perform both calculations in both ways to and compare the difference.
+
+    Most important thing I've learned building these MSM tests is that a single thread cannot perform multiple calculations inside the kernel invocation, instead things like additions operate on thread blocks of width 4, otherwise the result is corrupted. 
+
 ```Why does lagrange base vs monomial bases for SRS work better for MSM, conceptually?```
 
 ```Where are extension fields used in the calculation?```
+
+```Is MSM performed more commonly on jacobian elements or affine elements?```
+
