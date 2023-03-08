@@ -6,6 +6,7 @@ set(CMAKE_CUDA_STANDARD 17)
 include_directories(../arithmetic)
 include_directories(../fields)
 include_directories(../curves)
+include_directories(../srs)
 
 # montgomery multiplication
 add_executable(
@@ -115,10 +116,31 @@ target_link_libraries(
     PUBLIC
     field_library
     fixnum_library
+    reference_string_library
 )
 
 add_custom_target(
     run_msm_test
     COMMAND msm_test
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+)
+
+# example test
+add_executable(
+    msm_example_test
+    tests/msm/example_test.cu
+)
+
+target_link_libraries(
+    msm_example_test
+    PUBLIC
+    field_library
+    fixnum_library
+    reference_string_library
+)
+
+add_custom_target(
+    run_msm_example_test
+    COMMAND msm_example_test
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
 )
