@@ -401,28 +401,9 @@ __global__ void naive_double_and_add_curve_vector(g1::element *point, g1::elemen
         point[(blockIdx.x * 2) + 1].x.data[threadIdx.x], point[(blockIdx.x * 2) + 1].y.data[threadIdx.x], point[(blockIdx.x * 2) + 1].z.data[threadIdx.x],
         result_vec[blockIdx.x].x.data[threadIdx.x], result_vec[blockIdx.x].y.data[threadIdx.x], result_vec[blockIdx.x].z.data[threadIdx.x]
     );
-
-    // __syncthreads();
-    
-    // // Accumulate result into current block
-    // if (threadIdx.x == 0) {
-    //     fq_gpu::load(result_vec[0].x.data[0], res_x[0]);
-    //     fq_gpu::load(result_vec[0].x.data[1], res_x[1]);
-    //     fq_gpu::load(result_vec[0].x.data[2], res_x[2]);
-    //     fq_gpu::load(result_vec[0].x.data[3], res_x[3]);
-    
-    //     fq_gpu::load(result_vec[0].y.data[0], res_y[0]);
-    //     fq_gpu::load(result_vec[0].y.data[1], res_y[1]);
-    //     fq_gpu::load(result_vec[0].y.data[2], res_y[2]);
-    //     fq_gpu::load(result_vec[0].y.data[3], res_y[3]);
-
-    //     fq_gpu::load(result_vec[0].z.data[0], res_z[0]);
-    //     fq_gpu::load(result_vec[0].z.data[1], res_z[1]);
-    //     fq_gpu::load(result_vec[0].z.data[2], res_z[2]);
-    //     fq_gpu::load(result_vec[0].z.data[3], res_z[3]);
-    // }
 }
 
+// Compare two elliptic curve elements
 __global__ void comparator_kernel(g1::element *point, g1::element *point_2, uint64_t *result) {     
     fq_gpu lhs_zz;
     fq_gpu lhs_zzz;
@@ -444,6 +425,113 @@ __global__ void comparator_kernel(g1::element *point, g1::element *point_2, uint
     rhs_x.data[tid] = fq_gpu::mul(point_2[0].x.data[tid], lhs_zz.data[tid], rhs_x.data[tid]);
     rhs_y.data[tid] = fq_gpu::mul(point_2[0].y.data[tid], lhs_zzz.data[tid], rhs_y.data[tid]);
     result[tid] = ((lhs_x.data[tid] == rhs_x.data[tid]) && (lhs_y.data[tid] == rhs_y.data[tid]));
+}
+
+/* -------------------------- Kernel Functions For Vector of Finite Field With Scalars Tests ---------------------------------------------- */
+
+// Naive double and add using sequential implementation using scalars
+__global__ void naive_double_and_add_field_vector_with_scalars(fq_gpu *point, fr_gpu *scalar, fq_gpu *result_vec, uint64_t *result) { 
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+
+    fq_gpu temp{ 0, 0, 0, 0 };
+    fq_gpu temp_accumulator{ 0, 0, 0, 0 };
+
+    for (int i = 0; i < 1024; i++) {
+        fq_gpu::mul(point[i].data[tid], scalar[i].data[tid], temp.data[tid]);
+        fq_gpu::add(temp.data[tid], temp_accumulator.data[tid], temp_accumulator.data[tid]);
+    }
+    fq_gpu::load(temp_accumulator.data[tid], result_vec[0].data[tid]);
+    fq_gpu::from_monty(result_vec[0].data[tid], result_vec[0].data[tid]);
+    fq_gpu::load(temp_accumulator.data[tid], result[tid]);
+    fq_gpu::from_monty(result[tid], result[tid]);
+}
+
+// Double and add implementation using bit-decomposition with time complexity: O(k)
+__global__ void double_and_add_field_vector_with_scalars(fq_gpu *point, fr_gpu *scalar, uint64_t *result) {
+    // Holders for points and scalars
+    fq_gpu R;
+    fq_gpu Q;
+    
+    // Inner and outer accumulators
+    fq_gpu inner_accumulator;
+    fq_gpu outer_accumulator;
+
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    if (tid < LIMBS) {
+        // Initialize the inner and outer accumulator that will store intermediate results
+        fq_gpu::load(0, inner_accumulator.data[tid]); 
+        fq_gpu::load(0, outer_accumulator.data[tid]); 
+
+        // Loop over all curve points and scalars
+        // Does indexing with int vs uint64_t or size_t matter?
+        for (int i = 0; i < POINTS; i++) {
+            // Load Q with curve point 'i', and 'R' with the identity element
+            fq_gpu::load(point[i].data[tid], Q.data[tid]);
+            // Loop for each limb
+            for (int j = 0; j < LIMBS; j++) {
+                fq_gpu::load(0, R.data[tid]); 
+                // Loop for each bit of scalar
+                for (int z = 63; z >= 0; z--) {
+                    // Performs bit-decompositon by traversing the bits of the scalar from MSB to LSB,
+                    // and extracting the i-th bit of scalar in limb.
+                    if (((scalar[i].data[j] >> j) & 1) ? 1 : 0)
+                        fq_gpu::add(R.data[tid], Q.data[tid], R.data[tid]);  
+                    if (z != 0) 
+                        // z != 0 assumes the odd case -- need to calculate if this is neccessary?
+                        fq_gpu::add(R.data[tid], R.data[tid], R.data[tid]); 
+                }
+                // Inner accumulator 
+                fq_gpu::add(R.data[tid], inner_accumulator.data[tid], inner_accumulator.data[tid]);
+            }
+            // Outer accumulator 
+            fq_gpu::add(inner_accumulator.data[tid], outer_accumulator.data[tid], outer_accumulator.data[tid]);
+        }
+    }
+    
+    // Store the final value of R into the result array for this limb
+    fq_gpu::load(outer_accumulator.data[tid], result[tid]);
+}
+
+/* -------------------------- Kernel Functions For Vector of Finite Field With Scalars Tests ---------------------------------------------- */
+
+// Naive double and add using sequential implementation using scalars
+__global__ void naive_double_and_add_curve_with_scalars(
+g1::element *point, fr_gpu *scalar, g1::element *result_vec, uint64_t *res_x, uint64_t *res_y, uint64_t *res_z) { 
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+
+    g1::element temp;
+    g1::element temp_accumulator;
+    fq_gpu res_x_temp{ 0, 0, 0, 0 };
+    fq_gpu res_y_temp{ 0, 0, 0, 0 };
+    fq_gpu res_z_temp{ 0, 0, 0, 0 };
+
+    fq_gpu::load(res_x_temp.data[tid], temp.x.data[tid]);
+    fq_gpu::load(res_y_temp.data[tid], temp.y.data[tid]);
+    fq_gpu::load(res_z_temp.data[tid], temp.z.data[tid]);
+    fq_gpu::load(res_x_temp.data[tid], temp_accumulator.x.data[tid]);
+    fq_gpu::load(res_y_temp.data[tid], temp_accumulator.y.data[tid]);
+    fq_gpu::load(res_z_temp.data[tid], temp_accumulator.z.data[tid]);
+
+    for (int i = 0; i < 1024; i++) {
+        fq_gpu::mul(point[i].x.data[tid], scalar[i].data[tid], temp.x.data[tid]);
+        fq_gpu::mul(point[i].y.data[tid], scalar[i].data[tid], temp.y.data[tid]);
+        fq_gpu::mul(point[i].z.data[tid], scalar[i].data[tid], temp.z.data[tid]);
+        fq_gpu::add(temp.x.data[tid], temp_accumulator.x.data[tid], temp_accumulator.x.data[tid]);
+        fq_gpu::add(temp.y.data[tid], temp_accumulator.y.data[tid], temp_accumulator.y.data[tid]);
+        fq_gpu::add(temp.z.data[tid], temp_accumulator.z.data[tid], temp_accumulator.z.data[tid]);
+    }
+    
+    fq_gpu::load(temp_accumulator.x.data[tid], result_vec[0].x.data[tid]);
+    fq_gpu::load(temp_accumulator.y.data[tid], result_vec[0].y.data[tid]);
+    fq_gpu::load(temp_accumulator.z.data[tid], result_vec[0].z.data[tid]);
+
+    fq_gpu::from_monty(result_vec[0].x.data[tid], result_vec[0].x.data[tid]);
+    fq_gpu::from_monty(result_vec[0].y.data[tid], result_vec[0].y.data[tid]);
+    fq_gpu::from_monty(result_vec[0].z.data[tid], result_vec[0].z.data[tid]);   
+
+    fq_gpu::load(result_vec[0].x.data[tid], res_x[tid]);
+    fq_gpu::load(result_vec[0].y.data[tid], res_y[tid]);
+    fq_gpu::load(result_vec[0].z.data[tid], res_z[tid]); 
 }
 
 /* -------------------------- Helper Functions ---------------------------------------------- */
@@ -490,28 +578,21 @@ B* read_curve_points() {
 // Read scalars
 template <class B>
 B* read_scalars() {
-    uint64_t temp[POINTS * 4];
     fr_gpu *scalars = new fr_gpu[POINTS];
-    uint64_t scalar;
 
     // File stream
     ifstream stream;
     stream.open("../src/aztec/gpu/msm/scalars/scalars.txt", ios::in);
 
     // Read scalars
-    if (stream.is_open()) {   
-        int i = 0;  
-        while (stream.good()) { 
-            stream >> scalar;
-            temp[i] = scalar;
-            i++;
-        }
+    if ( stream.is_open() ) {   
+        for (size_t i = 0; i < POINTS; i++) {
+            for (size_t j = 0; j < 4; j++) {
+                stream >> scalars[i].data[j];
+            }
+        }   
     }
-    
-    for (size_t i = 0; i < (sizeof(temp) / sizeof(uint64_t)) / 4; ++i) {    
-        fr_gpu element{ temp[i], temp[i + 1], temp[i + 2], temp[i + 3] };
-        scalars[i] = element;        
-    }
+    stream.close();
         
     return scalars;
 }
@@ -620,16 +701,14 @@ var *a, var *b, var *c, var *d, var *result, var *res_x, var *res_y, var *res_z,
 // Execute kernel with vector of finite field elements
 void execute_kernels_finite_fields_vector(
 var *a, var *b, var *c, var *d, var *result, var *res_x, var *res_y, var *res_z, var *expect_x, var *expect_y, var *expect_z) {    
-    // Read curve points and scalars
-    fr_gpu *scalars = read_scalars<fr_gpu>();
+    // Read curve points
     fq_gpu *points = read_field_points<fq_gpu>();
 
     // Define pointers to uint64_t type
-    fq_gpu *points_alloc, *scalar_alloc, *result_vec;
+    fq_gpu *points_alloc, *result_vec;
 
     // Allocate unified memory accessible by host and device
     cudaMallocManaged(&points_alloc, LIMBS * POINTS * sizeof(var));
-    cudaMallocManaged(&scalar_alloc, LIMBS * POINTS * sizeof(var));
     cudaMallocManaged(&result_vec, LIMBS * POINTS * sizeof(var));
 
     // Load points
@@ -645,12 +724,12 @@ var *a, var *b, var *c, var *d, var *result, var *res_x, var *res_y, var *res_z,
     expect_x[2] = 0x9EE7391E20B296B4;
     expect_x[3] = 0x21E559B660EDBD92;
 
-    // Kernel invocation
+    // Kernel invocation 1
     naive_double_and_add_field_vector_simple<<<1, 4>>>(points_alloc, result_vec, result);
     assert_checks(expect_x, result);
     print_field_tests(result);
 
-    // The issue with this is it requires log(NUM_POINTS) kernel invocation
+    // Kernel invocation 2
     naive_double_and_add_field_vector<<<1024, 4>>>(points_alloc, result_vec, result);
     naive_double_and_add_field_vector<<<512, 4>>>(result_vec, result_vec, result);
     naive_double_and_add_field_vector<<<256, 4>>>(result_vec, result_vec, result);
@@ -669,10 +748,10 @@ var *a, var *b, var *c, var *d, var *result, var *res_x, var *res_y, var *res_z,
 // Execute kernel with vector of finite field elements
 void execute_kernels_curve_vector(
 var *a, var *b, var *c, var *d, var *result, var *res_x, var *res_y, var *res_z, var *expect_x, var *expect_y, var *expect_z) {    
-    // Read curve points and scalars
+    // Read curve points
     g1::element *points = read_curve_points<g1::element>();
 
-    // Define pointers to uint64_t type
+    // Define pointers to g1::element type
     g1::element *points_alloc, *result_vec_1, *result_vec_2;
 
     // Allocate unified memory accessible by host and device
@@ -680,7 +759,7 @@ var *a, var *b, var *c, var *d, var *result, var *res_x, var *res_y, var *res_z,
     cudaMallocManaged(&result_vec_1, 3 * LIMBS * POINTS * sizeof(var));
     cudaMallocManaged(&result_vec_2, 3 * LIMBS * POINTS * sizeof(var));
  
-    // Load points
+    // Load curve elements 
     for (int i = 0; i < 1024; i++) {
         for (int j = 0; j < LIMBS; j++) {
             points_alloc[i].x.data[j] = points[i].x.data[j];
@@ -705,14 +784,14 @@ var *a, var *b, var *c, var *d, var *result, var *res_x, var *res_y, var *res_z,
     expect_z[2] = 0x19440082AE9936D8;
     expect_z[3] = 0x14E512C471B5CDD4;
 
-    // Kernel invocation
+    // Kernel invocation 1
     naive_double_and_add_curve_vector_simple<<<1, 4>>>(points_alloc, result_vec_1, res_x, res_y, res_z);
     assert_checks(expect_x, res_x);
     assert_checks(expect_y, res_y);
     assert_checks(expect_z, res_z);
     print_curve_tests(res_x, res_y, res_z);
 
-    // The issue with this is it requires log(NUM_POINTS) kernel invocations
+    // Kernel invocation 2
     naive_double_and_add_curve_vector<<<512, 4>>>(points_alloc, result_vec_2, res_x, res_y, res_z);
     naive_double_and_add_curve_vector<<<256, 4>>>(result_vec_2, result_vec_2, res_x, res_y, res_z);
     naive_double_and_add_curve_vector<<<128, 4>>>(result_vec_2, result_vec_2, res_x, res_y, res_z);
@@ -730,6 +809,108 @@ var *a, var *b, var *c, var *d, var *result, var *res_x, var *res_y, var *res_z,
     cudaDeviceSynchronize();
     comparator_kernel<<<1, 4>>>(result_vec_1, result_vec_2, result);
     print_field_tests(result);
+}
+
+// Execute kernel with vector of finite field elements with scalars
+void execute_kernels_finite_fields_vector_with_scalars(
+var *a, var *b, var *c, var *d, var *result, var *res_x, var *res_y, var *res_z, var *expect_x, var *expect_y, var *expect_z) {    
+    // Read curve points and scalars
+    fr_gpu *scalars = read_scalars<fr_gpu>();
+    fq_gpu *points = read_field_points<fq_gpu>();
+
+    // Define pointers to uint64_t type
+    fq_gpu *points_alloc, *result_vec_1, *result_vec_2;
+    fr_gpu *scalars_alloc;
+
+    // Allocate unified memory accessible by host and device
+    cudaMallocManaged(&points_alloc, LIMBS * POINTS * sizeof(var));
+    cudaMallocManaged(&scalars_alloc, LIMBS * POINTS * sizeof(var));
+    cudaMallocManaged(&result_vec_1, LIMBS * POINTS * sizeof(var));
+    cudaMallocManaged(&result_vec_2, LIMBS * POINTS * sizeof(var));
+
+    // Load field elements 
+    for (int i = 0; i < POINTS; i++) {
+        for (int j = 0; j < LIMBS; j++) {
+            points_alloc[i].data[j] = points[i].data[j];
+        }
+    }
+
+    // Load scalars
+    for (int i = 0; i < POINTS; i++) {
+        for (int j = 0; j < LIMBS; j++) {
+            scalars_alloc[i].data[j] = scalars[i].data[j];
+        }
+    }
+
+    // Load expected result
+    expect_x[0] = 0x5B5ECFF24EEE567B;
+    expect_x[1] = 0xE0E4CCD174FA7CD3;
+    expect_x[2] = 0x2EDFE1054FF06F7D;
+    expect_x[3] = 0x93075569BFD611A;
+
+    // Kernel invocation 1
+    naive_double_and_add_field_vector_with_scalars<<<1, 4>>>(points_alloc, scalars_alloc, result_vec_1, result);
+    assert_checks(expect_x, result);
+    print_field_tests(result);
+
+    double_and_add_field_vector_with_scalars<<<BLOCKS, THREADS>>>(points_alloc, scalars_alloc, result);
+    print_field_tests(result);
+}
+
+// Execute kernel with vector of curve elements with scalars
+void execute_kernels_curve_vector_with_scalars(
+var *a, var *b, var *c, var *d, var *result, var *res_x, var *res_y, var *res_z, var *expect_x, var *expect_y, var *expect_z) {    
+    // Read curve points and scalars
+    fr_gpu *scalars = read_scalars<fr_gpu>();
+    g1::element *points = read_curve_points<g1::element>();
+
+    // Define pointers to uint64_t type
+    g1::element *points_alloc, *result_vec;
+    fr_gpu *scalars_alloc;
+
+    // Allocate unified memory accessible by host and device
+    cudaMallocManaged(&points_alloc, 3 * LIMBS * POINTS * sizeof(var));
+    cudaMallocManaged(&scalars_alloc, LIMBS * POINTS * sizeof(var));
+    cudaMallocManaged(&result_vec, 3 * LIMBS * POINTS * sizeof(var));
+
+    // Load curve elements 
+    for (int i = 0; i < 1024; i++) {
+        for (int j = 0; j < LIMBS; j++) {
+            points_alloc[i].x.data[j] = points[i].x.data[j];
+            points_alloc[i].y.data[j] = points[i].y.data[j];
+            points_alloc[i].z.data[j] = points[i].z.data[j];
+        }
+    }
+
+    // Load scalars
+    for (int i = 0; i < POINTS; i++) {
+        for (int j = 0; j < LIMBS; j++) {
+            scalars_alloc[i].data[j] = scalars[i].data[j];
+        }
+    }
+
+    // Load expected result for 1024 points
+    expect_x[0] = 0xC651AE98201F2ED5;
+    expect_x[1] = 0x7FCBB8625702746E;
+    expect_x[2] = 0xEA1323D929C8744;
+    expect_x[3] = 0x299F0951AE8445B8;
+
+    expect_y[0] = 0x9471B80AA7A54D0B;
+    expect_y[1] = 0x985A8A5A3CA5C1EB;
+    expect_y[2] = 0x3CF789E4252D1EE8;
+    expect_y[3] = 0xECCA07E625BB37D;
+    
+    expect_z[0] = 0x88FE75761CA8C8DF;
+    expect_z[1] = 0x996914266C5DE61A;
+    expect_z[2] = 0x53745CEECA7D48FE;
+    expect_z[3] = 0x293E5E8A3728B7C6;
+
+    // Kernel invocation 1
+    naive_double_and_add_curve_with_scalars<<<1, 4>>>(points_alloc, scalars_alloc, result_vec, res_x, res_y, res_z);
+    assert_checks(expect_x, res_x);
+    assert_checks(expect_y, res_y);
+    assert_checks(expect_z, res_z);
+    print_curve_tests(res_x, res_y, res_z);
 }
 
 /* -------------------------- Main Entry Function ---------------------------------------------- */
@@ -755,10 +936,12 @@ int main(int, char**) {
     cudaMallocManaged(&expect_z, LIMBS * sizeof(var));
 
     // Execute kernel functions
-    // execute_kernels_finite_fields(a, b, c, d, result, res_x, res_y, res_z, expect_x, expect_y, expect_z);
-    // execute_kernels_curve(a, b, c, d, result, res_x, res_y, res_z, expect_x, expect_y, expect_z);
-    // execute_kernels_finite_fields_vector(a, b, c, d, result, res_x, res_y, res_z, expect_x, expect_y, expect_z);
+    execute_kernels_finite_fields(a, b, c, d, result, res_x, res_y, res_z, expect_x, expect_y, expect_z);
+    execute_kernels_curve(a, b, c, d, result, res_x, res_y, res_z, expect_x, expect_y, expect_z);
+    execute_kernels_finite_fields_vector(a, b, c, d, result, res_x, res_y, res_z, expect_x, expect_y, expect_z);
     execute_kernels_curve_vector(a, b, c, d, result, res_x, res_y, res_z, expect_x, expect_y, expect_z);
+    execute_kernels_finite_fields_vector_with_scalars(a, b, c, d, result, res_x, res_y, res_z, expect_x, expect_y, expect_z);
+    execute_kernels_curve_vector_with_scalars(a, b, c, d, result, res_x, res_y, res_z, expect_x, expect_y, expect_z);
 
     // Successfull execution of unit tests
     cout << "******* All 'MSM' unit tests passed! **********" << endl;
