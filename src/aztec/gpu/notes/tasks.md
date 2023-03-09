@@ -26,7 +26,7 @@
 - [ ] Multi-scalar multiplication (MSM) for Pippenger's Bucket Method
     - [x] Understand Barretenberg’s multi-exponentiation CPU implementation 
     - [x] Benchmark Zprize MSM implementation on GPU 
-    - [ ] Understand Supranational’s SPPARK MSM GPU kernel
+    - [x] Understand Supranational’s SPPARK MSM GPU kernel
     - [ ] Adapt Supranational’s MSM scheme into Barretenberg
         - [x] Add comments to understand code
         - [x] Remove rust bindings
@@ -34,7 +34,7 @@
         - [ ] Port MSM implemenation over BN-254 curve
         - [ ] Experiment between Lagrange SRS over monomial SRS
 - [ ] Test and benchmark MSM kernel implementation on GPU
-    - [ ] Create unit test suite
+    - [x] Create unit test suite
     - [ ] Create benchmarking suite
 - [ ] Implement remaining G1 arthmetic
     - [ ] Finish adding missing elliptic curve functions
@@ -45,5 +45,5 @@
 - [ ] Implement simple double-and-add algorithm for correctness
     - [x] Implement for single finite field elements
     - [x] Implement for single elliptic curve points
-    - [ ] Implement for vector of finite field elements
-    - [ ] Implement for vector of elliptic curve points
+    - [x] Implement for vector of finite field elements
+    - [x] Implement for vector of elliptic curve points
