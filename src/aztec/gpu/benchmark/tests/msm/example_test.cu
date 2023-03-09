@@ -19,7 +19,7 @@ static constexpr size_t POINTS = 1 << 16;
 /* -------------------------- Kernel Functions For Finite Field Tests ---------------------------------------------- */
 
 // Sum reduction with warp divergence
-__global__ void sum_reduction(int *v, int *v_r) { 
+__global__ void sum_reduction_1(int *v, int *v_r) { 
     // Global thread ID
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -32,9 +32,72 @@ __global__ void sum_reduction(int *v, int *v_r) {
     // Sychronization barrier
     __syncthreads();
     
-    // Warp divergence to determine active threads
+    // Warp divergence to determine active threads based on stride
     for (int s = 1; s < blockDim.x; s *= 2) {
         if (threadIdx.x % (2 * s) == 0) {
+            partial_sum[threadIdx.x] += partial_sum[threadIdx.x + s];
+        }
+        __syncthreads();
+    }
+
+    // Accumulate result into current block
+    if (threadIdx.x == 0) {
+        v_r[blockIdx.x] = partial_sum[0];
+    }
+}
+
+// Sum reduction using sequential threads (eliminating warp divergence and modulo operation). 
+// This reduces the number kernel threads by half, and performs ~2x compared to sum_reduction_1. 
+__global__ void sum_reduction_2(int *v, int *v_r) { 
+    // Global thread ID
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+
+    // Perform reduction in shared memory
+    __shared__ int partial_sum[256];
+
+    // Partial_sum array is being used to accumulate partial sums
+    partial_sum[threadIdx.x] = v[tid];
+
+    // Sychronization barrier
+    __syncthreads();
+    
+    // Warp divergence to determine active threads based on stride
+    for (int s = 1; s < blockDim.x; s *= 2) {
+        // Change the indexing to be sequential threads (i.e. divide threads into groups)
+        int index = 2 * s * threadIdx.x;
+
+        // Each thread does work unless the idex goes off the block
+        if (index < blockDim.x) {
+            partial_sum[index] += partial_sum[index + s];
+        }
+        __syncthreads();
+    }
+
+    // Accumulate result into current block
+    if (threadIdx.x == 0) {
+        v_r[blockIdx.x] = partial_sum[0];
+    }
+}
+
+// Contiguous memory access, avoiding shared memory bank conflicts.
+// Bank conflicts arise because of some specific access pattern of data in shared memory.
+__global__ void sum_reduction_3(int *v, int *v_r) { 
+    // Global thread ID
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+
+    // Perform reduction in shared memory
+    __shared__ int partial_sum[256];
+
+    // Partial_sum array is being used to accumulate partial sums
+    partial_sum[threadIdx.x] = v[tid];
+
+    // Sychronization barrier
+    __syncthreads();
+    
+    // Warp divergence to determine active threads based on stride
+    for (int s = blockDim.x / 2; s > 0; s >>= 1) {
+        // Each thread does work unless the idex goes off the block
+        if (threadIdx.x < s) {
             partial_sum[threadIdx.x] += partial_sum[threadIdx.x + s];
         }
         __syncthreads();
@@ -65,7 +128,7 @@ void print_field_tests(var *result) {
 /* -------------------------- Executing Initialization and Workload Kernels ---------------------------------------------- */
 
 // Execute kernel with vector of finite field elements
-void execute_kernels(var *a, var *b, var *c, var *d, var *result, var *res_x, var *res_y, var *res_z) {    
+void execute_sum_reduction(var *a, var *b, var *c, var *d, var *result, var *res_x, var *res_y, var *res_z) {    
     size_t bytes = POINTS * sizeof(int);
 
     // Allocate dynamic memory
@@ -86,11 +149,15 @@ void execute_kernels(var *a, var *b, var *c, var *d, var *result, var *res_x, va
     // Grid size
     int GRID_SIZE = (int)ceil(POINTS / 256);
 
-    // Call kernel
-    sum_reduction<<<GRID_SIZE, 256>>>(d_v, d_v_r);
+    // Launch kernels
+    // sum_reduction_1<<<GRID_SIZE, 256>>>(d_v, d_v_r);
+    // sum_reduction_1<<<1, GRID_SIZE>>>(d_v_r, d_v_r);
 
-    // Final accumulation
-    sum_reduction<<<1, GRID_SIZE>>>(d_v_r, d_v_r);
+    // sum_reduction_2<<<GRID_SIZE, 256>>>(d_v, d_v_r);
+    // sum_reduction_2<<<1, GRID_SIZE>>>(d_v_r, d_v_r);
+
+    sum_reduction_3<<<GRID_SIZE, 256>>>(d_v, d_v_r);
+    sum_reduction_3<<<1, GRID_SIZE>>>(d_v_r, d_v_r);
 
     // Copy results to host
     cudaMemcpy(h_v_r, d_v_r, POINTS * sizeof(int), cudaMemcpyDeviceToHost);
@@ -118,7 +185,7 @@ int main(int, char**) {
     cudaMallocManaged(&res_z, LIMBS * sizeof(var));
 
     // Execute kernel functions
-    execute_kernels(a, b, c, d, result, res_x, res_y, res_z);
+    execute_sum_reduction(a, b, c, d, result, res_x, res_y, res_z);
 
     // Successfull execution of unit tests
     cout << "******* All 'MSM' unit tests passed! **********" << endl;
