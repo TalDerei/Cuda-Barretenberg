@@ -23,8 +23,6 @@ class element {
         __device__ element(const fq_gpu &a, const fq_gpu &b, const fq_gpu &c) noexcept;
         
         __device__ element(const element& other) noexcept;
-
-        constexpr bool operator==(const element& other) const noexcept;
 };
 
 /* -------------------------- Affine Representation ---------------------------------------------- */
