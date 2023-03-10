@@ -6,17 +6,20 @@ using namespace std;
 using namespace gpu_barretenberg;
 
 /**
- * Function declerations are templated with base 
- * and scalar fields represented as 'params'
+ * Function declerations are templated with base and scalar fields represented as 'params'
  */
-
 template<class params> 
 __device__ field_gpu<params>::field_gpu(var a, var b, var c, var d) noexcept
     : data{ a, b, c, d } {};
 
 template<class params> 
 __device__ field_gpu<params> field_gpu<params>::zero() {
-    return field_gpu(0, 0, 0, 0); 
+    return field_gpu(0x0, 0x0, 0x0, 0x0); 
+}
+
+template<class params> 
+__device__ field_gpu<params> field_gpu<params>::one() {
+    return field_gpu(0x01, 0x0, 0x0, 0x0); 
 }
 
 template<class params> 

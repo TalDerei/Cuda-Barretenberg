@@ -3,6 +3,8 @@
 using namespace std;
 using namespace gpu_barretenberg;
 
+/* -------------------------- Affine and Jacobian Coordinate Operations ---------------------------------------------- */
+
 template <class fq_gpu, class fr_gpu> 
 __device__ void group_gpu<fq_gpu, fr_gpu>::load_affine(affine_element &X, affine_element &result) {
     fq_gpu::load(X.x.data[0], result.x.data[0]);      
@@ -34,32 +36,10 @@ __device__ void group_gpu<fq_gpu, fr_gpu>::load_jacobian(element &X, element &re
     fq_gpu::load(X.z.data[3], result.z.data[3]);  
 }
 
-template <class fq_gpu, class fr_gpu> 
-__device__ void group_gpu<fq_gpu, fr_gpu>::is_affine(const affine_element &X) {
 
-}
-
-template <class fq_gpu, class fr_gpu> 
-__device__ void group_gpu<fq_gpu, fr_gpu>::is_affine_equal(const affine_element &X) {
-
-}
-
-template <class fq_gpu, class fr_gpu> 
-__device__ void group_gpu<fq_gpu, fr_gpu>::is_jacobian_equal(const affine_element &X) {
-
-}
-
-template <class fq_gpu, class fr_gpu> 
-__device__ void group_gpu<fq_gpu, fr_gpu>::store_affine(const affine_element &X, const var *y) {
-
-}
-
-template <class fq_gpu, class fr_gpu> 
-__device__ void group_gpu<fq_gpu, fr_gpu>::store_jacobian(const element &X, const var *y) {
-
-}
-
-// Elliptic curve algorithms: https://hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-0.html#addition-zadd-2007-m
+/**
+ * Elliptic curve algorithms: https://hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-0.html#addition-zadd-2007-m
+ */
 template <class fq_gpu, class fr_gpu> 
 __device__ void group_gpu<fq_gpu, fr_gpu>::mixed_add(var X, var Y, var Z, var A, var B, var &res_x, var &res_y, var &res_z) {
     var z1z1, u2, s2, h, hh, i, j, r, v, t0, t1;
@@ -101,6 +81,11 @@ template <class fq_gpu, class fr_gpu>
 __device__ void group_gpu<fq_gpu, fr_gpu>::doubling(var X, var Y, var Z, var &res_x, var &res_y, var &res_z) {
     var T0, T1, T2, T3;
 
+   // Check P == 0
+    if (fq_gpu::is_zero(Z)) {
+        fq_gpu::zero();
+    }
+
     // X Element
     fq_gpu::square(X, T0);              // T0 = x*x
     fq_gpu::square(Y, T1);              // T1 = y*y
@@ -130,6 +115,9 @@ __device__ void group_gpu<fq_gpu, fr_gpu>::doubling(var X, var Y, var Z, var &re
     fq_gpu::sub(Y, T2, res_y);          // Y = Y - T2
 }
 
+/**
+ * Jacobian addition has cost 16T multiplications
+ */
 template <class fq_gpu, class fr_gpu> 
 __device__ void group_gpu<fq_gpu, fr_gpu>::add(var X1, var Y1, var Z1, var X2, var Y2, var Z2, var &res_x, var &res_y, var &res_z) {
     var Z1Z1, Z2Z2, U1, U2, S1, S2, F, H, I, J;
@@ -186,8 +174,97 @@ __device__ void group_gpu<fq_gpu, fr_gpu>::add(var X1, var Y1, var Z1, var X2, v
     fq_gpu::load(Z1, res_z);             // res_z = Z1;
 }
 
+/* -------------------------- Projective Coordinate Operations ---------------------------------------------- */
+
+template <class fq_gpu, class fr_gpu> 
+__device__ void group_gpu<fq_gpu, fr_gpu>::load_projective(projective_element &X, projective_element &result) {
+    fq_gpu::load(X.x.data[0], result.x.data[0]);      
+    fq_gpu::load(X.x.data[1], result.x.data[1]);      
+    fq_gpu::load(X.x.data[2], result.x.data[2]);      
+    fq_gpu::load(X.x.data[3], result.x.data[3]);    
+        
+    fq_gpu::load(X.x.data[0], result.y.data[0]);      
+    fq_gpu::load(X.x.data[1], result.y.data[1]);      
+    fq_gpu::load(X.x.data[2], result.y.data[2]);      
+    fq_gpu::load(X.x.data[3], result.y.data[3]);  
+
+    fq_gpu::load(X.z.data[0], result.z.data[0]);      
+    fq_gpu::load(X.z.data[1], result.z.data[1]);      
+    fq_gpu::load(X.z.data[2], result.z.data[2]);      
+    fq_gpu::load(X.z.data[3], result.z.data[3]);  
+}
+
+template <class fq_gpu, class fr_gpu> 
+projective_element<fq_gpu, fr_gpu> group_gpu<fq_gpu, fr_gpu>::from_affine(const affine_element &other) {
+    projective_element projective;
+    projective.x = other.x;
+    projective.y = other.y;
+    return { projective.x, projective.y, fq_gpu::one() };
+}
+
 /**
- * TODO: Need to add extension fields (quadtratic and cubic)
- * TODO: Need to add rest of unit tests for Fq and Fr
+ * Projective addition has cost 14T multiplications
+ */
+template <class fq_gpu, class fr_gpu> 
+__device__ void group_gpu<fq_gpu, fr_gpu>::add_projective(
+var X1, var Y1, var Z1, var X2, var Y2, var Z2, var &res_x, var &res_y, var &res_z) {
+    var t00, t01, t02, t03, t04, t05, t06, t07, t08, t09, t10;
+    var t11, t12, t13, t14, t15, t16, t17, t18, t19, t20, t21;
+    var t22, t23, t24, t25, t26, t27, t28, t29, t30, t31;
+
+    // Check P == 0 or Q == 0
+    if (fq_gpu::is_zero(Z1)) {
+        res_x = X2;
+        res_y = Y2;
+        res_z = Z2;
+        return;
+    } else if (fq_gpu::is_zero(Z2)) {
+        res_x = X1;
+        res_y = Y1;
+        res_z = Z1;
+        return;
+    }
+
+    // Check if P == Q --> double P
+
+    fq_gpu::mul(X1, X2, t00);                                   // t00 ← X1 · X2     < 2
+    fq_gpu::mul(Y1, Y2, t01);                                   // t01 ← Y1 · Y2     < 2
+    fq_gpu::mul(Z1, Z2, t02);                                   // t02 ← Z1 · Z2     < 2
+    fq_gpu::add(X1, Y1, t03);                                   // t03 ← X1 + Y1     < 4
+    fq_gpu::add(X2, Y2, t04);                                   // t04 ← X2 + Y2     < 4
+    fq_gpu::mul(t03, t04, t05);                                 // t05 ← t03 · t04   < 3
+    fq_gpu::add(t00, t01, t06);                                 // t06 ← t00 + t01   < 4
+    fq_gpu::sub(t05, t06, t07);                                 // t07 ← t05 − t06   < 2
+    fq_gpu::add(Y1, Z1, t08);                                   // t08 ← Y1 + Z1     < 4
+    fq_gpu::add(Y2, Z2, t09);                                   // t09 ← Y2 + Z2     < 4
+    fq_gpu::mul(t08, t09, t10);                                 // t10 ← t08 · t09   < 3
+    fq_gpu::add(t01, t02, t11);                                 // t11 ← t01 + t02   < 4
+    fq_gpu::sub(t10, t11, t12);                                 // t12 ← t10 − t11   < 2
+    fq_gpu::add(X1, Z1, t13);                                   // t13 ← X1 + Z1     < 4
+    fq_gpu::add(X2, Z2, t14);                                   // t14 ← X2 + Z2     < 4
+    fq_gpu::mul(t13, t14, t15);                                 // t15 ← t13 · t14   < 3
+    fq_gpu::add(t00, t02, t16);                                 // t16 ← t00 + t02   < 4
+    fq_gpu::sub(t15, t16, t17);                                 // t17 ← t15 − t16   < 2
+    fq_gpu::add(t00, t00, t18);                                 // t18 ← t00 + t00   < 2
+    fq_gpu::add(t18, t00, t19);                                 // t19 ← t18 + t00   < 2
+    fq_gpu::mul(3 * gpu_barretenberg::b, t02, t20);             // t20 ← b3 · t02    < 2
+    fq_gpu::add(t01, t20, t21);                                 // t21 ← t01 + t20   < 2
+    fq_gpu::sub(t01, t20, t22);                                 // t22 ← t01 − t20   < 2
+    fq_gpu::mul(3 * gpu_barretenberg::b, t17, t23);             // t23 ← b3 · t17    < 2
+    fq_gpu::mul(t12, t23, t24);                                 // t24 ← t12 · t23   < 2
+    fq_gpu::mul(t07, t22, t25);                                 // t25 ← t07 · t22   < 2
+    fq_gpu::sub(t25, t24, res_x);                               // X3 ← t25 − t24    < 2
+    fq_gpu::mul(t23, t19, t27);                                 // t27 ← t23 · t19   < 2
+    fq_gpu::mul(t22, t21, t28);                                 // t28 ← t22 · t21   < 2
+    fq_gpu::add(t28, t27, res_y);                               // Y3 ← t28 + t27    < 2
+    fq_gpu::mul(t19, t07, t30);                                 // t30 ← t19 · t07   < 2
+    fq_gpu::mul(t21, t12, t31);                                 // t31 ← t21 · t12   < 2
+    fq_gpu::add(t31, t30, res_z);                               // Z3 ← t31 + t30    < 2
+}
+
+/**
+ * TODO: Add extension fields (quadtratic and cubic)
+ * TODO: Add Projective coordinates
+ * TODO: Implement unit tests for Projective coordinates
  * TODO: Check for zero statements in loading points
 */

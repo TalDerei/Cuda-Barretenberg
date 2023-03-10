@@ -82,26 +82,27 @@ class group_gpu {
     public:    
         typedef group_elements::element<fq_gpu, fr_gpu> element;
         typedef group_elements::affine_element<fq_gpu, fr_gpu> affine_element;
+        typedef group_elements::projective_element<fq_gpu, fr_gpu> projective_element;
 
+        /* -------------------------- Affine and Jacobian Coordinate Operations ---------------------------------------------- */
+        
         __device__ static void load_affine(affine_element &X, affine_element &result);
 
         __device__ static void load_jacobian(element &X, element &result);
 
-        __device__ static void is_affine(const affine_element &X);
-
-        __device__ static void is_affine_equal(const affine_element &X);
-
-        __device__ static void is_jacobian_equal(const affine_element &X);
-
-        __device__ static void store_affine(const affine_element &X, const var *y);
-
-        __device__ static void store_jacobian(const element &X, const var *y);
+        __device__ static void add(var X1, var Y1, var Z1, var X2, var Y2, var Z2, var &res_x, var &res_y, var &res_z);
 
         __device__ static void mixed_add(var X1, var Y1, var Z1, var X2, var Y2, var &res_x, var &res_y, var &res_z);
 
         __device__ static void doubling(var X, var Y, var Z, var &res_x, var &res_y, var &res_z);
+
+        /* -------------------------- Projective Coordinate Operations ---------------------------------------------- */
+
+        __device__ static void load_projective(projective_element &X, projective_element &result);
         
-        __device__ static void add(var X1, var Y1, var Z1, var X2, var Y2, var Z2, var &res_x, var &res_y, var &res_z);
+        projective_element from_affine(const affine_element &other);
+        
+        __device__ static void add_projective(var X1, var Y1, var Z1, var X2, var Y2, var Z2, var &res_x, var &res_y, var &res_z);
 };
 typedef group_gpu<fq_gpu, fr_gpu> g1;
 

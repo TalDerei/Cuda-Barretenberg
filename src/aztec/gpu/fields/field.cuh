@@ -16,6 +16,11 @@ static constexpr size_t LIMBS = 4;
 static constexpr size_t BYTES_PER_ELEM = LIMBS * sizeof(var);
 
 /* -------------------------- Base Field Modulus Fq ---------------------------------------------- */
+
+/**
+ * BN-254 defined by Y^2 = X^3 + 3 over the base field F_q, 
+ * q = 21888242871839275222246405745257275088696311157297823662689037894645226208583
+ */
 __device__ __constant__ static var MOD_Q_BASE[LIMBS] = {
     0x3C208C16D87CFD47UL, 0x97816a916871ca8dUL,
     0xb85045b68181585dUL, 0x30644e72e131a029UL
@@ -73,8 +78,14 @@ __device__ __constant__ static var endo_minus_b1_lo_base = 0x8211bbeb7d4f1129UL;
 __device__ __constant__ static var endo_minus_b1_mid_base = 0x6f4d8248eeb859fcUL;
 __device__ __constant__ static var endo_b2_lo_base = 0x89d3256894d213e2UL;
 __device__ __constant__ static var endo_b2_mid_base = 0UL;
+__device__ __constant__ static var b = 0x03UL;
 
 /* -------------------------- Scalar Field Modulus Fr ---------------------------------------------- */
+
+/**
+ * Scalar field F_r has curve order r,
+ * r = 21888242871839275222246405745257275088548364400416034343698204186575808495617
+ */
 __device__ __constant__
 const var MOD_Q_SCALAR[LIMBS] = {
     0x43E1F593F0000001UL, 0x2833E84879B97091UL,
@@ -151,19 +162,19 @@ struct BN254_MOD_SCALAR {
 };
 
 /* -------------------------- Finite Field Arithmetic for G1 ---------------------------------------------- */
+
 template < typename params > 
 class field_gpu {
     public:    
         var data[4];    
     
-        /**
-         * Constructor
-        */
         __device__ field_gpu() noexcept {}
         
         __device__ field_gpu(const var a, const var b, const var c, const var d) noexcept;
 
         __device__ static field_gpu zero();
+        
+        __device__ static field_gpu one();
         
         __device__ static bool is_zero(const var &x);
 
