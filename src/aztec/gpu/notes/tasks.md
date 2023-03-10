@@ -36,14 +36,16 @@
 - [ ] Test and benchmark MSM kernel implementation on GPU
     - [x] Create unit test suite
     - [ ] Create benchmarking suite
-- [ ] Implement remaining G1 arthmetic
-    - [ ] Finish adding missing elliptic curve functions
-- [ ] Implement G2 arithmetic
+- [x] Implement remaining G1 arthmetic
+    - [x] Finish adding missing elliptic curve functions
+- [ ] Implement Projective coordinates G2 arithmetic
     - [ ] Add extension fields
     - [ ] Add zero and infinity checks 
-    - [ ] Create unit test suite
-- [ ] Implement simple double-and-add algorithm for correctness
+    - [ ] Create unit test suite for extension fields
+    - [x] Implement Projective coordinates and testing bench
+- [x] Implement simple double-and-add algorithm for correctness
     - [x] Implement for single finite field elements
     - [x] Implement for single elliptic curve points
     - [x] Implement for vector of finite field elements
     - [x] Implement for vector of elliptic curve points
+- [ ] MVP KZG-10 commitment scheme 
