@@ -17,9 +17,10 @@ __device__ field_gpu<params> field_gpu<params>::zero() {
     return field_gpu(0x0, 0x0, 0x0, 0x0); 
 }
 
+// Montgomery form of 1
 template<class params> 
 __device__ field_gpu<params> field_gpu<params>::one() {
-    return field_gpu(0x01, 0x0, 0x0, 0x0); 
+    return field_gpu(0xd35d438dc58f0d9d, 0xa78eb28f5c70b3d, 0x666ea36f7879462c, 0xe0a77c19a07df2f); 
 }
 
 template<class params> 
