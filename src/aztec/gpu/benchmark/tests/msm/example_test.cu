@@ -201,46 +201,6 @@ __global__ void sum_reduction_5(int *v, int *v_r) {
     }
 }
 
-/* -------------------------- Kernel 6 ---------------------------------------------- */
-
-// Cooperative groups
-__global__ void sum_reduction_6(int *sum,, int *input, int n) { 
-    // Global thread ID
-    int tid = blockIdx.x * blockDim.x + threadIdx.x;
-
-    // Perform reduction in shared memory
-    __shared__ int partial_sum[256];
-
-    // Load elements and perform first pass of the reduction,
-    // Scale i since vector is 2x as long as the number of threads
-    int i = blockIdx.x * (blockDim.x * 2) + threadIdx.x;
-
-    // Partial_sum array is being used to accumulate partial sums
-    partial_sum[threadIdx.x] = v[i] + v[i + blockDim.x];
-
-    // Sychronization barrier
-    __syncthreads();
-    
-    // Do all iterations until reaching the last warp, otherwise
-    // results in a lot of useless checks
-    for (int s = blockDim.x / 2; s > 32; s >>= 1) {
-        // Each thread does work unless it is further than the stride
-        if (threadIdx.x < s) {
-            partial_sum[threadIdx.x] += partial_sum[threadIdx.x + s];
-        }
-        __syncthreads();
-    }
-
-    if (threadIdx.x < 32) {
-        warpReduce(partial_sum, threadIdx.x);
-    }
-
-    // Accumulate result into current block
-    if (threadIdx.x == 0) {
-        v_r[blockIdx.x] = partial_sum[0];
-    }
-}
-
 /* -------------------------- Helper Functions ---------------------------------------------- */
 
 /**
@@ -303,35 +263,6 @@ void execute_sum_reduction(var *a, var *b, var *c, var *d, var *result, var *res
     cout << "Accumulated result is: " << h_v_r[0] << endl;
 }
 
-// Execute sum reduction kernel with cooperative groups and unified memory
-void execute_sum_reduction_with_cooperative_groups(var *a, var *b, var *c, var *d, var *result, var *res_x, var *res_y, var *res_z) {    
-    size_t bytes = POINTS * sizeof(int);
-
-    // Allocate unified memory pointers
-    int *sum;
-    int *data;
-
-    cudaMallocManaged(&sum, bytes);
-    cudaMallocManaged(&data, bytes);
-
-    // Populate array
-    for (int i = 0; i < POINTS; i++) {
-        data[i] = 1;
-    }
-
-    // Grid size
-    int GRID_SIZE = ((POINTS + 256 - 1) / 256);
-
-    // Launch kernels with dynamic shared memory
-    sum_reduction_6<<<GRID_SIZE, 256, bytes>>>(sum, data, POINTS);
-
-    // Synchronization barrier
-    cudaDeviceSynchronize();
-
-    // Print out result
-    cout << "Accumulated result is: " << sum[0] << endl;
-}
-
 /* -------------------------- Main Entry Function ---------------------------------------------- */
 
 int main(int, char**) {
@@ -352,8 +283,7 @@ int main(int, char**) {
     cudaMallocManaged(&res_z, LIMBS * sizeof(var));
 
     // Execute kernel functions
-    // execute_sum_reduction(a, b, c, d, result, res_x, res_y, res_z);
-    execute_sum_reduction_with_cooperative_groups(a, b, c, d, result, res_x, res_y, res_z);
+    execute_sum_reduction(a, b, c, d, result, res_x, res_y, res_z);
 
     // Successfull execution of unit tests
     cout << "******* All 'MSM' unit tests passed! **********" << endl;
@@ -374,3 +304,8 @@ int main(int, char**) {
 
     return 0;
 }
+
+/** Developer Doscs 
+ * https://developer.download.nvidia.com/assets/cuda/files/reduction.pdf
+ * https://enccs.github.io/CUDA/3.01_ParallelReduction/#unroll-the-last-warp
+*/

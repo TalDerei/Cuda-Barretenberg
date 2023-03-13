@@ -4,52 +4,74 @@ using namespace std;
 using namespace std::chrono;
 using namespace gpu_barretenberg;
 
-static constexpr size_t LIMBS_NUM = 4;
+// Kernel launch parameters
 static constexpr size_t BLOCKS = 1;
-static constexpr size_t THREADS = 1;
+static constexpr size_t THREADS = 4;
+static constexpr size_t POINTS = 1 << 10;
 
 /* -------------------------- Addition Test ---------------------------------------------- */
 __global__ void initialize_add_check_against_constants
-(var *a, var *b, var *c, var *x, var *y, var *z, var *expected_x, var *expected_y, var *expected_z) {
-    fq_gpu a_x{ 0x184b38afc6e2e09a, 0x4965cd1c3687f635, 0x334da8e7539e71c4, 0xf708d16cfe6e14 };
-    fq_gpu a_y{ 0x2a6ff6ffc739b3b6, 0x70761d618b513b9, 0xbf1645401de26ba1, 0x114a1616c164b980 };
-    fq_gpu a_z{ 0x10143ade26bbd57a, 0x98cf4e1f6c214053, 0x6bfdc534f6b00006, 0x1875e5068ababf2c };
-    fq_gpu b_x{ 0xafdb8a15c98bf74c, 0xac54df622a8d991a, 0xc6e5ae1f3dad4ec8, 0x1bd3fb4a59e19b52 };
-    fq_gpu b_y{ 0x21b3bb529bec20c0, 0xaabd496406ffb8c1, 0xcd3526c26ac5bdcb, 0x187ada6b8693c184 };
-    fq_gpu b_z{ 0xffcd440a228ed652, 0x8a795c8f234145f1, 0xd5279cdbabb05b95, 0xbdf19ba16fc607a };
-    fq_gpu exp_x{ 0x18764da36aa4cd81, 0xd15388d1fea9f3d3, 0xeb7c437de4bbd748, 0x2f09b712adf6f18f };
-    fq_gpu exp_y{ 0x50c5f3cab191498c, 0xe50aa3ce802ea3b5, 0xd9d6125b82ebeff8, 0x27e91ba0686e54fe };
-    fq_gpu exp_z{ 0xe4b81ef75fedf95, 0xf608edef14913c75, 0xfd9e178143224c96, 0xa8ae44990c8accd };
+(var *a, var *b, var *c, var *x, var *y, var *z, var *expected_x, var *expected_y, var *expected_z, g1::element *t1, g1::element *t2, g1::element *expected) {
+    int tid = (blockDim.x * blockIdx.x) + threadIdx.x;
 
-    for (int i = 0; i < LIMBS_NUM; i++) {
-        a[i] = a_x.data[i];
-        b[i] = a_y.data[i];
-        c[i] = a_z.data[i];
-        x[i] = b_x.data[i];
-        y[i] = b_y.data[i];
-        z[i] = b_z.data[i];
-        expected_x[i] = exp_x.data[i];
-        expected_y[i] = exp_y.data[i];
-        expected_z[i] = exp_z.data[i];
-    }
+    fq_gpu::load(0x0, a[tid]);
+    fq_gpu::load(field_gpu<fq_gpu>::one().data[tid], b[tid]);
+    fq_gpu::load(0x0, c[tid]);
+
+    fq_gpu::load(a[tid], t1[0].x.data[tid]); 
+    fq_gpu::load(b[tid], t1[0].y.data[tid]); 
+    fq_gpu::load(c[tid], t1[0].z.data[tid]); 
 }
 
+__global__ void initialize_affine(g1::affine_element *aff) {
+    int tid = (blockDim.x * blockIdx.x) + threadIdx.x;
+
+    fq_gpu a_x{ 0x01, 0x0, 0x0, 0x0 };
+    fq_gpu a_y{ 0x02, 0x0, 0x0, 0x0 };
+
+    fq_gpu::load(a_x.data[tid], aff[0].x.data[tid]); 
+    fq_gpu::load(a_y.data[tid], aff[0].y.data[tid]); 
+}
+
+__global__ void initialize_jacobian(g1::element *jac) {
+    int tid = (blockDim.x * blockIdx.x) + threadIdx.x;
+    
+    fq_gpu a_x{ 0x1, 0x0, 0x0, 0x0 };
+    fq_gpu a_y{ 0x2, 0x0, 0x0, 0x0 };
+    fq_gpu a_z{ 0x0, 0x0, 0x0, 0x0 };
+
+    fq_gpu::load(a_x.data[tid], jac[0].x.data[tid]); 
+    fq_gpu::load(a_y.data[tid], jac[0].y.data[tid]); 
+    fq_gpu::load(a_z.data[tid], jac[0].z.data[tid]); 
+}
+
+__global__ void initialize_projective(g1::projective_element *proj) {
+    int tid = (blockDim.x * blockIdx.x) + threadIdx.x;
+
+    fq_gpu a_x{ 0x1, 0x0, 0x0, 0x0 };
+    fq_gpu a_y{ 0x2, 0x0, 0x0, 0x0 };
+    fq_gpu a_z{ 0x0, 0x0, 0x0, 0x0 };
+
+    fq_gpu::load(a_x.data[tid], proj[0].x.data[tid]); 
+    fq_gpu::load(a_y.data[tid], proj[0].y.data[tid]); 
+    fq_gpu::load(a_z.data[tid], proj[0].z.data[tid]); 
+}
+
+
 __global__ void add_check_against_constants
-(var *a, var *b, var *c, var *x, var *y, var *z, var *res_x, var *res_y, var *res_z) {
+(var *a, var *b, var *c, var *x, var *y, var *z, var *res_x, var *res_y, var *res_z, g1::element *t1, g1::projective_element *t2, g1::projective_element *t3) {
     g1::projective_element lhs;
     g1::projective_element rhs;
-    g1::projective_element result;
-    g1::projective_element expected;
 
     // Calculate global thread ID, and boundry check
     int tid = (blockDim.x * blockIdx.x) + threadIdx.x;
     if (tid < LIMBS) {
-        lhs.x.data[tid] = fq_gpu::to_monty(a[tid], res_x[tid]);
-        lhs.y.data[tid] = fq_gpu::to_monty(b[tid], res_x[tid]);
-        lhs.z.data[tid] = fq_gpu::to_monty(c[tid], res_x[tid]);
-        rhs.x.data[tid] = fq_gpu::to_monty(x[tid], res_x[tid]);
-        rhs.y.data[tid] = fq_gpu::to_monty(y[tid], res_x[tid]);
-        rhs.z.data[tid] = fq_gpu::to_monty(z[tid], res_x[tid]);
+        fq_gpu::to_monty(t1[0].x.data[tid], lhs.x.data[tid]);
+        fq_gpu::to_monty(t1[0].y.data[tid], lhs.y.data[tid]);
+        fq_gpu::to_monty(t1[0].z.data[tid], lhs.z.data[tid]);
+        fq_gpu::to_monty(t2[0].x.data[tid], rhs.x.data[tid]);
+        fq_gpu::to_monty(t2[0].y.data[tid], rhs.y.data[tid]);
+        fq_gpu::to_monty(t2[0].z.data[tid], rhs.z.data[tid]);
 
         // lhs + rhs (projective element + projective element)
         g1::add_projective(
@@ -57,12 +79,68 @@ __global__ void add_check_against_constants
             rhs.x.data[tid], rhs.y.data[tid], rhs.z.data[tid], 
             res_x[tid], res_y[tid], res_z[tid]
         );
-        
+
         // Transform results from montgomery form 
         fq_gpu::from_monty(res_x[tid], res_x[tid]);
         fq_gpu::from_monty(res_y[tid], res_y[tid]);
         fq_gpu::from_monty(res_z[tid], res_z[tid]);
+
+        fq_gpu::load(res_x[tid], t3[0].x.data[tid]); 
+        fq_gpu::load(res_y[tid], t3[0].y.data[tid]); 
+        fq_gpu::load(res_z[tid], t3[0].z.data[tid]); 
     }
+}
+
+// Compare two elliptic curve elements
+__global__ void comparator_kernel(g1::element *point, g1::projective_element *point_2, uint64_t *result) {     
+    fq_gpu lhs_zz;
+    fq_gpu lhs_zzz;
+    fq_gpu rhs_zz;
+    fq_gpu rhs_zzz;
+    fq_gpu lhs_x;
+    fq_gpu lhs_y;
+    fq_gpu rhs_x;
+    fq_gpu rhs_y;
+
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    
+    lhs_zz.data[tid] =  fq_gpu::square(point[0].z.data[tid], lhs_zz.data[tid]);
+    lhs_zzz.data[tid] = fq_gpu::mul(lhs_zz.data[tid], point[0].z.data[tid], lhs_zzz.data[tid]);
+    rhs_zz.data[tid] = fq_gpu::square(point_2[0].z.data[tid], rhs_zz.data[tid]);
+    rhs_zzz.data[tid] = fq_gpu::mul(rhs_zz.data[tid], point_2[0].z.data[tid], rhs_zzz.data[tid]);
+    lhs_x.data[tid] = fq_gpu::mul(point[0].x.data[tid], rhs_zz.data[tid], lhs_x.data[tid]);
+    lhs_y.data[tid] = fq_gpu::mul(point[0].y.data[tid], rhs_zzz.data[tid], lhs_y.data[tid]);
+    rhs_x.data[tid] = fq_gpu::mul(point_2[0].x.data[tid], lhs_zz.data[tid], rhs_x.data[tid]);
+    rhs_y.data[tid] = fq_gpu::mul(point_2[0].y.data[tid], lhs_zzz.data[tid], rhs_y.data[tid]);
+    result[tid] = ((lhs_x.data[tid] == rhs_x.data[tid]) && (lhs_y.data[tid] == rhs_y.data[tid]));
+}
+
+__global__ void affine_to_projective(g1::affine_element *point, g1::projective_element *point_2) {     
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    
+    fq_gpu::load(point[0].x.data[tid], point_2[0].x.data[tid]);
+    fq_gpu::load(point[0].y.data[tid], point_2[0].y.data[tid]);
+    fq_gpu::load(field_gpu<fq_gpu>::one().data[tid], point_2[0].z.data[tid]);
+}
+
+__global__ void jacobian_to_projective(g1::element *point, g1::projective_element *point_2) {     
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    fq_gpu t1; 
+
+    fq_gpu::mul(point[0].x.data[tid], point[0].z.data[tid], point_2[0].x.data[tid]);
+    fq_gpu::load(point[0].y.data[tid], point_2[0].y.data[tid]);
+    fq_gpu::square(point[0].z.data[tid], t1.data[tid]);
+    fq_gpu::mul(t1.data[tid], point[0].z.data[tid], point_2[0].z.data[tid]);
+}
+
+__global__ void projective_to_jacobian(g1::projective_element *point, g1::element *point_2) {     
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    fq_gpu t1; 
+
+    fq_gpu::mul(point[0].x.data[tid], point[0].z.data[tid], point_2[0].x.data[tid]);
+    fq_gpu::square(point[0].z.data[tid], t1.data[tid]);
+    fq_gpu::mul(point[0].y.data[tid], t1.data[tid], point_2[0].y.data[tid]);
+    fq_gpu::load(point[0].z.data[tid], point_2[0].z.data[tid]);
 }
 
 /* -------------------------- Executing Initialization and Workload Kernels ---------------------------------------------- */
@@ -82,20 +160,117 @@ void assert_checks(var *expected, var *result) {
     printf("expected[1] is: %zu\n", expected[1]);
     printf("expected[2] is: %zu\n", expected[2]);
     printf("expected[3] is: %zu\n", expected[3]);
+
     printf("result[0] is: %zu\n", result[0]);
     printf("result[1] is: %zu\n", result[1]);
     printf("result[2] is: %zu\n", result[2]);
-    printf("result[3] is: %zu\n", result[3]);
+    printf("result[3] is: %zu\n\n", result[3]);
+}
+
+void print_affine(g1::affine_element *aff) {
+    // Explicit synchronization barrier
+    cudaDeviceSynchronize();
+
+    // Print results for projective point
+    printf("expected[0] is: %zu\n", aff[0].x.data[0]);
+    printf("expected[0] is: %zu\n", aff[0].x.data[1]);
+    printf("expected[0] is: %zu\n", aff[0].x.data[2]);
+    printf("expected[0] is: %zu\n\n", aff[0].x.data[3]);
+
+    printf("expected[0] is: %zu\n", aff[0].y.data[0]);
+    printf("expected[0] is: %zu\n", aff[0].y.data[1]);
+    printf("expected[0] is: %zu\n", aff[0].y.data[2]);
+    printf("expected[0] is: %zu\n\n", aff[0].y.data[3]);
+}
+
+void print_projective(g1::projective_element *proj) {
+    // Explicit synchronization barrier
+    cudaDeviceSynchronize();
+
+    // Print results for projective point
+    printf("expected[0] is: %zu\n", proj[0].x.data[0]);
+    printf("expected[0] is: %zu\n", proj[0].x.data[1]);
+    printf("expected[0] is: %zu\n", proj[0].x.data[2]);
+    printf("expected[0] is: %zu\n\n", proj[0].x.data[3]);
+
+    printf("expected[0] is: %zu\n", proj[0].y.data[0]);
+    printf("expected[0] is: %zu\n", proj[0].y.data[1]);
+    printf("expected[0] is: %zu\n", proj[0].y.data[2]);
+    printf("expected[0] is: %zu\n\n", proj[0].y.data[3]);
+
+    printf("expected[0] is: %zu\n", proj[0].z.data[0]);
+    printf("expected[0] is: %zu\n", proj[0].z.data[1]);
+    printf("expected[0] is: %zu\n", proj[0].z.data[2]);
+    printf("expected[0] is: %zu\n\n", proj[0].z.data[3]);
+}
+
+void print_jacobian(g1::element *jac) {
+    // Explicit synchronization barrier
+    cudaDeviceSynchronize();
+
+    // Print results for projective point
+    printf("expected[0] is: %zu\n", jac[0].x.data[0]);
+    printf("expected[0] is: %zu\n", jac[0].x.data[1]);
+    printf("expected[0] is: %zu\n", jac[0].x.data[2]);
+    printf("expected[0] is: %zu\n\n", jac[0].x.data[3]);
+
+    printf("expected[0] is: %zu\n", jac[0].y.data[0]);
+    printf("expected[0] is: %zu\n", jac[0].y.data[1]);
+    printf("expected[0] is: %zu\n", jac[0].y.data[2]);
+    printf("expected[0] is: %zu\n\n", jac[0].y.data[3]);
+
+    printf("expected[0] is: %zu\n", jac[0].z.data[0]);
+    printf("expected[0] is: %zu\n", jac[0].z.data[1]);
+    printf("expected[0] is: %zu\n", jac[0].z.data[2]);
+    printf("expected[0] is: %zu\n\n", jac[0].z.data[3]);
+}
+
+void print_field(var *result) {
+    // Explicit synchronization barrier
+    cudaDeviceSynchronize();
+
+    // Print results for each limb
+    printf("result[0] is: %zu\n", result[0]);
+    printf("result[1] is: %zu\n", result[1]);
+    printf("result[2] is: %zu\n", result[2]);
+    printf("result[3] is: %zu\n\n", result[3]);
 }
 
 void execute_kernels
-(var *a, var *b, var *c, var *x, var *y, var *z, var *expected_x, var *expected_y, var *expected_z, var *res_x, var *res_y, var *res_z) {
-    // Addition Test
-    initialize_add_check_against_constants<<<BLOCKS, THREADS>>>(a, b, c, x, y, z, expected_x, expected_y, expected_z);
-    add_check_against_constants<<<BLOCKS, LIMBS_NUM>>>(a, b, c, x, y, z, res_x, res_y, res_z);
-    assert_checks(expected_x, res_x);
-    assert_checks(expected_y, res_y);
-    assert_checks(expected_z, res_z);
+(var *a, var *b, var *c, var *x, var *y, var *z, var *expected_x, var *expected_y, var *expected_z, var *result, var *res_x, var *res_y, var *res_z) {
+    // Allocate unified memory accessible by host and device
+    g1::element *t1;
+    g1::element *t2;
+    g1::projective_element *t3;
+    g1::element *jac;
+    g1::affine_element *aff;
+    g1::projective_element *proj;
+    g1::element *expected;
+
+    cudaMallocManaged(&t1, 3 * 2 * LIMBS * sizeof(uint64_t));
+    cudaMallocManaged(&t2, 3 * 2 * LIMBS * sizeof(uint64_t));
+    cudaMallocManaged(&t3, 3 * 2 * LIMBS * sizeof(uint64_t));
+    cudaMallocManaged(&jac, 3 * 2 * LIMBS * sizeof(uint64_t));
+    cudaMallocManaged(&aff, 3 * 2 * LIMBS * sizeof(uint64_t));
+    cudaMallocManaged(&proj, 3 * 2 * LIMBS * sizeof(uint64_t));
+    cudaMallocManaged(&expected, 3 * 2 * LIMBS * sizeof(uint64_t));
+
+    // Initialize points
+    initialize_add_check_against_constants<<<BLOCKS, THREADS>>>(a, b, c, x, y, z, expected_x, expected_y, expected_z, t1, t2, expected);
+    initialize_affine<<<BLOCKS, THREADS>>>(aff);
+
+    // Affine conversion
+    affine_to_projective<<<1, LIMBS>>>(aff, proj);
+    cudaDeviceSynchronize();
+
+    // Execute projective addition
+    add_check_against_constants<<<1, LIMBS>>>(a, b, c, x, y, z, res_x, res_y, res_z, t1, proj, t3);
+    print_projective(t3);
+
+    // Compare results
+    cudaDeviceSynchronize();
+    comparator_kernel<<<1, LIMBS>>>(expected, t3, result);
+    print_field(result);
 }
 
 /* -------------------------- Main Entry Function ---------------------------------------------- */
@@ -105,11 +280,11 @@ int main(int, char**) {
     auto start = high_resolution_clock::now();
 
     // Define pointers to 'uint64_t' type
-    var *a, *b, *c, *x, *y, *z, *expected_x, *expected_y, *expected_z, *res_x, *res_y, *res_z;    
+    var *a, *b, *c, *x, *y, *z, *expected_x, *expected_y, *expected_z, *result, *res_x, *res_y, *res_z;    
 
     // Allocate unified memory accessible by host and device
-    cudaMallocManaged(&a, LIMBS_NUM * sizeof(uint64_t));
-    cudaMallocManaged(&b, LIMBS_NUM * sizeof(uint64_t));
+    cudaMallocManaged(&a, LIMBS * sizeof(uint64_t));
+    cudaMallocManaged(&b, LIMBS * sizeof(uint64_t));
     cudaMallocManaged(&c, LIMBS * sizeof(uint64_t));
     cudaMallocManaged(&x, LIMBS * sizeof(uint64_t));
     cudaMallocManaged(&y, LIMBS * sizeof(uint64_t));
@@ -117,12 +292,13 @@ int main(int, char**) {
     cudaMallocManaged(&expected_x, LIMBS * sizeof(uint64_t));
     cudaMallocManaged(&expected_y, LIMBS * sizeof(uint64_t));
     cudaMallocManaged(&expected_z, LIMBS * sizeof(uint64_t));
+    cudaMallocManaged(&result, LIMBS * sizeof(uint64_t));
     cudaMallocManaged(&res_x, LIMBS * sizeof(uint64_t));
     cudaMallocManaged(&res_y, LIMBS * sizeof(uint64_t));
     cudaMallocManaged(&res_z, LIMBS * sizeof(uint64_t));
 
     // Execute kernel functions
-    execute_kernels(a, b, c, x, y, z, expected_x, expected_y, expected_z, res_x, res_y, res_z);
+    execute_kernels(a, b, c, x, y, z, expected_x, expected_y, expected_z, result, res_x, res_y, res_z);
 
     // Successfull execution of unit tests
     cout << "******* All 'G1 BN-254 Curve' unit tests passed! **********" << endl;

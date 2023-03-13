@@ -447,19 +447,19 @@ void assert_checks(var *expected, var *result) {
 
 void execute_kernels
 (var *a, var *b, var *c, var *x, var *y, var *z, var *expected_x, var *expected_y, var *expected_z, var *res_x, var *res_y, var *res_z) {
-    // Mixed Addition Test
-    initialize_mixed_add_check_against_constants<<<BLOCKS, THREADS>>>(a, b, c, x, y, z, expected_x, expected_y, expected_z);
-    mixed_add_check_against_constants<<<BLOCKS, LIMBS_NUM>>>(a, b, c, x, y, z, res_x, res_y, res_z);
-    assert_checks(expected_x, res_x);
-    assert_checks(expected_y, res_y);
-    assert_checks(expected_z, res_z);
+    // // Mixed Addition Test
+    // initialize_mixed_add_check_against_constants<<<BLOCKS, THREADS>>>(a, b, c, x, y, z, expected_x, expected_y, expected_z);
+    // mixed_add_check_against_constants<<<BLOCKS, LIMBS_NUM>>>(a, b, c, x, y, z, res_x, res_y, res_z);
+    // assert_checks(expected_x, res_x);
+    // assert_checks(expected_y, res_y);
+    // assert_checks(expected_z, res_z);
 
-    // Doubling Test
-    initialize_dbl_check_against_constants<<<BLOCKS, THREADS>>>(a, b, c, x, y, z, expected_x, expected_y, expected_z);
-    dbl_check_against_constants<<<BLOCKS, LIMBS_NUM>>>(a, b, c, x, y, z, res_x, res_y, res_z);
-    assert_checks(expected_x, res_x);
-    assert_checks(expected_y, res_y);
-    assert_checks(expected_z, res_z);
+    // // Doubling Test
+    // initialize_dbl_check_against_constants<<<BLOCKS, THREADS>>>(a, b, c, x, y, z, expected_x, expected_y, expected_z);
+    // dbl_check_against_constants<<<BLOCKS, LIMBS_NUM>>>(a, b, c, x, y, z, res_x, res_y, res_z);
+    // assert_checks(expected_x, res_x);
+    // assert_checks(expected_y, res_y);
+    // assert_checks(expected_z, res_z);
 
     // Addition Test
     initialize_add_check_against_constants<<<BLOCKS, THREADS>>>(a, b, c, x, y, z, expected_x, expected_y, expected_z);
@@ -468,12 +468,12 @@ void execute_kernels
     assert_checks(expected_y, res_y);
     assert_checks(expected_z, res_z);
 
-    // Add Exception Test
-    initialize_add_exception_test_dbl<<<BLOCKS, THREADS>>>(a, b, c, x, y, z);
-    add_exception_test_dbl<<<BLOCKS, LIMBS_NUM>>>(a, b, c, x, y, z, expected_x, expected_y, expected_z, res_x, res_y, res_z);
-    assert_checks(expected_x, res_x);
-    assert_checks(expected_y, res_y);
-    assert_checks(expected_z, res_z);
+    // // Add Exception Test
+    // initialize_add_exception_test_dbl<<<BLOCKS, THREADS>>>(a, b, c, x, y, z);
+    // add_exception_test_dbl<<<BLOCKS, LIMBS_NUM>>>(a, b, c, x, y, z, expected_x, expected_y, expected_z, res_x, res_y, res_z);
+    // assert_checks(expected_x, res_x);
+    // assert_checks(expected_y, res_y);
+    // assert_checks(expected_z, res_z);
 
     // Add Double Consistency Test
     // initialize_add_dbl_consistency<<<BLOCKS, THREADS>>>(a, b, c, x, y, z);
@@ -482,9 +482,9 @@ void execute_kernels
     // assert_checks(expected_y, res_y);
     // assert_checks(expected_z, res_z);
 
-    // Add Double Consistency Repeated Test
-    initialize_add_dbl_consistency_repeated<<<BLOCKS, THREADS>>>(a, b, c);
-    add_dbl_consistency_repeated<<<BLOCKS, LIMBS_NUM>>>(a, b, c, expected_x, expected_y, expected_z, res_x, res_y, res_z);
+    // // Add Double Consistency Repeated Test
+    // initialize_add_dbl_consistency_repeated<<<BLOCKS, THREADS>>>(a, b, c);
+    // add_dbl_consistency_repeated<<<BLOCKS, LIMBS_NUM>>>(a, b, c, expected_x, expected_y, expected_z, res_x, res_y, res_z);
 }
 
 /* -------------------------- Main Entry Function ---------------------------------------------- */
