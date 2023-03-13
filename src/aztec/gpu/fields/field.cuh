@@ -64,6 +64,10 @@ __device__ __constant__ static var COSET_GENERATORS_BASE_3[8]{
     0x180a96573d3d9f8ULL,  0xf8b21270ddbb927ULL,  0x1d9598e8a7e39857ULL, 0x2ba010aa41eb7786ULL,
 };
 
+__device__ __constant__ static var ONE_MONT[LIMBS] = {
+    0xd35d438dc58f0d9d, 0xa78eb28f5c70b3d, 0x666ea36f7879462c, 0xe0a77c19a07df2f
+};
+
 /**
  * -Q^{-1} (mod 2^256)
  */ 
@@ -78,7 +82,7 @@ __device__ __constant__ static var endo_minus_b1_lo_base = 0x8211bbeb7d4f1129UL;
 __device__ __constant__ static var endo_minus_b1_mid_base = 0x6f4d8248eeb859fcUL;
 __device__ __constant__ static var endo_b2_lo_base = 0x89d3256894d213e2UL;
 __device__ __constant__ static var endo_b2_mid_base = 0UL;
-__device__ __constant__ static var b = 0x03UL;
+__device__ __constant__ static var b = 3;
 
 /* -------------------------- Scalar Field Modulus Fr ---------------------------------------------- */
 
@@ -151,6 +155,7 @@ struct BN254_MOD_BASE {
     __device__ __forceinline__ static var monty() { return R_SQUARED_BASE[lane()]; }
     __device__ __forceinline__ static var cube() { return CUBE_ROOT_BASE[lane()]; }
     __device__ __forceinline__ static var root() { return PRIMTIVE_ROOTS_UNITY_BASE[lane()]; }
+    __device__ __forceinline__ static var one_mont() { return ONE_MONT[lane()]; }
 };
 
 struct BN254_MOD_SCALAR {

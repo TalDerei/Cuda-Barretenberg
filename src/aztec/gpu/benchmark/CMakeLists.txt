@@ -65,10 +65,10 @@ add_custom_target(
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
 )
 
-# curve test
+# curve test for jacobian points
 add_executable(
     curve_bn254_test
-    tests/curves/curve_test.cu
+    tests/curves/curve_jacobian_test.cu
 )
 
 target_link_libraries(
@@ -82,6 +82,26 @@ target_link_libraries(
 add_custom_target(
     run_curve_bn254_test
     COMMAND curve_bn254_test
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+)
+
+# curve test for projective points
+add_executable(
+    curve_bn254_test_2
+    tests/curves/curve_projective_test.cu
+)
+
+target_link_libraries(
+    curve_bn254_test_2
+    PUBLIC
+    curve_library
+    field_library
+    fixnum_library
+)
+
+add_custom_target(
+    run_curve_bn254_test_2
+    COMMAND curve_bn254_test_2
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
 )
 
