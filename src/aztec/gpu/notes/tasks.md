@@ -27,11 +27,13 @@
     - [x] Understand Barretenberg’s multi-exponentiation CPU implementation 
     - [x] Benchmark Zprize MSM implementation on GPU 
     - [x] Understand Supranational’s SPPARK MSM GPU kernel
-    - [ ] Adapt Supranational’s MSM scheme into Barretenberg
+    - [ ] Adapt Supranational’s and Ingonyama's Icicle MSM scheme
         - [x] Add comments to understand code
         - [x] Remove rust bindings
         - [x] Read in curve points and scalars
         - [ ] Port MSM implemenation over BN-254 curve
+            - [ ] Add naive method
+            - [ ] Add bucket method
         - [ ] Experiment between Lagrange SRS over monomial SRS
 - [ ] Test and benchmark MSM kernel implementation on GPU
     - [x] Create unit test suite
