@@ -32,7 +32,7 @@
         - [x] Remove rust bindings
         - [x] Read in curve points and scalars
         - [ ] Port MSM implemenation over BN-254 curve
-            - [ ] Add naive method
+            - [x] Add naive reference method
             - [ ] Add bucket method
         - [ ] Experiment between Lagrange SRS over monomial SRS
 - [ ] Test and benchmark MSM kernel implementation on GPU

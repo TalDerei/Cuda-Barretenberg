@@ -582,7 +582,7 @@ B* read_scalars() {
 
     // File stream
     ifstream stream;
-    stream.open("../src/aztec/gpu/msm/scalars/scalars.txt", ios::in);
+    stream.open("../src/aztec/gpu/msm/points/scalars.txt", ios::in);
 
     // Read scalars
     if ( stream.is_open() ) {   

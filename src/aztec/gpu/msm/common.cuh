@@ -21,10 +21,10 @@ static thread_pool_t batch_pool(NUM_BATCH_THREADS);
 /**
  * Typedef points, scalars, and buckets 
  */
-typedef element<fq_gpu> point_t;
+typedef element<fq_gpu, fr_gpu> point_t;
 typedef fr_gpu scalar_t;
-typedef affine_element<fq_gpu> bucket_t;
-typedef affine_element<fq_gpu> affine_t;
+typedef affine_element<fq_gpu, fr_gpu> bucket_t;
+typedef affine_element<fq_gpu, fr_gpu> affine_t;
 
 /**
  * Allocate device storage and buffers
@@ -131,6 +131,14 @@ class pippenger_t {
         void launch_coop(void(*f)(Types...), dim3 gridDim, dim3 blockDim, cudaStream_t stream, Types... args);
 
         void synchronize_stream(pippenger_t &config);
+
+        affine_t* read_affine_curve_points();
+
+        point_t* read_jacobian_curve_points(point_t *points);
+
+        scalar_t* read_scalars(scalar_t *scalars);
+
+        void print_result(point_t *result);
 };
 typedef pippenger_t<bucket_t, point_t, scalar_t, affine_t> pipp_t;
 

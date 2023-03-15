@@ -163,6 +163,9 @@ void(*f)(Types...), dim3 gridDim, dim3 blockDim, cudaStream_t stream, Types... a
     CUDA_WRAPPER(cudaLaunchCooperativeKernel((const void*)f, gridDim, blockDim, va_args, 0, stream));
 }
 
+/**
+ * Launch kernel
+ */
 template <class bucket_t, class point_t, class scalar_t, class affine_t>
 void pippenger_t<bucket_t, point_t, scalar_t, affine_t>::launch_kernel(
 pippenger_t &config, size_t d_bases_idx, size_t d_scalar_idx, size_t d_buckets_idx) {
@@ -184,6 +187,80 @@ pippenger_t &config, size_t d_bases_idx, size_t d_scalar_idx, size_t d_buckets_i
         pippenger, dim3(NWINS, config.N), NTHREADS, stream, (affine_t*)d_points, config.npoints, 
         (const scalar_t*)d_scalars, d_buckets, d_none
     );
+}
+
+/**
+ * Read affine elliptic curve points from SRS
+ */
+template <class bucket_t, class point_t, class scalar_t, class affine_t>
+affine_t* pippenger_t<bucket_t, point_t, scalar_t, affine_t>::read_affine_curve_points() {
+    auto reference_string = std::make_shared<gpu_waffle::FileReferenceString>(NUM_POINTS, "../srs_db");
+    g1::affine_element* points = reference_string->get_monomials();
+
+    return points;
+}
+
+/**
+ * Read jacobian elliptic curve points from file
+ */
+template <class bucket_t, class point_t, class scalar_t, class affine_t>
+point_t* pippenger_t<bucket_t, point_t, scalar_t, affine_t>::read_jacobian_curve_points(point_t *points) {
+    std::ifstream myfile ("../src/aztec/gpu/benchmark/tests/msm/points/curve_points.txt"); 
+
+    if ( myfile.is_open() ) {   
+        for (size_t i = 0; i < NUM_POINTS; i++) {
+            for (size_t j = 0; j < 4; j++) {
+                myfile >> points[i].x.data[j];
+            }
+            for (size_t y = 0; y < 4; y++) {
+                myfile >> points[i].y.data[y];
+            }
+            for (size_t z = 0; z < 4; z++) {
+                myfile >> points[i].z.data[z];
+            }
+        }   
+    }
+    myfile.close();
+    
+    return points;
+} 
+
+/**
+ * Read scalars from scalar field
+ */
+template <class bucket_t, class point_t, class scalar_t, class affine_t>
+scalar_t* pippenger_t<bucket_t, point_t, scalar_t, affine_t>::read_scalars(scalar_t *scalars) {
+    ifstream stream;
+    stream.open("../src/aztec/gpu/msm/points/scalars.txt", ios::in);
+
+    if ( stream.is_open() ) {   
+        for (size_t i = 0; i < NUM_POINTS; i++) {
+            for (size_t j = 0; j < 4; j++) {
+                stream >> scalars[i].data[j];
+            }
+        }   
+    }
+    stream.close();
+        
+    return scalars;
+}
+
+/**
+ * Print results
+ */
+template <class bucket_t, class point_t, class scalar_t, class affine_t>
+void pippenger_t<bucket_t, point_t, scalar_t, affine_t>::print_result(point_t *result) {
+    for (int i = 0; i < LIMBS; i++) {
+        printf("result is: %zu\n", result[0].x.data[i]);
+    }
+    printf("\n");
+    for (int i = 0; i < LIMBS; i++) {
+        printf("result is: %zu\n", result[0].y.data[i]);
+    }
+    printf("\n");
+    for (int i = 0; i < LIMBS; i++) {
+        printf("result is: %zu\n", result[0].z.data[i]);
+    }
 }
 
 /***************************************** Function declerations for 'device_ptr' class  *****************************************/

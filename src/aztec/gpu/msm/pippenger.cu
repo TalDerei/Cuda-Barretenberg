@@ -10,61 +10,10 @@ using namespace std;
 namespace pippenger_common {
 
 /**
- * Read elliptic curve points from SRS
- */
-template <class T, class B>
-T* msm_t<T, B>::read_curve_points() {
-    auto reference_string = std::make_shared<gpu_waffle::FileReferenceString>(NUM_POINTS, "../srs_db");
-    g1::affine_element* points = reference_string->get_monomials();
-
-    cout << points[0].x.data[0] << endl;
-    cout << points[0].x.data[1] << endl;
-    cout << points[0].x.data[2] << endl;
-    cout << points[0].x.data[3] << endl;
-    cout << points[0].y.data[0] << endl;
-    cout << points[0].y.data[1] << endl;
-    cout << points[0].y.data[2] << endl;
-    cout << points[0].y.data[3] << endl;
-
-    return points;
-}
-
-/**
- * Read scalars from scalar field
- */
-template <class T, class B>
-B* msm_t<T, B>::read_scalars() {
-    uint64_t temp[NUM_POINTS * 4];
-    fr_gpu *scalars = new fr_gpu[NUM_POINTS];
-    uint64_t scalar;
-
-    // File stream
-    ifstream stream;
-    stream.open("../src/aztec/gpu/msm/scalars/scalars.txt", ios::in);
-
-    // Read scalars
-    if (stream.is_open()) {   
-        int i = 0;  
-        while (stream.good()) { 
-            stream >> scalar;
-            temp[i] = scalar;
-            i++;
-        }
-    }
-    
-    for (size_t i = 0; i < (sizeof(temp) / sizeof(uint64_t)) / 4; ++i) {    
-        fr_gpu element{ temp[i], temp[i + 1], temp[i + 2], temp[i + 3] };
-        scalars[i] = element;        
-    }
-        
-    return scalars;
-}
-
-/**
  * Entry point into "Pippenger's Bucket Method"
  */ 
-template <class T, class B>
-Context<bucket_t, point_t, scalar_t, affine_t>* msm_t<T, B>::pippenger_initialize(T* points) {
+template <class A, class S, class J>
+Context<bucket_t, point_t, scalar_t, affine_t>* msm_t<A, S, J>::pippenger_initialize(A* points) {
     try {
         // Initialize context object 
         Context<bucket_t, point_t, scalar_t, affine_t> *context = new Context<bucket_t, point_t, scalar_t, affine_t>();
@@ -102,8 +51,8 @@ Context<bucket_t, point_t, scalar_t, affine_t>* msm_t<T, B>::pippenger_initializ
 /**
  * Perform MSM
  */ 
-template <class T, class B>
-void msm_t<T, B>::pippenger_execute(Context<bucket_t, point_t, scalar_t, affine_t> *context, size_t num_points, T* points, B* scalars) {
+template <class A, class S, class J>
+void msm_t<A, S, J>::pippenger_execute(Context<bucket_t, point_t, scalar_t, affine_t> *context, size_t num_points, A* points, S* scalars) {
     // Create auxilary stream
     // will need to change this?
     stream_t aux_stream(context->pipp.device);
@@ -138,6 +87,54 @@ void msm_t<T, B>::pippenger_execute(Context<bucket_t, point_t, scalar_t, affine_
         cout << "Failed executing multi-scalar multiplication!" << endl;
         throw;
     }
+}
+
+/**
+ * Perform naive MSM
+ */ 
+template <class A, class S, class J>
+void msm_t<A, S, J>::naive_msm(Context<bucket_t,point_t,scalar_t,affine_t>* context, size_t npoints, A *points, S *scalars) {
+    fr_gpu *d_scalars;
+    J *j_points;
+    J *result;
+    J *final_result;
+    J *result_acc;
+    fq_gpu *result_2;
+
+    // Allocate cuda memory 
+    cudaMallocManaged(&d_scalars, POINTS * LIMBS * sizeof(uint64_t));
+    cudaMallocManaged(&j_points, 3 * POINTS * LIMBS * sizeof(uint64_t));
+    cudaMallocManaged(&result_acc, 3 * POINTS * LIMBS * sizeof(uint64_t));
+    cudaMallocManaged(&result, 3 * POINTS * LIMBS * sizeof(uint64_t));
+    cudaMallocManaged(&result_2, 3 * POINTS * LIMBS * sizeof(uint64_t));
+    cudaMallocManaged(&final_result, 3 * POINTS * LIMBS * sizeof(uint64_t));
+
+    // Read points and scalars
+    g1::element *points_r = context->pipp.read_jacobian_curve_points(j_points);
+    fr_gpu *scalars_r = context->pipp.read_scalars(d_scalars);
+
+    // Perform MSM method 1
+    simple_msm_naive<<<1, 4>>>(j_points, d_scalars, result, POINTS);
+    cudaDeviceSynchronize();
+
+    // Perform MSM method 2
+    simple_msm_naive_2<<<4, 1024>>>(j_points, d_scalars, result_2, result_acc, POINTS);
+
+    // Perform final accumulation by summing all elements in the vector
+    sum_reduction<<<1, 8>>>(result_acc, final_result);
+    sum_reduction_accumulate<<<1, 4>>>(final_result, final_result);
+    cudaDeviceSynchronize();
+    
+    // Print results
+    context->pipp.print_result(final_result);
+}
+
+/**
+ * Perform MSM Bucket Method
+ */ 
+template <class A, class S, class J>
+void msm_t<A, S, J>::msm_bucket_method(Context<bucket_t,point_t,scalar_t,affine_t>* context, size_t npoints, A * points, S * scalars) {
+
 }
 
 }

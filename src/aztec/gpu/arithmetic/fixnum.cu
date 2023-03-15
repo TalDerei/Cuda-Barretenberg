@@ -116,8 +116,7 @@ struct fixnum {
     __device__
     static cooperative_groups::thread_block_tile<WIDTH>
     layout() {
-        return cooperative_groups::tiled_partition<WIDTH>(
-            cooperative_groups::this_thread_block());
+        return cooperative_groups::tiled_partition<WIDTH>(cooperative_groups::this_thread_block());
     }
 
     // Return zero value of var type
