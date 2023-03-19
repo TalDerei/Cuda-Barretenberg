@@ -93,7 +93,7 @@ void msm_t<A, S, J>::pippenger_execute(Context<bucket_t, point_t, scalar_t, affi
  * Perform naive MSM
  */ 
 template <class A, class S, class J>
-void msm_t<A, S, J>::naive_msm(Context<bucket_t,point_t,scalar_t,affine_t>* context, size_t npoints, A *points, S *scalars) {
+void msm_t<A, S, J>::naive_msm(Context<bucket_t,point_t,scalar_t,affine_t> *context, size_t npoints, A *points, S *scalars) {
     fr_gpu *d_scalars;
     J *j_points;
     J *result;
@@ -133,8 +133,27 @@ void msm_t<A, S, J>::naive_msm(Context<bucket_t,point_t,scalar_t,affine_t>* cont
  * Perform MSM Bucket Method
  */ 
 template <class A, class S, class J>
-void msm_t<A, S, J>::msm_bucket_method(Context<bucket_t,point_t,scalar_t,affine_t>* context, size_t npoints, A * points, S * scalars) {
+void msm_t<A, S, J>::msm_bucket_method(Context<bucket_t,point_t,scalar_t,affine_t> *context, size_t npoints, A *points, S *scalars) {
+    S *d_scalars;
+    J *j_points;
+    J *result;
 
+    // Need to read affine points instead of jacobian points
+
+    // Change from unified memory to pinned memory
+    cudaMallocManaged(&d_scalars, POINTS * LIMBS * sizeof(uint64_t));
+    cudaMallocManaged(&j_points, 3 * POINTS * LIMBS * sizeof(uint64_t));
+    cudaMallocManaged(&result, 3 * POINTS * LIMBS * sizeof(uint64_t));
+
+    // Change to cudaMemcpy instead of reading points from file
+    J *points_r = context->pipp.read_jacobian_curve_points(j_points);
+    S *scalars_r = context->pipp.read_scalars(d_scalars);
+
+    // Parameters
+    unsigned bitsize = 255;
+    unsigned c = 10;
+
+    context->pipp.initialize_buckets(d_scalars, bitsize, c, npoints);
 }
 
 }

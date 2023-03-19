@@ -32,4 +32,9 @@ int main(int, char**) {
 /**
  * TODO: C++/cuda inline of functions
  * TODO: Benchmark Ingonyama "Icicle" MSM
+ * TODO: Add multiple stream support
+ * TODO: Look into cuda graph support 
+ * TODO: change unified memory to pinned host memory
+ * TODO: look into asynchronous transfers 
+ * TODO: seperate kernel code
  */

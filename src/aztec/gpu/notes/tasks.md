@@ -35,9 +35,11 @@
             - [x] Add naive reference method
             - [ ] Add bucket method
         - [ ] Experiment between Lagrange SRS over monomial SRS
+        - [ ] Add "inlining" to C++/cuda functions
 - [ ] Test and benchmark MSM kernel implementation on GPU
     - [x] Create unit test suite
     - [ ] Create benchmarking suite
+    - [ ] Benchmark and compare against Ingonyama's "Icicle" MSM implementation
 - [x] Implement remaining G1 arthmetic
     - [x] Finish adding missing elliptic curve functions
 - [ ] Implement Projective coordinates G2 arithmetic

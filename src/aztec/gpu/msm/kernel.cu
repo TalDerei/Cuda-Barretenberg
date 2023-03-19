@@ -64,11 +64,9 @@ __global__ void simple_msm_naive_2(g1::element *point, fr_gpu *scalar, fq_gpu *r
     int subgroup = grp.meta_group_rank();
 
     // 3 * Fq field multiplications
-    for (int i = 0; i < npoints; i++) {
-        fq_gpu::mul(point[subgroup].x.data[tid % 4], scalar[subgroup].data[tid % 4], result_vec[subgroup].x.data[tid % 4]);
-        fq_gpu::mul(point[subgroup].y.data[tid % 4], scalar[subgroup].data[tid % 4], result_vec[subgroup].y.data[tid % 4]);
-        fq_gpu::mul(point[subgroup].z.data[tid % 4], scalar[subgroup].data[tid % 4], result_vec[subgroup].z.data[tid % 4]);
-    }
+    fq_gpu::mul(point[subgroup].x.data[tid % 4], scalar[subgroup].data[tid % 4], result_vec[subgroup].x.data[tid % 4]);
+    fq_gpu::mul(point[subgroup].y.data[tid % 4], scalar[subgroup].data[tid % 4], result_vec[subgroup].y.data[tid % 4]);
+    fq_gpu::mul(point[subgroup].z.data[tid % 4], scalar[subgroup].data[tid % 4], result_vec[subgroup].z.data[tid % 4]);
 }
 
 /**
@@ -200,6 +198,66 @@ __global__ void comparator_kernel(g1::element *point, g1::element *point_2, uint
     rhs_x.data[tid] = fq_gpu::mul(point_2[0].x.data[tid], lhs_zz.data[tid], rhs_x.data[tid]);
     rhs_y.data[tid] = fq_gpu::mul(point_2[0].y.data[tid], lhs_zzz.data[tid], rhs_y.data[tid]);
     result[tid] = ((lhs_x.data[tid] == rhs_x.data[tid]) && (lhs_y.data[tid] == rhs_y.data[tid]));
+}
+
+/**
+ * Initialize buckets kernel for large MSM
+ */
+__global__ void initialize_buckets_kernel(g1::element *bucket) {     
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    
+    // Parameters for coperative groups
+    auto grp = fixnum::layout();
+    int subgroup = grp.meta_group_rank();
+
+    // Initialize buckets with zero points
+    fq_gpu::load(fq_gpu::zero().data[tid % 4], bucket[subgroup].x.data[tid % 4]);
+    fq_gpu::load(fq_gpu::one().data[tid % 4], bucket[subgroup].y.data[tid % 4]);
+    fq_gpu::load(fq_gpu::zero().data[tid % 4], bucket[subgroup].z.data[tid % 4]);
+}
+
+/**
+ * Scalar digit decomposition 
+ */
+__device__ uint64_t decompose_scalar_digit(fr_gpu scalar, unsigned num, unsigned width) {
+    // Determine which 64-bit limb to access 
+    const uint64_t limb_lsb_idx = (num * width) / 64;  
+    const uint64_t shift_bits = (num * width) % 64;  
+
+    // Shift limb to right to extract scalar digit
+    uint64_t rv = scalar.data[limb_lsb_idx] >> shift_bits; 
+
+    // Check if scalar digit crosses boundry of current limb
+    if ((shift_bits + width > 64) && (limb_lsb_idx + 1 < 4)) {
+        // Access next limb and left shift by '32 - shift_bits' bits
+        rv += scalar.data[limb_lsb_idx + 1] << (32 - shift_bits);
+    }
+    rv &= ((1 << width) - 1);
+    // printf("rv is: %d\n", rv); 
+
+    return rv;
+}
+
+/**
+ * Decompose b-bit scalar into c-bit scalar, where c <= b
+ */
+__global__ void split_scalars_kernel
+(unsigned *bucket_indices, unsigned *point_indices, fr_gpu *scalars, unsigned npoints, unsigned num_bucket_modules, unsigned c) {         
+    unsigned bucket_index;
+    unsigned current_index;
+    fr_gpu scalar;
+
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    if (tid < npoints) {
+        for (int i = 0; i < num_bucket_modules; i++) {
+            // Need to check if the decomposition is correct, i.e. if each thread can handle it's own scalar
+            bucket_index = decompose_scalar_digit(scalars[tid], i, c);
+            current_index = i * npoints + tid;
+            bucket_indices[current_index] = (i << c) | bucket_index;
+            printf("rv is: %d\n", (i << c) | bucket_index); 
+            point_indices[current_index] = tid;
+        }
+    }   
 }
 
 }

@@ -139,6 +139,10 @@ class pippenger_t {
         scalar_t* read_scalars(scalar_t *scalars);
 
         void print_result(point_t *result);
+
+        void initialize_buckets(scalar_t *scalars, unsigned bitsize, unsigned c, size_t npoints);
+
+        void decompose_scalar_digit(unsigned digit_num, unsigned digit_width);
 };
 typedef pippenger_t<bucket_t, point_t, scalar_t, affine_t> pipp_t;
 
