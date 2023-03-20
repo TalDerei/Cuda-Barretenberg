@@ -17,8 +17,8 @@ add_executable(
 target_link_libraries(
     pippenger_cu
     PUBLIC
-    field_library
     curve_library
+    field_library
     fixnum_library
     reference_string_library
 )
@@ -28,3 +28,4 @@ add_custom_target(
     COMMAND pippenger_cu
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
 )
+

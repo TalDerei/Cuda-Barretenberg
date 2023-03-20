@@ -4,6 +4,7 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <chrono>
 
 using namespace std;
 
@@ -134,26 +135,38 @@ void msm_t<A, S, J>::naive_msm(Context<bucket_t,point_t,scalar_t,affine_t> *cont
  */ 
 template <class A, class S, class J>
 void msm_t<A, S, J>::msm_bucket_method(Context<bucket_t,point_t,scalar_t,affine_t> *context, size_t npoints, A *points, S *scalars) {
-    S *d_scalars;
     J *j_points;
     J *result;
 
-    // Need to read affine points instead of jacobian points
-
-    // Change from unified memory to pinned memory
-    cudaMallocManaged(&d_scalars, POINTS * LIMBS * sizeof(uint64_t));
+    // Allocate unified memory
     cudaMallocManaged(&j_points, 3 * POINTS * LIMBS * sizeof(uint64_t));
     cudaMallocManaged(&result, 3 * POINTS * LIMBS * sizeof(uint64_t));
 
-    // Change to cudaMemcpy instead of reading points from file
+    // Read points
     J *points_r = context->pipp.read_jacobian_curve_points(j_points);
-    S *scalars_r = context->pipp.read_scalars(d_scalars);
 
     // Parameters
     unsigned bitsize = 255;
     unsigned c = 10;
+    // LOOK INTO MAKING C = 16, SO WE DON'T NEED TO WORRY ABOUT EDGE CASES BETWEEN BUCKETS
 
-    context->pipp.initialize_buckets(d_scalars, bitsize, c, npoints);
+    // timer
+    using namespace std::chrono;
+    high_resolution_clock::time_point t1 = high_resolution_clock::now();
+
+    context->pipp.initialize_buckets(scalars, points_r, bitsize, c, npoints);
+    
+    high_resolution_clock::time_point t2 = high_resolution_clock::now();
+    duration<double> time_span = duration_cast<duration<double>>(t2 - t1);
+    std::cout << "It took me " << time_span.count() << " seconds.";
+    std::cout << std::endl;
+    // Scalars are 10-bits, so between 0-1024. There are 26 windows (or bucket modules).
+    // Group elements with the same scalars go into the same buckets, i.e. 6 * G1 means
+    // G1 goes into bucket 6. And you have 2^c total buckets per window.
+
+    // Step 1. Partition b-bit scalars to c-bits
+    // Step 2. Add points to buckets depending on their scalar
+    // step 3. Sum the contents of each bucket into N bucket sums for each window
 }
 
 }

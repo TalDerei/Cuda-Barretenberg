@@ -1,10 +1,4 @@
 #include "kernel.cu"
-#include <cuda.h>
-// #include <cub/device/device_radix_sort.cuh>
-// #include <cub/device/device_run_length_encode.cuh>
-// #include <cub/device/device_scan.cuh>
-#include <cub/cub.cuh>
-
 #include <iostream>
 #include <vector>
 
@@ -276,22 +270,25 @@ void pippenger_t<bucket_t, point_t, scalar_t, affine_t>::print_result(point_t *r
  * Initialze buckets
  */
 template <class bucket_t, class point_t, class scalar_t, class affine_t>
-void pippenger_t<bucket_t, point_t, scalar_t, affine_t>::initialize_buckets(scalar_t *scalars, unsigned bitsize, unsigned c, size_t npoints) {
+void pippenger_t<bucket_t, point_t, scalar_t, affine_t>::initialize_buckets(
+scalar_t *scalars, point_t *points, unsigned bitsize, unsigned c, size_t npoints) {
+    // Calculate the number of windows 
     unsigned num_bucket_modules = bitsize / c; 
     if (bitsize / c) {  
         num_bucket_modules++;
     }
 
-    size_t num_buckets = num_bucket_modules << c;
-
     point_t *buckets;
-    cudaMallocManaged(&buckets, num_buckets * sizeof(point_t));
+    size_t num_buckets = num_bucket_modules << c;
+    // change memory size?
+    cudaMallocManaged(&buckets, num_buckets * 3 * 4 * sizeof(uint64_t));
 
     // Launch bucket initialization kernel
     unsigned NUM_THREADS = 1 << 10;
     unsigned NUM_BLOCKS = (num_buckets + NUM_THREADS - 1) / NUM_THREADS;
 
-    initialize_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS>>>(buckets);
+    // Need to see if initializing the buckets is even neccessary? Let's do it at the beggining anyways
+    initialize_buckets_kernel<<<NUM_BLOCKS * 4, NUM_THREADS>>>(buckets); // 1024 * 26 operating on a single limb.
     cudaDeviceSynchronize();
 
     cout << "b-bit scalar is: " << bitsize << endl;
@@ -301,20 +298,20 @@ void pippenger_t<bucket_t, point_t, scalar_t, affine_t>::initialize_buckets(scal
     cout << "number of blocks is: " << NUM_BLOCKS << endl;
     cout << "number of threads is: " << NUM_THREADS << endl;
 
-    // cout << "bucket 0 is: " << buckets[0].x.data[0] << endl;
-    // cout << "bucket 0 is: " << buckets[0].x.data[1] << endl;
-    // cout << "bucket 0 is: " << buckets[0].x.data[2] << endl;
-    // cout << "bucket 0 is: " << buckets[0].x.data[3] << endl;
+    // cout << "bucket 0 is: " << buckets[26623].x.data[0] << endl;
+    // cout << "bucket 0 is: " << buckets[26623].x.data[1] << endl;
+    // cout << "bucket 0 is: " << buckets[26623].x.data[2] << endl;
+    // cout << "bucket 0 is: " << buckets[26623].x.data[3] << endl;
 
-    // cout << "bucket 0 is: " << buckets[0].y.data[0] << endl;
-    // cout << "bucket 0 is: " << buckets[0].y.data[1] << endl;
-    // cout << "bucket 0 is: " << buckets[0].y.data[2] << endl;
-    // cout << "bucket 0 is: " << buckets[0].y.data[3] << endl;
+    // cout << "bucket 0 is: " << buckets[26623].y.data[0] << endl;
+    // cout << "bucket 0 is: " << buckets[26623].y.data[1] << endl;
+    // cout << "bucket 0 is: " << buckets[26623].y.data[2] << endl;
+    // cout << "bucket 0 is: " << buckets[26623].y.data[3] << endl;
 
-    // cout << "bucket 0 is: " << buckets[0].z.data[0] << endl;
-    // cout << "bucket 0 is: " << buckets[0].z.data[1] << endl;
-    // cout << "bucket 0 is: " << buckets[0].z.data[2] << endl;
-    // cout << "bucket 0 is: " << buckets[0].z.data[3] << endl;
+    // cout << "bucket 0 is: " << buckets[26623].z.data[0] << endl;
+    // cout << "bucket 0 is: " << buckets[26623].z.data[1] << endl;
+    // cout << "bucket 0 is: " << buckets[26623].z.data[2] << endl;
+    // cout << "bucket 0 is: " << buckets[26623].z.data[3] << endl;
 
     // Allocate memory for bucket and point indices
     unsigned *bucket_indices;
@@ -323,40 +320,116 @@ void pippenger_t<bucket_t, point_t, scalar_t, affine_t>::initialize_buckets(scal
     cudaMallocManaged(&point_indices, sizeof(unsigned) * npoints * (num_bucket_modules + 1));
 
     // Split scalars into digits
-    unsigned NUM_BLOCKS_2 = ((npoints * (num_bucket_modules + 1)) + NUM_THREADS - 1) / NUM_THREADS;
-    
-    // cout << "NUM_BLOCKS is: " << NUM_BLOCKS_2 << endl;
-
     // NUM_THREADS * NUM_BLOCKS = NUM_BUCKETS --> each thread splits a single scalar into num_modules digits, each of size c. 
-    // I'm splitting the work between 4 threads, and need the window size to be an even multiple of 4?
+    unsigned NUM_BLOCKS_2 = ((npoints * (num_bucket_modules + 1)) + NUM_THREADS - 1) / NUM_THREADS;
 
     cout << "scalar 0 is: " << scalars[0].data[0] << endl;
     cout << "scalar 0 is: " << scalars[0].data[1] << endl;
     cout << "scalar 0 is: " << scalars[0].data[2] << endl;
     cout << "scalar 0 is: " << scalars[0].data[3] << endl;
 
-    split_scalars_kernel<<<1, 1>>>(bucket_indices + npoints, point_indices + npoints, scalars, npoints, num_bucket_modules, c);
+    // Split sub-scalars into their own seperate buckets
+    // not sure why we're passing pointers at an offset of npoints
+    // Would be able to do this 4 coooperaitve groups if c = 16...look into it
+    split_scalars_kernel<<<NUM_BLOCKS_2, NUM_THREADS>>>(bucket_indices + npoints, point_indices + npoints, scalars, npoints, num_bucket_modules, c);
     cudaDeviceSynchronize();
+
+    // cout << "UNSORTED: " << endl;
+    // for (int i = 0; i < 30; i++) {
+    //     cout << "bucket_indices: " << bucket_indices[1024 + i] << endl;
+    // }
 
     // integrating CUB routines for things like offset calculations
     // sort indices from smallest to largest in order to group points that belong to same bucket
-    // unsigned *sort_indices_temp_storage{};
-    // size_t sort_indices_temp_storage_bytes;
+    unsigned *sort_indices_temp_storage{};
+    size_t sort_indices_temp_storage_bytes; // need to figure out why this is 1, maybe a return value?
 
-    // determine the amount of temporary storage
-    // cub::DeviceRadixSort::SortPairs(sort_indices_temp_storage, sort_indices_temp_storage_bytes, bucket_indices + npoints, bucket_indices,
-    //                              point_indices + npoints, point_indices, npoints);
+    // Determine temporary device storage requirements
+    cub::DeviceRadixSort::SortPairs(sort_indices_temp_storage, sort_indices_temp_storage_bytes, bucket_indices + npoints, bucket_indices,
+                                 point_indices + npoints, point_indices, npoints);
 
-    // cudaMalloc(&sort_indices_temp_storage, sort_indices_temp_storage_bytes);
-
-    // // perform the radix sort -- total number of sorts is num_bucket_modules. sorting arrays of bucket_indices and point_indices
-    // for (unsigned i = 0; i < num_bucket_modules; i++) {
-    //     unsigned offset_out = i * npoints;
-    //     unsigned offset_in = offset_out + npoints;
-    //     cub::DeviceRadixSort::SortPairs(sort_indices_temp_storage, sort_indices_temp_storage_bytes, bucket_indices + offset_in,
-    //                                 bucket_indices + offset_out, point_indices + offset_in, point_indices + offset_out, npoints);
+    cout << "sort_indices_temp_storage_bytes is: " << sort_indices_temp_storage_bytes << endl;
+    
+    // for (int i = 0; i < 30; i++) {
+    //     cout << "point_indices: " << point_indices[1024 + i] << endl;
     // }
-    // cudaFree(sort_indices_temp_storage);
+
+    cudaMalloc(&sort_indices_temp_storage, sort_indices_temp_storage_bytes);
+
+    // perform the radix sort operation -- total number of sorts is num_bucket_modules. sorting arrays of bucket_indices and point_indices
+    for (unsigned i = 0; i < num_bucket_modules; i++) {
+        unsigned offset_out = i * npoints;
+        unsigned offset_in = offset_out + npoints;
+        // pffsets ensure each iteration operates on different set of points in input / output array
+        // compressing inputs + offset --> offset in this method
+        cub::DeviceRadixSort::SortPairs(sort_indices_temp_storage, sort_indices_temp_storage_bytes, bucket_indices + offset_in,
+                                    bucket_indices + offset_out, point_indices + offset_in, point_indices + offset_out, npoints);
+    }
+    cudaFree(sort_indices_temp_storage);
+
+    // for (int i = 0; i < 30; i++) {
+    //     cout << "point_indices: " << point_indices[i] << endl;
+    // }
+
+    // cout << "SORTED: " << endl;
+    // for (int i = 0; i < 30; i++) {
+    //     cout << "bucket_indices: " << bucket_indices[1024 + i] << endl;
+    // }
+
+    // Next find the size of the buckets based on bucket_indices
+    unsigned *single_bucket_indices;
+    unsigned *bucket_sizes;
+    unsigned *nof_buckets_to_compute;
+    cudaMalloc(&single_bucket_indices, sizeof(unsigned) * num_buckets);
+    cudaMalloc(&bucket_sizes, sizeof(unsigned) * num_buckets);
+    cudaMalloc(&nof_buckets_to_compute, sizeof(unsigned));
+    unsigned *encode_temp_storage{};
+    size_t encode_temp_storage_bytes = 0;
+
+    // run length encoding computes a simple compressed representation of a sequence of input element
+    cub::DeviceRunLengthEncode::Encode(encode_temp_storage, encode_temp_storage_bytes, bucket_indices, single_bucket_indices, bucket_sizes,
+                                            nof_buckets_to_compute, num_bucket_modules * npoints);
+    cudaMalloc(&encode_temp_storage, encode_temp_storage_bytes);
+    cub::DeviceRunLengthEncode::Encode(encode_temp_storage, encode_temp_storage_bytes, bucket_indices, single_bucket_indices, bucket_sizes,
+                                            nof_buckets_to_compute, num_bucket_modules * npoints);
+    cudaFree(encode_temp_storage);
+
+    //get offsets - where does each new bucket begin
+    unsigned* bucket_offsets;
+    cudaMalloc(&bucket_offsets, sizeof(unsigned) * num_buckets);
+    unsigned* offsets_temp_storage{};
+    size_t offsets_temp_storage_bytes = 0;
+    cub::DeviceScan::ExclusiveSum(offsets_temp_storage, offsets_temp_storage_bytes, bucket_sizes, bucket_offsets, num_buckets);
+    cudaMalloc(&offsets_temp_storage, offsets_temp_storage_bytes);
+    cub::DeviceScan::ExclusiveSum(offsets_temp_storage, offsets_temp_storage_bytes, bucket_sizes, bucket_offsets, num_buckets);
+    cudaFree(offsets_temp_storage);
+
+    // Launch accumulation kernel
+    unsigned NUM_BLOCKS_3 = (num_buckets + NUM_THREADS - 1) / NUM_THREADS;
+    accumulate_buckets_kernel<<<NUM_BLOCKS_3, NUM_THREADS * 4>>>(buckets, bucket_offsets, bucket_sizes, single_bucket_indices, point_indices, points, num_buckets);
+    cudaDeviceSynchronize();
+
+    // cout << "final_result is: " << buckets[0].x.data[0] << endl;
+    // cout << "final_result is: " << buckets[0].x.data[1] << endl;
+    // cout << "final_result is: " << buckets[0].x.data[2] << endl;
+    // cout << "final_result is: " << buckets[0].x.data[3] << endl;
+
+    // At this point we have n buckets and m bucket modules. Need to first sum up the n buckets per bucket module, and then
+    // perform a final accumulation of the bucket modules. 
+
+    point_t *final_result;
+    cudaMallocManaged(&final_result, num_bucket_modules * 3 * 4 * sizeof(uint64_t));
+    // Need to optimize these kernel launch parameters?
+    bucket_module_sum_reduction_kernel<<<1, num_bucket_modules * 4>>>(buckets, final_result, num_buckets, c);
+    cudaDeviceSynchronize();
+
+    // Final accumulation kernel
+    point_t *res;
+    cudaMallocManaged(&res, 3 * 4 * sizeof(uint64_t));
+    final_accumulation_kernel<<<1,4>>>(final_result, res, num_bucket_modules, c);
+    cudaDeviceSynchronize();
+
+    // free memory
 }
 
 

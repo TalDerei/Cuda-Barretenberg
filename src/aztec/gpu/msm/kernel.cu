@@ -62,11 +62,18 @@ __global__ void simple_msm_naive_2(g1::element *point, fr_gpu *scalar, fq_gpu *r
     // Parameters for coperative groups
     auto grp = fixnum::layout();
     int subgroup = grp.meta_group_rank();
+    int subgroup_size = grp.meta_group_size();
 
     // 3 * Fq field multiplications
-    fq_gpu::mul(point[subgroup].x.data[tid % 4], scalar[subgroup].data[tid % 4], result_vec[subgroup].x.data[tid % 4]);
-    fq_gpu::mul(point[subgroup].y.data[tid % 4], scalar[subgroup].data[tid % 4], result_vec[subgroup].y.data[tid % 4]);
-    fq_gpu::mul(point[subgroup].z.data[tid % 4], scalar[subgroup].data[tid % 4], result_vec[subgroup].z.data[tid % 4]);
+    fq_gpu::mul(point[(subgroup + (subgroup_size * blockIdx.x))].x.data[tid % 4], 
+                scalar[(subgroup + (subgroup_size * blockIdx.x))].data[tid % 4], 
+                result_vec[(subgroup + (subgroup_size * blockIdx.x))].x.data[tid % 4]);
+    fq_gpu::mul(point[(subgroup + (subgroup_size * blockIdx.x))].y.data[tid % 4], 
+                scalar[(subgroup + (subgroup_size * blockIdx.x))].data[tid % 4], 
+                result_vec[(subgroup + (subgroup_size * blockIdx.x))].y.data[tid % 4]);
+    fq_gpu::mul(point[(subgroup + (subgroup_size * blockIdx.x))].z.data[tid % 4], 
+                scalar[(subgroup + (subgroup_size * blockIdx.x))].data[tid % 4], 
+                result_vec[(subgroup + (subgroup_size * blockIdx.x))].z.data[tid % 4]);
 }
 
 /**
@@ -89,13 +96,19 @@ __global__ void sum_reduction(g1::element *v, g1::element *result) {
     // printf("size of the group: %d\n", grp.meta_group_size());
 
     // Each thread loads two points into shared memory
-    fq_gpu::load(v[subgroup * 2].x.data[tid % 4], partial_sum[subgroup * 2].x.data[tid % 4]);
-    fq_gpu::load(v[subgroup * 2].y.data[tid % 4], partial_sum[subgroup * 2].y.data[tid % 4]);
-    fq_gpu::load(v[subgroup * 2].z.data[tid % 4], partial_sum[subgroup * 2].z.data[tid % 4]);
+    fq_gpu::load(v[(subgroup + (subgroup_size * blockIdx.x)) * 2].x.data[tid % 4], 
+                partial_sum[(subgroup + (subgroup_size * blockIdx.x)) * 2].x.data[tid % 4]);
+    fq_gpu::load(v[(subgroup + (subgroup_size * blockIdx.x)) * 2].y.data[tid % 4], 
+                partial_sum[(subgroup + (subgroup_size * blockIdx.x)) * 2].y.data[tid % 4]);
+    fq_gpu::load(v[(subgroup + (subgroup_size * blockIdx.x)) * 2].z.data[tid % 4], 
+                partial_sum[(subgroup + (subgroup_size * blockIdx.x)) * 2].z.data[tid % 4]);
 
-    fq_gpu::load(v[(subgroup * 2) + 1].x.data[tid % 4], partial_sum[(subgroup * 2) + 1].x.data[tid % 4]);
-    fq_gpu::load(v[(subgroup * 2) + 1].y.data[tid % 4], partial_sum[(subgroup * 2) + 1].y.data[tid % 4]);
-    fq_gpu::load(v[(subgroup * 2) + 1].z.data[tid % 4], partial_sum[(subgroup * 2) + 1].z.data[tid % 4]);
+    fq_gpu::load(v[((subgroup + (subgroup_size * blockIdx.x)) * 2) + 1].x.data[tid % 4], 
+                partial_sum[((subgroup + (subgroup_size * blockIdx.x)) * 2) + 1].x.data[tid % 4]);
+    fq_gpu::load(v[((subgroup + (subgroup_size * blockIdx.x)) * 2) + 1].y.data[tid % 4], 
+                partial_sum[((subgroup + (subgroup_size * blockIdx.x)) * 2) + 1].y.data[tid % 4]);
+    fq_gpu::load(v[((subgroup + (subgroup_size * blockIdx.x)) * 2) + 1].z.data[tid % 4], 
+                partial_sum[((subgroup + (subgroup_size * blockIdx.x)) * 2) + 1].z.data[tid % 4]);
 
     // Sychronization barrier after loading elements
     __syncthreads();
@@ -117,15 +130,15 @@ __global__ void sum_reduction(g1::element *v, g1::element *result) {
     for (int s = 0; s < 2; s++) {
         if (threadIdx.x < t)
             g1::add(
-                partial_sum[subgroup * 2].x.data[tid % 4], 
-                partial_sum[subgroup * 2].y.data[tid % 4], 
-                partial_sum[subgroup * 2].z.data[tid % 4], 
-                partial_sum[(subgroup * 2) + 1].x.data[tid % 4], 
-                partial_sum[(subgroup * 2) + 1].y.data[tid % 4], 
-                partial_sum[(subgroup * 2) + 1].z.data[tid % 4], 
-                partial_sum[subgroup].x.data[tid % 4], 
-                partial_sum[subgroup].y.data[tid % 4], 
-                partial_sum[subgroup].z.data[tid % 4]
+                partial_sum[(subgroup + (subgroup_size * blockIdx.x)) * 2].x.data[tid % 4], 
+                partial_sum[(subgroup + (subgroup_size * blockIdx.x)) * 2].y.data[tid % 4], 
+                partial_sum[(subgroup + (subgroup_size * blockIdx.x)) * 2].z.data[tid % 4], 
+                partial_sum[((subgroup + (subgroup_size * blockIdx.x)) * 2) + 1].x.data[tid % 4], 
+                partial_sum[((subgroup + (subgroup_size * blockIdx.x)) * 2) + 1].y.data[tid % 4], 
+                partial_sum[((subgroup + (subgroup_size * blockIdx.x)) * 2) + 1].z.data[tid % 4], 
+                partial_sum[(subgroup + (subgroup_size * blockIdx.x))].x.data[tid % 4], 
+                partial_sum[(subgroup + (subgroup_size * blockIdx.x))].y.data[tid % 4], 
+                partial_sum[(subgroup + (subgroup_size * blockIdx.x))].z.data[tid % 4]
             );
         __syncthreads();
         t -= t / 2;
@@ -209,17 +222,18 @@ __global__ void initialize_buckets_kernel(g1::element *bucket) {
     // Parameters for coperative groups
     auto grp = fixnum::layout();
     int subgroup = grp.meta_group_rank();
+    int subgroup_size = grp.meta_group_size();
 
     // Initialize buckets with zero points
-    fq_gpu::load(fq_gpu::zero().data[tid % 4], bucket[subgroup].x.data[tid % 4]);
-    fq_gpu::load(fq_gpu::one().data[tid % 4], bucket[subgroup].y.data[tid % 4]);
-    fq_gpu::load(fq_gpu::zero().data[tid % 4], bucket[subgroup].z.data[tid % 4]);
+    fq_gpu::load(fq_gpu::zero().data[tid % 4], bucket[subgroup + (subgroup_size * blockIdx.x)].x.data[tid % 4]);
+    fq_gpu::load(fq_gpu::one().data[tid % 4], bucket[subgroup + (subgroup_size * blockIdx.x)].y.data[tid % 4]);
+    fq_gpu::load(fq_gpu::zero().data[tid % 4], bucket[subgroup + (subgroup_size * blockIdx.x)].z.data[tid % 4]);
 }
 
 /**
  * Scalar digit decomposition 
  */
-__device__ uint64_t decompose_scalar_digit(fr_gpu scalar, unsigned num, unsigned width) {
+__device__ uint64_t decompose_scalar_digit(fr_gpu scalar, unsigned num, unsigned width) {    
     // Determine which 64-bit limb to access 
     const uint64_t limb_lsb_idx = (num * width) / 64;  
     const uint64_t shift_bits = (num * width) % 64;  
@@ -230,11 +244,11 @@ __device__ uint64_t decompose_scalar_digit(fr_gpu scalar, unsigned num, unsigned
     // Check if scalar digit crosses boundry of current limb
     if ((shift_bits + width > 64) && (limb_lsb_idx + 1 < 4)) {
         // Access next limb and left shift by '32 - shift_bits' bits
-        rv += scalar.data[limb_lsb_idx + 1] << (32 - shift_bits);
+        rv += scalar.data[limb_lsb_idx + 1] << (64 - shift_bits);
     }
+    // Bit mask to extract LSB of size width
     rv &= ((1 << width) - 1);
-    // printf("rv is: %d\n", rv); 
-
+    
     return rv;
 }
 
@@ -252,12 +266,135 @@ __global__ void split_scalars_kernel
         for (int i = 0; i < num_bucket_modules; i++) {
             // Need to check if the decomposition is correct, i.e. if each thread can handle it's own scalar
             bucket_index = decompose_scalar_digit(scalars[tid], i, c);
-            current_index = i * npoints + tid;
-            bucket_indices[current_index] = (i << c) | bucket_index;
-            printf("rv is: %d\n", (i << c) | bucket_index); 
+            current_index = i * npoints + tid; // calculate the current index
+            bucket_indices[current_index] = (i << c) | bucket_index; // bitwise or performs additon here
+            // need to do this to store information about both the bucket module, and the specific bucket index for which 
+            // module it belongs to. we're packing information
+            // bucket module index i, and the bucket index within that module bucket_index
+            // printf("current index is: %d\n", current_index); 
+            // printf("i << c is: %d\n", i << c); 
+            // printf("bucket index is: %d\n", bucket_index); 
+            // printf("rv is: %d\n", (i << c) | bucket_index); 
+            // keeps track of which thread handled each scalar value
             point_indices[current_index] = tid;
         }
     }   
+}
+
+/**
+ * Accumulation kernel adds up points in each bucket
+ */
+__global__ void accumulate_buckets_kernel
+(g1::element *buckets, unsigned *bucket_offsets, unsigned *bucket_sizes, unsigned *single_bucket_indices, unsigned *point_indices, 
+g1::element *points, unsigned num_buckets) {
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    unsigned bucket_index = single_bucket_indices[tid];
+    unsigned bucket_size = bucket_sizes[tid];
+
+    if (tid >=num_buckets || bucket_size == 0) {
+        return;
+    }
+
+    // in the naive case, each thread handles summing points in a single bucket, can we 
+    // incorperate cooperative groups?
+    unsigned bucket_offset = bucket_offsets[tid];
+    for (unsigned i = 0; i < bucket_sizes[tid]; i++) { //  //add the relevant points starting from the relevant offset up to the bucket size
+        g1::add(
+            buckets[bucket_index].x.data[tid % 4], 
+            buckets[bucket_index].y.data[tid % 4], 
+            buckets[bucket_index].z.data[tid % 4], 
+            points[point_indices[bucket_offset + i]].x.data[tid % 4], 
+            points[point_indices[bucket_offset + i]].y.data[tid % 4], 
+            points[point_indices[bucket_offset + i]].z.data[tid % 4], 
+            buckets[bucket_index].x.data[tid % 4], 
+            buckets[bucket_index].y.data[tid % 4], 
+            buckets[bucket_index].z.data[tid % 4]
+        );
+    }
+}
+
+/**
+ * Sum reduction kernel that accumulates bucket sums in bucket modules.
+ * Each thread deals with a single bucket module
+ */
+__global__ void bucket_module_sum_reduction_kernel(g1::element *buckets, g1::element *final_result, size_t num_buckets, unsigned c) {
+    // Parameters for coperative groups
+    auto grp = fixnum::layout();
+    int subgroup = grp.meta_group_rank();
+    
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    if (tid > num_buckets) {
+        return;
+    }
+
+    g1::element line_sum;
+
+    fq_gpu::load(buckets[(subgroup + 1) * (1 << c) - 1].x.data[tid % 4], line_sum.x.data[tid % 4]);
+    fq_gpu::load(buckets[(subgroup + 1) * (1 << c) - 1].y.data[tid % 4], line_sum.y.data[tid % 4]);
+    fq_gpu::load(buckets[(subgroup + 1) * (1 << c) - 1].z.data[tid % 4], line_sum.z.data[tid % 4]);
+
+    // need the 1 here?
+    fq_gpu::load(line_sum.x.data[tid % 4], final_result[subgroup].x.data[tid % 4]);
+    fq_gpu::load(line_sum.y.data[tid % 4], final_result[subgroup].y.data[tid % 4]);
+    fq_gpu::load(line_sum.z.data[tid % 4], final_result[subgroup].z.data[tid % 4]);
+
+    for (unsigned i = (1 << c) - 2; i > 0; i--) {
+        // why do we do 2 sums here? isn't this redundant?
+        g1::add(
+            line_sum.x.data[tid % 4], 
+            line_sum.y.data[tid % 4], 
+            line_sum.z.data[tid % 4], 
+            buckets[subgroup * (1 << c) + i].x.data[tid % 4], 
+            buckets[subgroup * (1 << c) + i].y.data[tid % 4], 
+            buckets[subgroup * (1 << c) + i].z.data[tid % 4], 
+            line_sum.x.data[tid % 4], 
+            line_sum.y.data[tid % 4], 
+            line_sum.z.data[tid % 4]
+        );
+
+        // running sum method?
+        g1::add(
+            final_result[subgroup].x.data[tid % 4], 
+            final_result[subgroup].y.data[tid % 4], 
+            final_result[subgroup].z.data[tid % 4], 
+            line_sum.x.data[tid % 4], 
+            line_sum.y.data[tid % 4], 
+            line_sum.z.data[tid % 4],
+            final_result[subgroup].x.data[tid % 4], 
+            final_result[subgroup].y.data[tid % 4], 
+            final_result[subgroup].z.data[tid % 4]
+        );
+    }
+}
+
+// Final bucket accumulation to produce single group element
+__global__ void final_accumulation_kernel(g1::element *final_result, g1::element *res, size_t num_bucket_modules, unsigned c) {
+    fq_gpu res_x_temp{ 0, 0, 0, 0 };
+    fq_gpu res_y_temp{ 0, 0, 0, 0 };
+    fq_gpu res_z_temp{ 0, 0, 0, 0 };
+
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+
+    fq_gpu::load(res_x_temp.data[tid], res[0].x.data[tid]);
+    fq_gpu::load(res_y_temp.data[tid], res[0].y.data[tid]);
+    fq_gpu::load(res_z_temp.data[tid], res[0].z.data[tid]);
+
+    // need to change this to scalar
+    size_t digit_base = {unsigned(1 << c)};
+
+    for (unsigned i = num_bucket_modules; i > 0; i--) {
+         g1::add(
+            digit_base * (res[0].x.data[tid]), 
+            digit_base * (res[0].y.data[tid]),
+            digit_base * (res[0].z.data[tid]),
+            final_result[i - 1].x.data[tid],
+            final_result[i - 1].y.data[tid],
+            final_result[i - 1].z.data[tid], 
+            res[0].x.data[tid], 
+            res[0].y.data[tid],
+            res[0].z.data[tid]
+        );
+    }
 }
 
 }

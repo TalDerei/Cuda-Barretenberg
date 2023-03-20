@@ -20,10 +20,10 @@ int main(int, char**) {
     fr_gpu *scalars = context->pipp.read_scalars(d_scalars);
 
     // Execute MSM
-    msm->pippenger_execute(context, NUM_POINTS, points, scalars);
+    // msm->pippenger_execute(context, NUM_POINTS, points, scalars);
 
     // Naive MSM
-    msm->naive_msm(context, NUM_POINTS, points, scalars);
+    // msm->naive_msm(context, NUM_POINTS, points, scalars);
 
     // MSM "Bucket Method"
     msm->msm_bucket_method(context, NUM_POINTS, points, scalars);
@@ -37,4 +37,12 @@ int main(int, char**) {
  * TODO: change unified memory to pinned host memory
  * TODO: look into asynchronous transfers 
  * TODO: seperate kernel code
+ * TODO: read affine points instead of jacobian
+ * TODO: change to memcpy instead of reading from files
+ * TODO: modify number of scalars
+ * TODO: incorperate cooperative groups in accmulation 
+ * TODO: choose block sizes based on occupancy in terms of active blocks
+ * TODO: free memory
+ * TODO: add timer
+ * TODO: look into shared memory optimizations
  */

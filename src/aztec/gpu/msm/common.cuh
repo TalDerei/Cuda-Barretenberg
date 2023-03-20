@@ -2,6 +2,10 @@
 #include "util/thread_pool.hpp"
 #include "error.cuh"
 #include <cuda.h>
+#include <cub/cub.cuh>
+#include <cub/device/device_radix_sort.cuh>
+#include <cub/device/device_run_length_encode.cuh>
+#include <cub/device/device_scan.cuh>
 
 namespace pippenger_common {
 
@@ -140,7 +144,7 @@ class pippenger_t {
 
         void print_result(point_t *result);
 
-        void initialize_buckets(scalar_t *scalars, unsigned bitsize, unsigned c, size_t npoints);
+        void initialize_buckets(scalar_t *scalars, point_t *points, unsigned bitsize, unsigned c, size_t npoints);
 
         void decompose_scalar_digit(unsigned digit_num, unsigned digit_width);
 };
