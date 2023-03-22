@@ -6,13 +6,106 @@ using namespace cooperative_groups;
 
 namespace pippenger_common {
 
+// // Wrapper around uint64_t with template parameter 'scalar_t'
+// class scalar_T {
+//     uint64_t val[sizeof(scalar_t) / sizeof(uint64_t)][WARP];
+
+//     public:
+//         __device__ uint64_t& operator[](size_t i) { 
+//             return val[i][0]; 
+//         }
+//         __device__ const uint64_t& operator[](size_t i) const { 
+//             return val[i][0]; 
+//         }
+//         // __device__ scalar_T& operator=(const scalar_t& rhs) {
+//         //     for (size_t i = 0; i < sizeof(scalar_t) / sizeof(uint64_t); i++) {
+//         //         val[i][0] = rhs[i];
+//         //     }
+//         //     return *this;
+//         // }
+// };
+
+// // Wrapper around a pointer to an array of scalar_T values,
+// // providing a way to index into array of scalars. The operator[] 
+// // function takes an index i, which represents the index of the scalar 
+// // value in the array, and returns a reference to the scalar_T value at that index.
+// class scalars_T {
+//     scalar_T* ptr;
+
+//     public:
+//         __device__ scalars_T(void* rhs) { 
+//             ptr = (scalar_T*)rhs; 
+//         }
+//         __device__ scalar_T& operator[](size_t i) {   
+//             return *(scalar_T*)&(&ptr[i / WARP][0])[i % WARP];   
+//         }
+//         __device__ const scalar_T& operator[](size_t i) const {   
+//             return *(const scalar_T*)&(&ptr[i / WARP][0])[i % WARP];   
+//         }
+// };
+
+// constexpr static __device__ int dlog2(int n) {   
+//     int ret = 0; while (n >>= 1) ret++; return ret;   
+// }
+
 /**
  * Kernel function for "Pippenger's Bucket Method"
  */
 __global__ void pippenger(
-affine_t *points, size_t npoints, const scalar_t *scalars, 
+affine_t *points, size_t npoints, const scalar_t *scalars_, 
 bucket_t(* buckets)[NWINS][1<<WBITS], bucket_t(* ret)[NWINS][NTHREADS][2]) {
-    
+    // // Assert number of threads per block, number of points, and number of points
+    // assert(blockDim.x == NTHREADS);         
+    // assert(gridDim.x == NWINS);
+    // assert(npoints == (uint64_t)npoints);
+
+    // // Divide input points and scalars between brid blocks along y-axis, 
+    // // and round to nearest warp-size
+    // if (gridDim.y > 1) {
+    //     uint64_t delta = ((uint64_t)npoints + gridDim.y - 1) / gridDim.y;
+    //     delta = (delta + WARP - 1) & (0U - WARP); 
+    //     uint64_t off = delta * blockIdx.y;
+
+    //     // Calculate offset into the points and scalars array for this grid block
+    //     // based on delta and blockIdx.y. 
+    //     points  += off;
+    //     scalars_ += off;
+
+    //     // Update value of npoints to reflect number of points this grid block should process.
+    //     if (blockIdx.y == gridDim.y - 1) {
+    //         npoints -= off;
+    //     }
+    //     else {
+    //         npoints = delta;
+    //     }
+    // }
+
+    // // Creates mutable copy of scalars_ array, allowing the algorithm
+    // // to later sort the array in-place
+    // scalars_T scalars = const_cast<scalar_t*>(scalars_);
+    // const int NTHRBITS = dlog2(NTHREADS);
+    // const uint64_t tid = threadIdx.x; 
+    // const uint64_t bid = blockIdx.x;
+    // const uint64_t bit0 = bid * WBITS;          // Computes the index of the first bucket that the current block will process
+    // bucket_t* row = buckets[blockIdx.y][bid];   // Pointer to first bucket the current block will proccess
+
+    // // Parameters for coperative groups
+    // auto grp = fixnum::layout();
+    // int subgroup = grp.meta_group_rank();
+    // int subgroup_size = grp.meta_group_size();
+
+    // #pragma unroll 1
+    // for (uint64_t i = NTHREADS * bid + tid; i < npoints; i += NTHREADS * NWINS) {
+    //     scalar_t s = scalars_[i];
+    //     // convert from montgomery form
+    //     fq_gpu::from_monty(s.data[i % 4], s.data[i % 4]);
+        
+    //     // load scalar back to scalars array
+    //     fq_gpu::load(s.data[i % 4], scalars[i]);
+    // }
+
+    // // Sync to avoid race conditions when writing scalars back to array
+    // grp.sync();
 }
 
 /**
@@ -149,9 +242,9 @@ __global__ void sum_reduction(g1::element *v, g1::element *result) {
 
     // Accumulate result into current block
     if (threadIdx.x < 4)
-        fq_gpu::load(partial_sum[subgroup].x.data[tid % 4], result[subgroup].x.data[tid % 4]);
-        fq_gpu::load(partial_sum[subgroup].y.data[tid % 4], result[subgroup].y.data[tid % 4]);
-        fq_gpu::load(partial_sum[subgroup].z.data[tid % 4], result[subgroup].z.data[tid % 4]);
+        fq_gpu::load(partial_sum[(subgroup + (subgroup_size * blockIdx.x))].x.data[tid % 4], result[(subgroup + (subgroup_size * blockIdx.x))].x.data[tid % 4]);
+        fq_gpu::load(partial_sum[(subgroup + (subgroup_size * blockIdx.x))].y.data[tid % 4], result[(subgroup + (subgroup_size * blockIdx.x))].y.data[tid % 4]);
+        fq_gpu::load(partial_sum[(subgroup + (subgroup_size * blockIdx.x))].z.data[tid % 4], result[(subgroup + (subgroup_size * blockIdx.x))].z.data[tid % 4]);
 }
 
 /**
@@ -225,8 +318,9 @@ __global__ void initialize_buckets_kernel(g1::element *bucket) {
     int subgroup_size = grp.meta_group_size();
 
     // Initialize buckets with zero points
+    // Initialize with one() in y axis for projective
     fq_gpu::load(fq_gpu::zero().data[tid % 4], bucket[subgroup + (subgroup_size * blockIdx.x)].x.data[tid % 4]);
-    fq_gpu::load(fq_gpu::one().data[tid % 4], bucket[subgroup + (subgroup_size * blockIdx.x)].y.data[tid % 4]);
+    fq_gpu::load(fq_gpu::zero().data[tid % 4], bucket[subgroup + (subgroup_size * blockIdx.x)].y.data[tid % 4]);
     fq_gpu::load(fq_gpu::zero().data[tid % 4], bucket[subgroup + (subgroup_size * blockIdx.x)].z.data[tid % 4]);
 }
 
@@ -285,20 +379,32 @@ __global__ void split_scalars_kernel
  * Accumulation kernel adds up points in each bucket
  */
 __global__ void accumulate_buckets_kernel
-(g1::element *buckets, unsigned *bucket_offsets, unsigned *bucket_sizes, unsigned *single_bucket_indices, unsigned *point_indices, 
-g1::element *points, unsigned num_buckets) {
+(g1::element *buckets, unsigned *bucket_offsets, unsigned *bucket_sizes, unsigned *single_bucket_indices, 
+unsigned *point_indices, g1::element *points, unsigned num_buckets) {
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
-    unsigned bucket_index = single_bucket_indices[tid];
-    unsigned bucket_size = bucket_sizes[tid];
 
-    if (tid >=num_buckets || bucket_size == 0) {
+    // Parameters for coperative groups
+    auto grp = fixnum::layout();
+    int subgroup = grp.meta_group_rank();
+    int subgroup_size = grp.meta_group_size();
+
+    // printf("thread_block my_block = this_thread_block(): %d\n", grp.meta_group_rank());
+    // printf("size of the group: %d\n", grp.meta_group_size());
+
+    // Bucket_sizes store the size and starting index of each bucket, and single_bucket_indices 
+    // and point_indices store the indices of the buckets and points that need to be added up.
+    unsigned bucket_index = single_bucket_indices[(subgroup + (subgroup_size * blockIdx.x))];
+    unsigned bucket_size = bucket_sizes[(subgroup + (subgroup_size * blockIdx.x))];
+    unsigned bucket_offset = bucket_offsets[(subgroup + (subgroup_size * blockIdx.x))];
+
+    grp.sync();
+
+    if (tid >= num_buckets || bucket_size == 0) { // if bucket is empty, return
         return;
     }
 
-    // in the naive case, each thread handles summing points in a single bucket, can we 
-    // incorperate cooperative groups?
-    unsigned bucket_offset = bucket_offsets[tid];
-    for (unsigned i = 0; i < bucket_sizes[tid]; i++) { //  //add the relevant points starting from the relevant offset up to the bucket size
+    // Add points starting from the relevant offset up to the bucket size
+    for (unsigned i = 0; i < bucket_sizes[(subgroup + (subgroup_size * blockIdx.x))]; i++) { 
         g1::add(
             buckets[bucket_index].x.data[tid % 4], 
             buckets[bucket_index].y.data[tid % 4], 
@@ -310,6 +416,19 @@ g1::element *points, unsigned num_buckets) {
             buckets[bucket_index].y.data[tid % 4], 
             buckets[bucket_index].z.data[tid % 4]
         );
+
+        // if (fq_gpu::is_zero(buckets[bucket_index].x.data[tid % 4]) 
+        //     && fq_gpu::is_zero(buckets[bucket_index].y.data[tid % 4]) 
+        //     && fq_gpu::is_zero(buckets[bucket_index].z.data[tid % 4])) {
+        //     g1::doubling(
+        //         points[point_indices[bucket_offset + i]].x.data[tid % 4], 
+        //         points[point_indices[bucket_offset + i]].y.data[tid % 4], 
+        //         points[point_indices[bucket_offset + i]].z.data[tid % 4], 
+        //         buckets[bucket_index].x.data[tid % 4], 
+        //         buckets[bucket_index].y.data[tid % 4], 
+        //         buckets[bucket_index].z.data[tid % 4]
+        //     );
+        // }
     }
 }
 
@@ -321,48 +440,47 @@ __global__ void bucket_module_sum_reduction_kernel(g1::element *buckets, g1::ele
     // Parameters for coperative groups
     auto grp = fixnum::layout();
     int subgroup = grp.meta_group_rank();
-    
+    int subgroup_size = grp.meta_group_size();
+
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    
     if (tid > num_buckets) {
         return;
     }
 
     g1::element line_sum;
 
-    fq_gpu::load(buckets[(subgroup + 1) * (1 << c) - 1].x.data[tid % 4], line_sum.x.data[tid % 4]);
-    fq_gpu::load(buckets[(subgroup + 1) * (1 << c) - 1].y.data[tid % 4], line_sum.y.data[tid % 4]);
-    fq_gpu::load(buckets[(subgroup + 1) * (1 << c) - 1].z.data[tid % 4], line_sum.z.data[tid % 4]);
+    fq_gpu::load(buckets[((subgroup + (subgroup_size * blockIdx.x)) + 1) * (1 << c) - 1].x.data[tid % 4], line_sum.x.data[tid % 4]);
+    fq_gpu::load(buckets[((subgroup + (subgroup_size * blockIdx.x)) + 1) * (1 << c) - 1].y.data[tid % 4], line_sum.y.data[tid % 4]);
+    fq_gpu::load(buckets[((subgroup + (subgroup_size * blockIdx.x)) + 1) * (1 << c) - 1].z.data[tid % 4], line_sum.z.data[tid % 4]);
 
-    // need the 1 here?
-    fq_gpu::load(line_sum.x.data[tid % 4], final_result[subgroup].x.data[tid % 4]);
-    fq_gpu::load(line_sum.y.data[tid % 4], final_result[subgroup].y.data[tid % 4]);
-    fq_gpu::load(line_sum.z.data[tid % 4], final_result[subgroup].z.data[tid % 4]);
+    fq_gpu::load(line_sum.x.data[tid % 4], final_result[(subgroup + (subgroup_size * blockIdx.x))].x.data[tid % 4]);
+    fq_gpu::load(line_sum.y.data[tid % 4], final_result[(subgroup + (subgroup_size * blockIdx.x))].y.data[tid % 4]);
+    fq_gpu::load(line_sum.z.data[tid % 4], final_result[(subgroup + (subgroup_size * blockIdx.x))].z.data[tid % 4]);
 
     for (unsigned i = (1 << c) - 2; i > 0; i--) {
-        // why do we do 2 sums here? isn't this redundant?
         g1::add(
             line_sum.x.data[tid % 4], 
             line_sum.y.data[tid % 4], 
             line_sum.z.data[tid % 4], 
-            buckets[subgroup * (1 << c) + i].x.data[tid % 4], 
-            buckets[subgroup * (1 << c) + i].y.data[tid % 4], 
-            buckets[subgroup * (1 << c) + i].z.data[tid % 4], 
+            buckets[(subgroup + (subgroup_size * blockIdx.x)) * (1 << c) + i].x.data[tid % 4], 
+            buckets[(subgroup + (subgroup_size * blockIdx.x)) * (1 << c) + i].y.data[tid % 4], 
+            buckets[(subgroup + (subgroup_size * blockIdx.x)) * (1 << c) + i].z.data[tid % 4], 
             line_sum.x.data[tid % 4], 
             line_sum.y.data[tid % 4], 
             line_sum.z.data[tid % 4]
         );
 
-        // running sum method?
         g1::add(
-            final_result[subgroup].x.data[tid % 4], 
-            final_result[subgroup].y.data[tid % 4], 
-            final_result[subgroup].z.data[tid % 4], 
+            final_result[(subgroup + (subgroup_size * blockIdx.x))].x.data[tid % 4], 
+            final_result[(subgroup + (subgroup_size * blockIdx.x))].y.data[tid % 4], 
+            final_result[(subgroup + (subgroup_size * blockIdx.x))].z.data[tid % 4], 
             line_sum.x.data[tid % 4], 
             line_sum.y.data[tid % 4], 
             line_sum.z.data[tid % 4],
-            final_result[subgroup].x.data[tid % 4], 
-            final_result[subgroup].y.data[tid % 4], 
-            final_result[subgroup].z.data[tid % 4]
+            final_result[(subgroup + (subgroup_size * blockIdx.x))].x.data[tid % 4], 
+            final_result[(subgroup + (subgroup_size * blockIdx.x))].y.data[tid % 4], 
+            final_result[(subgroup + (subgroup_size * blockIdx.x))].z.data[tid % 4]
         );
     }
 }

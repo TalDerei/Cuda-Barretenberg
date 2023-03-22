@@ -94,7 +94,7 @@ void msm_t<A, S, J>::pippenger_execute(Context<bucket_t, point_t, scalar_t, affi
  * Perform naive MSM
  */ 
 template <class A, class S, class J>
-void msm_t<A, S, J>::naive_msm(Context<bucket_t,point_t,scalar_t,affine_t> *context, size_t npoints, A *points, S *scalars) {
+void msm_t<A, S, J>::naive_msm(Context<bucket_t,point_t,scalar_t,affine_t> *context, size_t npoints, A *points) {
     fr_gpu *d_scalars;
     J *j_points;
     J *result;
@@ -134,32 +134,54 @@ void msm_t<A, S, J>::naive_msm(Context<bucket_t,point_t,scalar_t,affine_t> *cont
  * Perform MSM Bucket Method
  */ 
 template <class A, class S, class J>
-void msm_t<A, S, J>::msm_bucket_method(Context<bucket_t,point_t,scalar_t,affine_t> *context, size_t npoints, A *points, S *scalars) {
+void msm_t<A, S, J>::msm_bucket_method(Context<bucket_t,point_t,scalar_t,affine_t> *context, size_t npoints, A *points) {
     J *j_points;
+    S *d_scalars;
     J *result;
+
+    // cout << "NUM_POINTS IS: " << npoints << endl;
+    // exit(0);
 
     // Allocate unified memory
     cudaMallocManaged(&j_points, 3 * POINTS * LIMBS * sizeof(uint64_t));
+    cudaMallocManaged(&d_scalars, POINTS * LIMBS * sizeof(uint64_t));
     cudaMallocManaged(&result, 3 * POINTS * LIMBS * sizeof(uint64_t));
 
     // Read points
-    J *points_r = context->pipp.read_jacobian_curve_points(j_points);
+    context->pipp.read_jacobian_curve_points(j_points);
+    context->pipp.read_scalars(d_scalars);
+
+    int THREADS;
+    int BLOCKS;
+
+    cudaOccupancyMaxPotentialBlockSize(&BLOCKS, &THREADS, accumulate_buckets_kernel, 0, 0);
+
+    cout << "max threads is: " << THREADS << endl;
+    cout << "max blocks is: " << BLOCKS << endl;
 
     // Parameters
     unsigned bitsize = 255;
     unsigned c = 10;
     // LOOK INTO MAKING C = 16, SO WE DON'T NEED TO WORRY ABOUT EDGE CASES BETWEEN BUCKETS
 
+        // Calculate the number of windows 
+    unsigned num_bucket_modules = bitsize / c; 
+    if (bitsize / c) {  
+        num_bucket_modules++;
+    }
+    
     // timer
     using namespace std::chrono;
     high_resolution_clock::time_point t1 = high_resolution_clock::now();
 
-    context->pipp.initialize_buckets(scalars, points_r, bitsize, c, npoints);
+    context->pipp.initialize_buckets(d_scalars, j_points, bitsize, c, npoints);
     
     high_resolution_clock::time_point t2 = high_resolution_clock::now();
     duration<double> time_span = duration_cast<duration<double>>(t2 - t1);
     std::cout << "It took me " << time_span.count() << " seconds.";
     std::cout << std::endl;
+    
+
     // Scalars are 10-bits, so between 0-1024. There are 26 windows (or bucket modules).
     // Group elements with the same scalars go into the same buckets, i.e. 6 * G1 means
     // G1 goes into bucket 6. And you have 2^c total buckets per window.

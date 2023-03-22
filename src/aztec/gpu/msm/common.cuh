@@ -2,7 +2,7 @@
 #include "util/thread_pool.hpp"
 #include "error.cuh"
 #include <cuda.h>
-#include <cub/cub.cuh>
+// #include <cub/cub.cuh>
 #include <cub/device/device_radix_sort.cuh>
 #include <cub/device/device_run_length_encode.cuh>
 #include <cub/device/device_scan.cuh>
@@ -12,9 +12,9 @@ namespace pippenger_common {
 /**
  * Global variables
 */
-#define WARP 32                               // Warp size 
+#define WARP 64                               // Warp size 
 #define NTHREADS 256                          // Thread count      
-#define NBITS 253                             // Field elements size
+#define NBITS 255                             // Field elements size
 #define WBITS 17                              // Scalar size
 #define NWINS ((NBITS + WBITS - 1) / WBITS)   // Windowing size 
 

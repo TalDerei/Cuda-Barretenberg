@@ -25,9 +25,9 @@ class msm_t {
         
         void pippenger_execute(Context<bucket_t, point_t, scalar_t, affine_t> *context, size_t npoints, A* points, S* scalars);
         
-        void naive_msm(Context<bucket_t, point_t, scalar_t, affine_t> *context, size_t npoints, A* points, S* scalars);
+        void naive_msm(Context<bucket_t, point_t, scalar_t, affine_t> *context, size_t npoints, A* points);
 
-        void msm_bucket_method(Context<bucket_t, point_t, scalar_t, affine_t> *context, size_t npoints, A* points, S* scalars);
+        void msm_bucket_method(Context<bucket_t, point_t, scalar_t, affine_t> *context, size_t npoints, A* points);
 };
 
 }

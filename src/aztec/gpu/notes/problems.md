@@ -104,9 +104,8 @@
 
     Most important thing I've learned building these MSM tests is that a single thread cannot perform multiple calculations inside the kernel invocation, instead things like additions operate on thread blocks of width 4, otherwise the result is corrupted. 
 
-```Why does lagrange base vs monomial bases for SRS work better for MSM, conceptually?```
-
 ```Where are extension fields used in the calculation?```
+    Different extensions of the same base field would be used for different polynomials your committing to (e.g. permutation or quotient polynomial for example). The pairing groups, both G2 and GT, are specifically defined over extension fields. 
 
-```Is MSM performed more commonly on jacobian elements or affine elements?```
-
+```Is MSM performed more commonly on affine, jacobian, or projective elements?```
+    Affine elements are transformed to Jacobian or Projective elements for more efficient modular additions. 
