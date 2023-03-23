@@ -388,9 +388,6 @@ unsigned *point_indices, g1::element *points, unsigned num_buckets) {
     int subgroup = grp.meta_group_rank();
     int subgroup_size = grp.meta_group_size();
 
-    // printf("thread_block my_block = this_thread_block(): %d\n", grp.meta_group_rank());
-    // printf("size of the group: %d\n", grp.meta_group_size());
-
     // Bucket_sizes store the size and starting index of each bucket, and single_bucket_indices 
     // and point_indices store the indices of the buckets and points that need to be added up.
     unsigned bucket_index = single_bucket_indices[(subgroup + (subgroup_size * blockIdx.x))];
@@ -399,7 +396,7 @@ unsigned *point_indices, g1::element *points, unsigned num_buckets) {
 
     grp.sync();
 
-    if (tid >= num_buckets || bucket_size == 0) { // if bucket is empty, return
+    if (bucket_size == 0) { // if bucket is empty, return
         return;
     }
 
@@ -416,19 +413,6 @@ unsigned *point_indices, g1::element *points, unsigned num_buckets) {
             buckets[bucket_index].y.data[tid % 4], 
             buckets[bucket_index].z.data[tid % 4]
         );
-
-        // if (fq_gpu::is_zero(buckets[bucket_index].x.data[tid % 4]) 
-        //     && fq_gpu::is_zero(buckets[bucket_index].y.data[tid % 4]) 
-        //     && fq_gpu::is_zero(buckets[bucket_index].z.data[tid % 4])) {
-        //     g1::doubling(
-        //         points[point_indices[bucket_offset + i]].x.data[tid % 4], 
-        //         points[point_indices[bucket_offset + i]].y.data[tid % 4], 
-        //         points[point_indices[bucket_offset + i]].z.data[tid % 4], 
-        //         buckets[bucket_index].x.data[tid % 4], 
-        //         buckets[bucket_index].y.data[tid % 4], 
-        //         buckets[bucket_index].z.data[tid % 4]
-        //     );
-        // }
     }
 }
 
@@ -437,16 +421,14 @@ unsigned *point_indices, g1::element *points, unsigned num_buckets) {
  * Each thread deals with a single bucket module
  */
 __global__ void bucket_module_sum_reduction_kernel(g1::element *buckets, g1::element *final_result, size_t num_buckets, unsigned c) {
+    // Look at more effective sum reduction method
+
     // Parameters for coperative groups
     auto grp = fixnum::layout();
     int subgroup = grp.meta_group_rank();
     int subgroup_size = grp.meta_group_size();
 
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
-    
-    if (tid > num_buckets) {
-        return;
-    }
 
     g1::element line_sum;
 
@@ -459,6 +441,7 @@ __global__ void bucket_module_sum_reduction_kernel(g1::element *buckets, g1::ele
     fq_gpu::load(line_sum.z.data[tid % 4], final_result[(subgroup + (subgroup_size * blockIdx.x))].z.data[tid % 4]);
 
     for (unsigned i = (1 << c) - 2; i > 0; i--) {
+        // Running sum method
         g1::add(
             line_sum.x.data[tid % 4], 
             line_sum.y.data[tid % 4], 
@@ -487,6 +470,8 @@ __global__ void bucket_module_sum_reduction_kernel(g1::element *buckets, g1::ele
 
 // Final bucket accumulation to produce single group element
 __global__ void final_accumulation_kernel(g1::element *final_result, g1::element *res, size_t num_bucket_modules, unsigned c) {
+    // need to fix final accumulation kernel
+    
     fq_gpu res_x_temp{ 0, 0, 0, 0 };
     fq_gpu res_y_temp{ 0, 0, 0, 0 };
     fq_gpu res_z_temp{ 0, 0, 0, 0 };
@@ -499,6 +484,24 @@ __global__ void final_accumulation_kernel(g1::element *final_result, g1::element
 
     // need to change this to scalar
     size_t digit_base = {unsigned(1 << c)};
+
+    // for (int i = 3; i >= 0; i--) {
+    //     // Performs bit-decompositon by traversing the bits of the scalar from MSB to LSB
+    //     // and extracting the i-th bit of scalar in limb.
+    //     if (((scalar[0] >> i) & 1) ? 1 : 0)
+    //         g1::add(
+    //             R.x.data[tid], R.y.data[tid], R.z.data[tid], 
+    //             Q.x.data[tid], Q.y.data[tid], Q.z.data[tid], 
+    //             R.x.data[tid], R.y.data[tid], R.z.data[tid]
+    //         );
+    //     if (i != 0) 
+    //         g1::doubling(
+    //             R.x.data[tid], R.y.data[tid], R.z.data[tid], 
+    //             R.x.data[tid], R.y.data[tid], R.z.data[tid]
+    //         );
+    // }
+
+    // add final sum
 
     for (unsigned i = num_bucket_modules; i > 0; i--) {
          g1::add(

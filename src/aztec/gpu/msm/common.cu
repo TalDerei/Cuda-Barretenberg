@@ -453,8 +453,8 @@ scalar_t *scalars, point_t *points, unsigned bitsize, unsigned c, size_t npoints
     // Launch accumulation kernel
     // 512 and 208 respectively
     //Need to adjusge kernel para,meters to reduce overhead
-    unsigned NUM_THREADS_3 = 1 << 8;
-    unsigned NUM_BLOCKS_3 = ((num_buckets + NUM_THREADS_3 - 1) / NUM_THREADS_3);
+    unsigned NUM_THREADS_3 = 1 << 7;
+    unsigned NUM_BLOCKS_3 = ((num_buckets + NUM_THREADS_3 - 1) / NUM_THREADS_3) * 4;
 
     cout << "NUM_THREADS_3 is: " << NUM_THREADS_3 << endl;
     cout << "NUM_BLOCKS_3 is: " << NUM_BLOCKS_3 << endl;
@@ -466,7 +466,7 @@ scalar_t *scalars, point_t *points, unsigned bitsize, unsigned c, size_t npoints
     // result. But i’m hitting an upper-block limit for this kernel. Is the only solution here splitting up the problem
     // between multiple seperate kernel launches? And if so, what’s the best approach? The naive solution is moving from
     // single P100 to A10.
-    accumulate_buckets_kernel<<<50, 128>>>(buckets, bucket_offsets, bucket_sizes, single_bucket_indices, point_indices, points, num_buckets);
+    accumulate_buckets_kernel<<<NUM_BLOCKS_3, NUM_THREADS_3>>>(buckets, bucket_offsets, bucket_sizes, single_bucket_indices, point_indices, points, num_buckets);
     cudaDeviceSynchronize();
 
     int count = 0;
@@ -497,30 +497,31 @@ scalar_t *scalars, point_t *points, unsigned bitsize, unsigned c, size_t npoints
     gpuErrchk( cudaPeekAtLastError() );
     gpuErrchk( cudaDeviceSynchronize() );
     
-
     // At this point we have n buckets and m bucket modules. Need to first sum up the n buckets per bucket module, and then
     // perform a final accumulation of the bucket modules. Launch 4 threads per bucket module.
 
-    // point_t *final_result;
-    // cudaMallocManaged(&final_result, num_bucket_modules * 3 * 4 * sizeof(uint64_t));
-    // bucket_module_sum_reduction_kernel<<<1, num_bucket_modules * 4>>>(buckets, final_result, num_buckets, c);
-    // cudaDeviceSynchronize();
+    point_t *final_result;
+    cudaMallocManaged(&final_result, num_bucket_modules * 3 * 4 * sizeof(uint64_t));
+    // or change kernel parameters to num_bucket_modules, 4
+    // need to look into replacing this with known sum reduction techniques, since it dominates 90% of the runtime
+    bucket_module_sum_reduction_kernel<<<1, num_bucket_modules * 4>>>(buckets, final_result, num_buckets, c);
+    cudaDeviceSynchronize();
 
-    // cout << "\nfinal_result is: " << final_result[0].x.data[0] << endl;
-    // cout << "final_result is: " << final_result[0].x.data[1] << endl;
-    // cout << "final_result is: " << final_result[0].x.data[2] << endl;
-    // cout << "final_result is: " << final_result[0].x.data[3] << endl;
+    cout << "\nfinal_result is: " << final_result[0].x.data[0] << endl;
+    cout << "final_result is: " << final_result[0].x.data[1] << endl;
+    cout << "final_result is: " << final_result[0].x.data[2] << endl;
+    cout << "final_result is: " << final_result[0].x.data[3] << endl;
 
-    // // Final accumulation kernel
-    // point_t *res;
-    // cudaMallocManaged(&res, 3 * 4 * sizeof(uint64_t));
-    // final_accumulation_kernel<<<1,4>>>(final_result, res, num_bucket_modules, c);
-    // cudaDeviceSynchronize();
+    // Final accumulation kernel can use double and add or be performed on the CPU
+    point_t *res;
+    cudaMallocManaged(&res, 3 * 4 * sizeof(uint64_t));
+    final_accumulation_kernel<<<1,4>>>(final_result, res, num_bucket_modules, c);
+    cudaDeviceSynchronize();
 
-    // cout << "\n res is: " << res[0].x.data[0] << endl;
-    // cout << "res is: " << res[0].x.data[1] << endl;
-    // cout << "res is: " << res[0].x.data[2] << endl;
-    // cout << "res is: " << res[0].x.data[3] << endl;
+    cout << "\n res is: " << res[0].x.data[0] << endl;
+    cout << "res is: " << res[0].x.data[1] << endl;
+    cout << "res is: " << res[0].x.data[2] << endl;
+    cout << "res is: " << res[0].x.data[3] << endl;
 
     // cudamemcy
     // free memory

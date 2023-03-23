@@ -49,7 +49,7 @@ int main(int, char**) {
  * TODO: remove extraneous loops
  * TODO: adjust kernel parameters to reduce overhead
  * TODO: check jacobian addition by 0, and P == Q checks
- * TODO: look into loop unrolling
+ * TODO: look into loop unrolling with pragma
  */
 
 
