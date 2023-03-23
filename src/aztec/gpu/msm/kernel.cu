@@ -108,48 +108,66 @@ bucket_t(* buckets)[NWINS][1<<WBITS], bucket_t(* ret)[NWINS][NTHREADS][2]) {
     // grp.sync();
 }
 
+/* ----------------------------------------- Helper Kernel Functions ---------------------------------------------- */
+
 /**
- * Naive double and add using sequential implementation 
+ * Convert affine to projective coordinates 
  */
-__global__ void simple_msm_naive(
-g1::element *point, fr_gpu *scalar, g1::element *result, size_t npoints) { 
+__global__ void affine_to_projective(g1::affine_element *a_point, g1::projective_element *p_point, size_t npoints) {     
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
-
-    g1::element temp;
-    g1::element temp_accumulator;
-    fq_gpu res_x_temp{ 0, 0, 0, 0 };
-    fq_gpu res_y_temp{ 0, 0, 0, 0 };
-    fq_gpu res_z_temp{ 0, 0, 0, 0 };
-
-    fq_gpu::load(res_x_temp.data[tid], temp.x.data[tid]);
-    fq_gpu::load(res_y_temp.data[tid], temp.y.data[tid]);
-    fq_gpu::load(res_z_temp.data[tid], temp.z.data[tid]);
-    fq_gpu::load(res_x_temp.data[tid], temp_accumulator.x.data[tid]);
-    fq_gpu::load(res_y_temp.data[tid], temp_accumulator.y.data[tid]);
-    fq_gpu::load(res_z_temp.data[tid], temp_accumulator.z.data[tid]);
-
-    for (int i = 0; i < 1024; i++) {
-        fq_gpu::mul(point[i].x.data[tid], scalar[i].data[tid], temp.x.data[tid]);
-        fq_gpu::mul(point[i].y.data[tid], scalar[i].data[tid], temp.y.data[tid]);
-        fq_gpu::mul(point[i].z.data[tid], scalar[i].data[tid], temp.z.data[tid]);
-        fq_gpu::add(temp.x.data[tid], temp_accumulator.x.data[tid], temp_accumulator.x.data[tid]);
-        fq_gpu::add(temp.y.data[tid], temp_accumulator.y.data[tid], temp_accumulator.y.data[tid]);
-        fq_gpu::add(temp.z.data[tid], temp_accumulator.z.data[tid], temp_accumulator.z.data[tid]);
-    }
     
-    fq_gpu::load(temp_accumulator.x.data[tid], result[0].x.data[tid]);
-    fq_gpu::load(temp_accumulator.y.data[tid], result[0].y.data[tid]);
-    fq_gpu::load(temp_accumulator.z.data[tid], result[0].z.data[tid]);
-
-    fq_gpu::from_monty(result[0].x.data[tid], result[0].x.data[tid]);
-    fq_gpu::from_monty(result[0].y.data[tid], result[0].y.data[tid]);
-    fq_gpu::from_monty(result[0].z.data[tid], result[0].z.data[tid]);   
+    for (size_t i = 0; i < npoints; i++) {
+        fq_gpu::load(a_point[i].x.data[tid], p_point[i].x.data[tid]);
+        fq_gpu::load(a_point[i].y.data[tid], p_point[i].y.data[tid]);
+        fq_gpu::load(field_gpu<fq_gpu>::one().data[tid], p_point[0].z.data[tid]);
+    }
 }
 
 /**
+ * Convert affine to jacobian coordinates 
+ */
+__global__ void affine_to_jacobian(g1::affine_element *a_point, g1::element *j_point, size_t npoints) {     
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+
+    for (size_t i = 0; i < npoints; i++) {
+        fq_gpu::load(a_point[i].x.data[tid], j_point[i].x.data[tid]);
+        fq_gpu::load(a_point[i].y.data[tid], j_point[i].y.data[tid]);
+        fq_gpu::load(field_gpu<fq_gpu>::one().data[tid], j_point[i].z.data[tid]);
+    }
+}
+
+/**
+ * Compare group elements kernel
+ */
+__global__ void comparator_kernel(g1::element *point, g1::element *point_2, uint64_t *result) {     
+    fq_gpu lhs_zz;
+    fq_gpu lhs_zzz;
+    fq_gpu rhs_zz;
+    fq_gpu rhs_zzz;
+    fq_gpu lhs_x;
+    fq_gpu lhs_y;
+    fq_gpu rhs_x;
+    fq_gpu rhs_y;
+
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    
+    lhs_zz.data[tid] =  fq_gpu::square(point[0].z.data[tid], lhs_zz.data[tid]);
+    lhs_zzz.data[tid] = fq_gpu::mul(lhs_zz.data[tid], point[0].z.data[tid], lhs_zzz.data[tid]);
+    rhs_zz.data[tid] = fq_gpu::square(point_2[0].z.data[tid], rhs_zz.data[tid]);
+    rhs_zzz.data[tid] = fq_gpu::mul(rhs_zz.data[tid], point_2[0].z.data[tid], rhs_zzz.data[tid]);
+    lhs_x.data[tid] = fq_gpu::mul(point[0].x.data[tid], rhs_zz.data[tid], lhs_x.data[tid]);
+    lhs_y.data[tid] = fq_gpu::mul(point[0].y.data[tid], rhs_zzz.data[tid], lhs_y.data[tid]);
+    rhs_x.data[tid] = fq_gpu::mul(point_2[0].x.data[tid], lhs_zz.data[tid], rhs_x.data[tid]);
+    rhs_y.data[tid] = fq_gpu::mul(point_2[0].y.data[tid], lhs_zzz.data[tid], rhs_y.data[tid]);
+    result[tid] = ((lhs_x.data[tid] == rhs_x.data[tid]) && (lhs_y.data[tid] == rhs_y.data[tid]));
+}
+
+/* ----------------------------------------- Naive MSM Functions ---------------------------------------------- */
+
+/**
  * Naive double and add using sequential implementation 
  */
-__global__ void simple_msm_naive_2(g1::element *point, fr_gpu *scalar, fq_gpu *result, g1::element *result_vec, size_t npoints) { 
+__global__ void simple_msm_naive(g1::element *point, fr_gpu *scalar, fq_gpu *result, g1::element *result_vec, size_t npoints) { 
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
     
     // Parameters for coperative groups
@@ -242,9 +260,12 @@ __global__ void sum_reduction(g1::element *v, g1::element *result) {
 
     // Accumulate result into current block
     if (threadIdx.x < 4)
-        fq_gpu::load(partial_sum[(subgroup + (subgroup_size * blockIdx.x))].x.data[tid % 4], result[(subgroup + (subgroup_size * blockIdx.x))].x.data[tid % 4]);
-        fq_gpu::load(partial_sum[(subgroup + (subgroup_size * blockIdx.x))].y.data[tid % 4], result[(subgroup + (subgroup_size * blockIdx.x))].y.data[tid % 4]);
-        fq_gpu::load(partial_sum[(subgroup + (subgroup_size * blockIdx.x))].z.data[tid % 4], result[(subgroup + (subgroup_size * blockIdx.x))].z.data[tid % 4]);
+        fq_gpu::load(partial_sum[(subgroup + (subgroup_size * blockIdx.x))].x.data[tid % 4], 
+                    result[(subgroup + (subgroup_size * blockIdx.x))].x.data[tid % 4]);
+        fq_gpu::load(partial_sum[(subgroup + (subgroup_size * blockIdx.x))].y.data[tid % 4], 
+                    result[(subgroup + (subgroup_size * blockIdx.x))].y.data[tid % 4]);
+        fq_gpu::load(partial_sum[(subgroup + (subgroup_size * blockIdx.x))].z.data[tid % 4], 
+                    result[(subgroup + (subgroup_size * blockIdx.x))].z.data[tid % 4]);
 }
 
 /**
@@ -254,57 +275,13 @@ __global__ void sum_reduction_accumulate(g1::element *v, g1::element *v_r) {
     // Global thread ID
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
 
-    // Convert from montgomery form
+    // Convert results from montgomery form
     fq_gpu::from_monty(v[0].x.data[tid % 4], v_r[0].x.data[tid % 4]);
     fq_gpu::from_monty(v[0].y.data[tid % 4], v_r[0].y.data[tid % 4]);
     fq_gpu::from_monty(v[0].z.data[tid % 4], v_r[0].z.data[tid % 4]);
 }
 
-__global__ void affine_to_projective(g1::affine_element *a_point, g1::projective_element *p_point, size_t npoints) {     
-    int tid = blockIdx.x * blockDim.x + threadIdx.x;
-    
-    for (size_t i = 0; i < npoints; i++) {
-        fq_gpu::load(a_point[i].x.data[tid], p_point[i].x.data[tid]);
-        fq_gpu::load(a_point[i].y.data[tid], p_point[i].y.data[tid]);
-        fq_gpu::load(field_gpu<fq_gpu>::one().data[tid], p_point[0].z.data[tid]);
-    }
-}
-
-__global__ void affine_to_jacobian(g1::affine_element *a_point, g1::element *j_point, size_t npoints) {     
-    int tid = blockIdx.x * blockDim.x + threadIdx.x;
-
-    for (size_t i = 0; i < npoints; i++) {
-        fq_gpu::load(a_point[i].x.data[tid], j_point[i].x.data[tid]);
-        fq_gpu::load(a_point[i].y.data[tid], j_point[i].y.data[tid]);
-        fq_gpu::load(field_gpu<fq_gpu>::one().data[tid], j_point[i].z.data[tid]);
-    }
-}
-
-/**
- * Compare group elements kernel
- */
-__global__ void comparator_kernel(g1::element *point, g1::element *point_2, uint64_t *result) {     
-    fq_gpu lhs_zz;
-    fq_gpu lhs_zzz;
-    fq_gpu rhs_zz;
-    fq_gpu rhs_zzz;
-    fq_gpu lhs_x;
-    fq_gpu lhs_y;
-    fq_gpu rhs_x;
-    fq_gpu rhs_y;
-
-    int tid = blockIdx.x * blockDim.x + threadIdx.x;
-    
-    lhs_zz.data[tid] =  fq_gpu::square(point[0].z.data[tid], lhs_zz.data[tid]);
-    lhs_zzz.data[tid] = fq_gpu::mul(lhs_zz.data[tid], point[0].z.data[tid], lhs_zzz.data[tid]);
-    rhs_zz.data[tid] = fq_gpu::square(point_2[0].z.data[tid], rhs_zz.data[tid]);
-    rhs_zzz.data[tid] = fq_gpu::mul(rhs_zz.data[tid], point_2[0].z.data[tid], rhs_zzz.data[tid]);
-    lhs_x.data[tid] = fq_gpu::mul(point[0].x.data[tid], rhs_zz.data[tid], lhs_x.data[tid]);
-    lhs_y.data[tid] = fq_gpu::mul(point[0].y.data[tid], rhs_zzz.data[tid], lhs_y.data[tid]);
-    rhs_x.data[tid] = fq_gpu::mul(point_2[0].x.data[tid], lhs_zz.data[tid], rhs_x.data[tid]);
-    rhs_y.data[tid] = fq_gpu::mul(point_2[0].y.data[tid], lhs_zzz.data[tid], rhs_y.data[tid]);
-    result[tid] = ((lhs_x.data[tid] == rhs_x.data[tid]) && (lhs_y.data[tid] == rhs_y.data[tid]));
-}
+/* ----------------------------------------- Pippenger's "Bucket Method" MSM Functions ---------------------------------------------- */
 
 /**
  * Initialize buckets kernel for large MSM
@@ -317,8 +294,6 @@ __global__ void initialize_buckets_kernel(g1::element *bucket) {
     int subgroup = grp.meta_group_rank();
     int subgroup_size = grp.meta_group_size();
 
-    // Initialize buckets with zero points
-    // Initialize with one() in y axis for projective
     fq_gpu::load(fq_gpu::zero().data[tid % 4], bucket[subgroup + (subgroup_size * blockIdx.x)].x.data[tid % 4]);
     fq_gpu::load(fq_gpu::zero().data[tid % 4], bucket[subgroup + (subgroup_size * blockIdx.x)].y.data[tid % 4]);
     fq_gpu::load(fq_gpu::zero().data[tid % 4], bucket[subgroup + (subgroup_size * blockIdx.x)].z.data[tid % 4]);
@@ -337,7 +312,6 @@ __device__ uint64_t decompose_scalar_digit(fr_gpu scalar, unsigned num, unsigned
 
     // Check if scalar digit crosses boundry of current limb
     if ((shift_bits + width > 64) && (limb_lsb_idx + 1 < 4)) {
-        // Access next limb and left shift by '32 - shift_bits' bits
         rv += scalar.data[limb_lsb_idx + 1] << (64 - shift_bits);
     }
     // Bit mask to extract LSB of size width
@@ -356,20 +330,14 @@ __global__ void split_scalars_kernel
     fr_gpu scalar;
 
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
+
     if (tid < npoints) {
         for (int i = 0; i < num_bucket_modules; i++) {
-            // Need to check if the decomposition is correct, i.e. if each thread can handle it's own scalar
             bucket_index = decompose_scalar_digit(scalars[tid], i, c);
-            current_index = i * npoints + tid; // calculate the current index
-            bucket_indices[current_index] = (i << c) | bucket_index; // bitwise or performs additon here
-            // need to do this to store information about both the bucket module, and the specific bucket index for which 
-            // module it belongs to. we're packing information
-            // bucket module index i, and the bucket index within that module bucket_index
-            // printf("current index is: %d\n", current_index); 
-            // printf("i << c is: %d\n", i << c); 
-            // printf("bucket index is: %d\n", bucket_index); 
-            // printf("rv is: %d\n", (i << c) | bucket_index); 
-            // keeps track of which thread handled each scalar value
+            current_index = i * npoints + tid; 
+            
+            // Bitwise performs addition here -- packing information about bucket module and specific bucket index
+            bucket_indices[current_index] = (i << c) | bucket_index; 
             point_indices[current_index] = tid;
         }
     }   
@@ -388,15 +356,16 @@ unsigned *point_indices, g1::element *points, unsigned num_buckets) {
     int subgroup = grp.meta_group_rank();
     int subgroup_size = grp.meta_group_size();
 
-    // Bucket_sizes store the size and starting index of each bucket, and single_bucket_indices 
-    // and point_indices store the indices of the buckets and points that need to be added up.
+    // Stores the indices, sizes, and offsets of the buckets and points
     unsigned bucket_index = single_bucket_indices[(subgroup + (subgroup_size * blockIdx.x))];
     unsigned bucket_size = bucket_sizes[(subgroup + (subgroup_size * blockIdx.x))];
     unsigned bucket_offset = bucket_offsets[(subgroup + (subgroup_size * blockIdx.x))];
 
+    // Sync loads
     grp.sync();
 
-    if (bucket_size == 0) { // if bucket is empty, return
+    // If bucket is empty, return
+    if (bucket_size == 0) { 
         return;
     }
 
@@ -417,12 +386,9 @@ unsigned *point_indices, g1::element *points, unsigned num_buckets) {
 }
 
 /**
- * Sum reduction kernel that accumulates bucket sums in bucket modules.
- * Each thread deals with a single bucket module
+ * Sum reduction kernel that accumulates bucket sums in bucket modules
  */
 __global__ void bucket_module_sum_reduction_kernel(g1::element *buckets, g1::element *final_result, size_t num_buckets, unsigned c) {
-    // Look at more effective sum reduction method
-
     // Parameters for coperative groups
     auto grp = fixnum::layout();
     int subgroup = grp.meta_group_rank();
@@ -468,51 +434,60 @@ __global__ void bucket_module_sum_reduction_kernel(g1::element *buckets, g1::ele
     }
 }
 
-// Final bucket accumulation to produce single group element
+/**
+ * Final bucket accumulation to produce single group element
+ */
 __global__ void final_accumulation_kernel(g1::element *final_result, g1::element *res, size_t num_bucket_modules, unsigned c) {
-    // need to fix final accumulation kernel
-    
+    g1::element R;
+    g1::element Q;
+
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+
+    size_t digit_base = {unsigned(1 << c)};
+
     fq_gpu res_x_temp{ 0, 0, 0, 0 };
     fq_gpu res_y_temp{ 0, 0, 0, 0 };
     fq_gpu res_z_temp{ 0, 0, 0, 0 };
-
-    int tid = blockIdx.x * blockDim.x + threadIdx.x;
 
     fq_gpu::load(res_x_temp.data[tid], res[0].x.data[tid]);
     fq_gpu::load(res_y_temp.data[tid], res[0].y.data[tid]);
     fq_gpu::load(res_z_temp.data[tid], res[0].z.data[tid]);
 
-    // need to change this to scalar
-    size_t digit_base = {unsigned(1 << c)};
-
-    // for (int i = 3; i >= 0; i--) {
-    //     // Performs bit-decompositon by traversing the bits of the scalar from MSB to LSB
-    //     // and extracting the i-th bit of scalar in limb.
-    //     if (((scalar[0] >> i) & 1) ? 1 : 0)
-    //         g1::add(
-    //             R.x.data[tid], R.y.data[tid], R.z.data[tid], 
-    //             Q.x.data[tid], Q.y.data[tid], Q.z.data[tid], 
-    //             R.x.data[tid], R.y.data[tid], R.z.data[tid]
-    //         );
-    //     if (i != 0) 
-    //         g1::doubling(
-    //             R.x.data[tid], R.y.data[tid], R.z.data[tid], 
-    //             R.x.data[tid], R.y.data[tid], R.z.data[tid]
-    //         );
-    // }
-
-    // add final sum
-
+    // Double and add implementation using bit-decomposition for each bucket module with time complexity: O(k)
     for (unsigned i = num_bucket_modules; i > 0; i--) {
-         g1::add(
-            digit_base * (res[0].x.data[tid]), 
-            digit_base * (res[0].y.data[tid]),
-            digit_base * (res[0].z.data[tid]),
+        // Initialize 'R' to the identity element, Q to the curve point
+        fq_gpu::load(0, R.x.data[tid]); 
+        fq_gpu::load(0, R.y.data[tid]); 
+        fq_gpu::load(0, R.z.data[tid]); 
+
+        fq_gpu::load(res[0].x.data[tid], Q.x.data[tid]);
+        fq_gpu::load(res[0].y.data[tid], Q.y.data[tid]);
+        fq_gpu::load(res[0].z.data[tid], Q.z.data[tid]);
+
+        // Traverses the bits of the scalar from MSB to LSB and extracts the i-th bit of scalar in limb
+        for (int i = 253; i >= 0; i--) {
+            if (((digit_base >> i) & 1) ? 1 : 0)
+                g1::add(
+                    R.x.data[tid], R.y.data[tid], R.z.data[tid], 
+                    Q.x.data[tid], Q.y.data[tid], Q.z.data[tid], 
+                    R.x.data[tid], R.y.data[tid], R.z.data[tid]
+                );
+            if (i != 0) 
+                g1::doubling(
+                    R.x.data[tid], R.y.data[tid], R.z.data[tid], 
+                    R.x.data[tid], R.y.data[tid], R.z.data[tid]
+                );
+        }
+
+        g1::add(
+            R.x.data[tid], 
+            R.x.data[tid], 
+            R.x.data[tid],
             final_result[i - 1].x.data[tid],
             final_result[i - 1].y.data[tid],
-            final_result[i - 1].z.data[tid], 
+            final_result[i - 1].z.data[tid],
             res[0].x.data[tid], 
-            res[0].y.data[tid],
+            res[0].y.data[tid], 
             res[0].z.data[tid]
         );
     }

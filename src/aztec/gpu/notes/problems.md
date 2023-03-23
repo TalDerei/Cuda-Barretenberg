@@ -79,7 +79,7 @@
 
 ```Notes while performing simple double and add MSM```
 
-    Questions:
+    - Questions:
     1. How to expand this to perform on an actual Fq point and Fr scalar?
         --> They operate over different prime fields, but Fr scalar doesn't participate 
         in the addition / multiplication calculations, only multiples of the Fq curve element. 
@@ -105,7 +105,34 @@
     Most important thing I've learned building these MSM tests is that a single thread cannot perform multiple calculations inside the kernel invocation, instead things like additions operate on thread blocks of width 4, otherwise the result is corrupted. 
 
 ```Where are extension fields used in the calculation?```
-    Different extensions of the same base field would be used for different polynomials your committing to (e.g. permutation or quotient polynomial for example). The pairing groups, both G2 and GT, are specifically defined over extension fields. 
+    - Different extensions of the same base field would be used for different polynomials your committing to (e.g. permutation or quotient polynomial for example). The pairing groups, both G2 and GT, are specifically defined over extension fields. 
 
 ```Is MSM performed more commonly on affine, jacobian, or projective elements?```
-    Affine elements are transformed to Jacobian or Projective elements for more efficient modular additions. 
+    - Affine elements are transformed to Jacobian or Projective elements for more efficient modular additions. 
+
+```Notes while performing pippengers bucket method```
+    - 1. We're not handling all the bucket modules for some reason....
+    It's either a occupancy limit problem or data initialization probelem. It doesn't seem to be a data initialization problem,
+    because shifting the blockId by a constant factor revealed the missing data. It has to be an occupancy limit. The naive way 
+    to deal with this is moving to a more powerful GPU, i.e. A10. I need to figure out another standard way to deal with this. Update:
+    the issue here was an if statement within the kernel that blocks the conditional execution of some threads. Fixed.
+
+    2. How are these buckets logically seperated into bucket modules? where's the logical seperation happening in the code?
+    Using offsets
+
+    3. And why are some buckets empty when calling the accumulate_buckets_kernel, and why do we index on single_bucket_indices
+    instead of point_indices?
+    We have N buckets to compute, each with a variable size M. N * M = total num buckets. We're sorting based on single_bucket_indices,
+    so not every sequential indice correpsonds to a filled bucket. So buckets will be empty by design. The more threads you have, the more 
+    densely populated these buckets will be. 
+
+    Steps:
+        1. Initialize buckets num_modules << c
+        2. Split b-bit scalats into c-bit scalars and assign each of them in a "bucket_index". One sub-scalar per index.
+        3. Then group the similiar sub-scalars together into buckets (single_bucket_indices and bucket_sizes) for each bucket. 
+            This is just a logical mapping. The total number of unique buckets will be smaller. So to recape, e.g. we have 16216 unique buckets,
+            those are split into single_bucket_indices up to 26k, and each unique bucket has a non-zero size. 
+        4. Then launch the bucket accumulation to add the points together in each bucket. This is done for each bucket module. Note
+            that some buckets are empty since they weren't filled. See #3 above.
+        5. Apply a sum reduction to reduce all the buckets into a single value in each bucket module
+        6. Final accumulation step to sum up the partial sums into a final output.
