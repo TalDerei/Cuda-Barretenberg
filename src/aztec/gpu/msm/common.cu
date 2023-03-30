@@ -48,7 +48,8 @@ size_t pippenger_t<bucket_t, point_t, scalar_t, affine_t>::get_size_scalars(pipp
  * Calculate the amount of device storage required to store buckets 
  */
 template <class bucket_t, class point_t, class scalar_t, class affine_t>
-size_t pippenger_t<bucket_t, point_t, scalar_t, affine_t>::get_size_buckets(pippenger_t &config) {    
+size_t pippenger_t<bucket_t, point_t, scalar_t, affine_t>::get_size_buckets(pippenger_t &config) { 
+    // cout << "size of: " << config.N * NWINS * (1 << WBITS) << endl;
     return config.N * sizeof(bucket_t) * NWINS * (1 << WBITS);
 }
 
@@ -187,18 +188,29 @@ pippenger_t &config, size_t d_bases_idx, size_t d_scalar_idx, size_t d_buckets_i
     // Helper function that triggers the kernel launch
 
     cout << "NWINS is: " << NWINS << endl;
+    cout << "NBITS is: " << NBITS << endl;
+    cout << "WBITS is: " << WBITS << endl;
     cout << "config.N is: " << config.N << endl;
+    cout << "config.n is: " << config.n << endl;
 
-    // launch_coop(
-    //     pippenger, 1, 10, stream, (affine_t*)d_points, config.npoints, 
-    //     (const scalar_t*)d_scalars, d_buckets, d_none
-    // );
+    g1::element *final_result;
+    cudaMallocManaged(&final_result, NUM_POINTS * LIMBS * sizeof(uint64_t));    
 
     launch_coop(
-        pippenger, dim3(NWINS, config.N), NTHREADS, stream, (affine_t*)d_points, config.npoints, 
-        (const scalar_t*)d_scalars, d_buckets, d_none
+        pippenger, 1, 4, stream, (affine_t*)d_points, config.npoints, 
+        (const scalar_t*)d_scalars, d_buckets, d_none, final_result
     );
+
+    // launch_coop(
+    //     pippenger, dim3(NWINS, config.N), NTHREADS, stream, (affine_t*)d_points, config.npoints, 
+    //     (const scalar_t*)d_scalars, d_buckets, d_none, final_result
+    // );
     cudaDeviceSynchronize();
+
+    cout << "\nfinal_result is: " << final_result[0].x.data[0] << endl;
+    cout << "final_result is: " << final_result[0].x.data[1] << endl;
+    cout << "final_result is: " << final_result[0].x.data[2] << endl;
+    cout << "final_result is: " << final_result[0].x.data[3] << endl;
 }
 
 /**
@@ -217,7 +229,8 @@ affine_t* pippenger_t<bucket_t, point_t, scalar_t, affine_t>::read_affine_curve_
  */
 template <class bucket_t, class point_t, class scalar_t, class affine_t>
 point_t* pippenger_t<bucket_t, point_t, scalar_t, affine_t>::read_jacobian_curve_points(point_t *points) {
-    std::ifstream myfile ("../src/aztec/gpu/benchmark/tests/msm/points/curve_points.txt"); 
+    // std::ifstream myfile ("../src/aztec/gpu/msm/points/points_copy.txt"); 
+    std::ifstream myfile ("../src/aztec/gpu/msm/points/points.txt"); 
 
     if ( myfile.is_open() ) {   
         for (size_t i = 0; i < NUM_POINTS; i++) {
@@ -243,6 +256,7 @@ point_t* pippenger_t<bucket_t, point_t, scalar_t, affine_t>::read_jacobian_curve
 template <class bucket_t, class point_t, class scalar_t, class affine_t>
 scalar_t* pippenger_t<bucket_t, point_t, scalar_t, affine_t>::read_scalars(scalar_t *scalars) {
     ifstream stream;
+    // stream.open("../src/aztec/gpu/msm/points/scalars_copy.txt", ios::in);
     stream.open("../src/aztec/gpu/msm/points/scalars.txt", ios::in);
 
     if ( stream.is_open() ) {   
@@ -282,6 +296,10 @@ void pippenger_t<bucket_t, point_t, scalar_t, affine_t>::print_result(point_t *r
 template <class bucket_t, class point_t, class scalar_t, class affine_t>
 void pippenger_t<bucket_t, point_t, scalar_t, affine_t>::initialize_buckets(
 scalar_t *scalars, point_t *points, unsigned bitsize, unsigned c, size_t npoints) {
+    // Scalars are 10-bits, so between 0-1024. There are 26 windows (or bucket modules).
+    // Group elements with the same scalars go into the same buckets, i.e. 6 * G1 means
+    // G1 goes into bucket 6. And you have 2^c total buckets per window.
+
     // Calculate the number of windows 
     unsigned num_bucket_modules = bitsize / c; 
     if (bitsize % c) {  
@@ -289,16 +307,25 @@ scalar_t *scalars, point_t *points, unsigned bitsize, unsigned c, size_t npoints
     }
 
     point_t *buckets;
-    size_t num_buckets = num_bucket_modules << c; // 1024 * 26
+    size_t num_buckets = num_bucket_modules << c; // 1024 * 26 or 65536 * 16 = 1M buckets
     // change memory size?
     cudaMallocManaged(&buckets, num_buckets * 3 * 4 * sizeof(uint64_t));
 
     // Launch bucket initialization kernel
-    unsigned NUM_THREADS = 1 << 10;
-    unsigned NUM_BLOCKS = (num_buckets + NUM_THREADS - 1) / NUM_THREADS;
+    unsigned NUM_THREADS = 1 << 10; // max number of threads
+    unsigned NUM_BLOCKS = (num_buckets + NUM_THREADS - 1) / NUM_THREADS; // max number of blocks
 
-    // Need to see if initializing the buckets is even neccessary? Let's do it at the beggining anyways
-    initialize_buckets_kernel<<<NUM_BLOCKS * 4, NUM_THREADS>>>(buckets); // 1024 * 26 operating on a single limb.
+    // where blocks * threads = total numbrt of buckets
+
+    // Need to see if initializing the buckets is even neccessary? Let's do it at the beggining anyways for now...
+    // and later incorperate it into the kernel with "pipelining loads and compute" as depaul put it.
+    // Each thread operates on a single scalar of size num_bucket_modules windows,
+    // But there's a problem here. There's a mismatch between the number of threads being launched to represent the 
+    // number of buckets, and the total number of scalars that need to be partitioned into these buckets. I think the
+    // buckets array needs to be a 2D array to account for this? Will change after...
+    // It will need to support # scalars * 16, which may exceed the bucket count. Therefore the total number of buckets will
+    // stay the same, but the indexing will change...2D instead.
+    initialize_buckets_kernel<<<NUM_BLOCKS * 4, NUM_THREADS>>>(buckets); 
     cudaDeviceSynchronize();
 
     cout << "b-bit scalar is: " << bitsize << endl;
@@ -307,23 +334,27 @@ scalar_t *scalars, point_t *points, unsigned bitsize, unsigned c, size_t npoints
     cout << "number of bucket is: " << num_buckets << endl;
     cout << "number of blocks is: " << NUM_BLOCKS << endl;
     cout << "number of threads is: " << NUM_THREADS << endl;
+    
+    // cout << "bucket 0 is: " << buckets[1048575].y.data[0] << endl;
+    // cout << "bucket 0 is: " << buckets[1048575].x.data[1] << endl;
+    // cout << "bucket 0 is: " << buckets[1048575].x.data[2] << endl;
+    // cout << "bucket 0 is: " << buckets[1048575].x.data[3] << endl;
 
-    // cout << "bucket 0 is: " << buckets[26623].x.data[0] << endl;
-    // cout << "bucket 0 is: " << buckets[26623].x.data[1] << endl;
-    // cout << "bucket 0 is: " << buckets[26623].x.data[2] << endl;
-    // cout << "bucket 0 is: " << buckets[26623].x.data[3] << endl;
+    // cout << "bucket 0 is: " << buckets[1048575].y.data[0] << endl;
+    // cout << "bucket 0 is: " << buckets[1048575].y.data[1] << endl;
+    // cout << "bucket 0 is: " << buckets[1048575].y.data[2] << endl;
+    // cout << "bucket 0 is: " << buckets[1048575].y.data[3] << endl;
 
-    // cout << "bucket 0 is: " << buckets[26623].y.data[0] << endl;
-    // cout << "bucket 0 is: " << buckets[26623].y.data[1] << endl;
-    // cout << "bucket 0 is: " << buckets[26623].y.data[2] << endl;
-    // cout << "bucket 0 is: " << buckets[26623].y.data[3] << endl;
+    // cout << "bucket 0 is: " << buckets[1048575].z.data[0] << endl;
+    // cout << "bucket 0 is: " << buckets[1048575].z.data[1] << endl;
+    // cout << "bucket 0 is: " << buckets[1048575].z.data[2] << endl;
+    // cout << "bucket 0 is: " << buckets[1048575].z.data[3] << endl;
 
-    // cout << "bucket 0 is: " << buckets[26623].z.data[0] << endl;
-    // cout << "bucket 0 is: " << buckets[26623].z.data[1] << endl;
-    // cout << "bucket 0 is: " << buckets[26623].z.data[2] << endl;
-    // cout << "bucket 0 is: " << buckets[26623].z.data[3] << endl;
+    // After here, we have 2^16 windows, with each scalar represented by 16 bits. Each window will have 2^16 buckets,
+    // and we'll have 2^16 * 16 total buckets. 
 
     // Allocate memory for bucket and point indices
+    // need to understand these launch parameters
     unsigned *bucket_indices;
     unsigned *point_indices;
     cudaMallocManaged(&bucket_indices, sizeof(unsigned) * npoints * (num_bucket_modules + 1));
@@ -332,24 +363,32 @@ scalar_t *scalars, point_t *points, unsigned bitsize, unsigned c, size_t npoints
     // Split scalars into digits
     // NUM_THREADS * NUM_BLOCKS = NUM_BUCKETS --> each thread splits a single scalar into num_modules digits, each of size c. 
     unsigned NUM_BLOCKS_2 = ((npoints * (num_bucket_modules + 1)) + NUM_THREADS - 1) / NUM_THREADS;
+    // unsigned NUM_BLOCKS_2 = ((num_buckets + NUM_THREADS - 1) / NUM_THREADS);
 
     cout << "NUM_BLOCKS_2 is: " << NUM_BLOCKS_2 << endl;
 
-    cout << "scalar 0 is: " << scalars[0].data[0] << endl;
-    cout << "scalar 0 is: " << scalars[0].data[1] << endl;
-    cout << "scalar 0 is: " << scalars[0].data[2] << endl;
-    cout << "scalar 0 is: " << scalars[0].data[3] << endl;
-    cout << "points is: " << points[0].x.data[0] << endl;
-    cout << "points is: " << points[0].x.data[1] << endl;
-    cout << "points is: " << points[0].x.data[2] << endl;
-    cout << "points is: " << points[0].x.data[3] << endl;
+    // cout << "scalar 0 is: " << scalars[0].data[0] << endl;
+    // cout << "scalar 0 is: " << scalars[0].data[1] << endl;
+    // cout << "scalar 0 is: " << scalars[0].data[2] << endl;
+    // cout << "scalar 0 is: " << scalars[0].data[3] << endl;
+    // cout << "points is: " << points[0].x.data[0] << endl;
+    // cout << "points is: " << points[0].x.data[1] << endl;
+    // cout << "points is: " << points[0].x.data[2] << endl;
+    // cout << "points is: " << points[0].x.data[3] << endl;
 
     // Split sub-scalars into their own seperate buckets
     // not sure why we're passing pointers at an offset of npoints
     // Would be able to do this 4 coooperaitve groups if c = 16...look into it
     // Why do we have 27 blocks here?? 27 * 1024 = 27648 -- maybe because of the offset?
     // i think I can reduce this to 26 blocks
-    split_scalars_kernel<<<NUM_BLOCKS_2, NUM_THREADS>>>(bucket_indices + npoints, point_indices + npoints, scalars, npoints, num_bucket_modules, c);
+
+    // 1024 * 17 = 17408 threads to split scalars, but have more than 17408 scalars?
+    // What if you have more scalars than buckets, which is the case here. Previously, there were less
+    // scalars (1024) than the total number of buckets (27648).
+    
+    // Each thread will handle splitting it's own scalar into sub-scalars, and placing them into buckets. 
+    // split_scalars_kernel<<<NUM_BLOCKS_2, NUM_THREADS>>>(bucket_indices + npoints, point_indices + npoints, scalars, npoints, num_bucket_modules, c);
+    split_scalars_kernel<<<1, 2>>>(bucket_indices + npoints, point_indices + npoints, scalars, npoints, num_bucket_modules, c);
     cudaDeviceSynchronize();
 
     // integrating CUB routines for things like offset calculations
@@ -404,6 +443,7 @@ scalar_t *scalars, point_t *points, unsigned bitsize, unsigned c, size_t npoints
                                             nof_buckets_to_compute, num_bucket_modules * npoints);
     cudaFree(encode_temp_storage);
 
+
     cout << "nof_buckets_to_compute is: " << nof_buckets_to_compute[0] << endl;
 
     int sum = 0;
@@ -413,7 +453,6 @@ scalar_t *scalars, point_t *points, unsigned bitsize, unsigned c, size_t npoints
 
     cout << "sum is: " << sum << endl;
 
-    // this is good
     // int temp = 0;
     // for (int i = 0; i < num_buckets; i++) {
     //     cout << "count is: " << temp << endl;
@@ -422,16 +461,28 @@ scalar_t *scalars, point_t *points, unsigned bitsize, unsigned c, size_t npoints
     // }
     // exit(0);
 
+    // int temp = 0;
     // for (int i = 0; i < num_buckets; i++) {
-    //     cout << "index is: " << i << endl;
-    //     cout << "bucket_sizes: " << bucket_sizes[i] << endl;
+    //     if (single_bucket_indices[i] != 0) {
+    //         temp++;
+    //     }
+    // }
+    // cout << "temp is: " << temp << endl;
+
+    // for (int i = 0; i < num_buckets; i++) {
+    //     // cout << "index is: " << i << endl;
+    //     // cout << "bucket_sizes: " << bucket_sizes[i] << endl;
+    //     if (bucket_sizes[i] == 2) {
+    //         cout << "!!!!!!!!!\n" << endl;
+    //     } 
     // }
     // exit(0);
 
     //get offsets - where does each new bucket begin
     unsigned* bucket_offsets;
     cudaMallocManaged(&bucket_offsets, sizeof(unsigned) * num_buckets);
-    unsigned* offsets_temp_storage{};
+    // unsigned* offsets_temp_storage{};
+    void *offsets_temp_storage = NULL;
     size_t offsets_temp_storage_bytes = 0;
     cub::DeviceScan::ExclusiveSum(offsets_temp_storage, offsets_temp_storage_bytes, bucket_sizes, bucket_offsets, num_buckets);
     cudaMallocManaged(&offsets_temp_storage, offsets_temp_storage_bytes);
@@ -467,26 +518,45 @@ scalar_t *scalars, point_t *points, unsigned bitsize, unsigned c, size_t npoints
     // between multiple seperate kernel launches? And if so, what’s the best approach? The naive solution is moving from
     // single P100 to A10.
     accumulate_buckets_kernel<<<NUM_BLOCKS_3, NUM_THREADS_3>>>(buckets, bucket_offsets, bucket_sizes, single_bucket_indices, point_indices, points, num_buckets);
+    // accumulate_buckets_kernel<<<1, 8>>>(buckets, bucket_offsets, bucket_sizes, single_bucket_indices, point_indices, points, num_buckets);
     cudaDeviceSynchronize();
 
     int count = 0;
-    for (int i = 0; i < num_buckets; i++) {
+    for (int i = 0; i < 1024; i++) {
         if (buckets[i].x.data[0] != 0) {
             count++;
+            cout << "bucket index is: " << i << endl;
+            cout << "x: " << "{ " << buckets[i].x.data[0] << "," << buckets[i].x.data[1] << "," << buckets[i].x.data[2] << "," << buckets[i].x.data[3] << " }; "  
+            << " y: " << "{ " << buckets[i].y.data[0] << "," << buckets[i].y.data[1] << "," << buckets[i].y.data[2] << "," << buckets[i].y.data[3] << " }; "  
+            << " z: " << "{ " << buckets[i].z.data[0] << "," << buckets[i].z.data[1] << "," << buckets[i].z.data[2] << "," << buckets[i].z.data[3] << " }; " << endl;
         }
-        // cout << "bucket index is: " << i << endl;
-        // cout << "x: " << "{ " << buckets[i].x.data[0] << "," << buckets[i].x.data[1] << "," << buckets[i].x.data[2] << "," << buckets[i].x.data[3] << " }; "  
-        // << " y: " << "{ " << buckets[i].y.data[0] << "," << buckets[i].y.data[1] << "," << buckets[i].y.data[2] << "," << buckets[i].y.data[3] << " }; "  
-        // << " z: " << "{ " << buckets[i].z.data[0] << "," << buckets[i].z.data[1] << "," << buckets[i].z.data[2] << "," << buckets[i].z.data[3] << " }; " << endl;
     }
     cout << "count is: " << count << endl;
 
-    // The result is we'll have num_bucket modules each with num_bucket << c buckets of a single result
-    cout << "final_result is: " << buckets[0].x.data[0] << endl;
-    cout << "final_result is: " << buckets[0].x.data[1] << endl;
-    cout << "final_result is: " << buckets[0].x.data[2] << endl;
-    cout << "final_result is: " << buckets[0].x.data[3] << endl;
+    point_t *temp_res;
+    cudaMallocManaged(&temp_res, 3 * 4 * sizeof(uint64_t));
+    test_kernel<<<1, 4>>>(points, temp_res);
+    cudaDeviceSynchronize();
 
+    cout << "temp_res is: " << temp_res[0].x.data[0] << endl;
+    cout << "temp_res is: " << temp_res[0].x.data[1] << endl;
+    cout << "temp_res is: " << temp_res[0].x.data[2] << endl;
+    cout << "temp_res is: " << temp_res[0].x.data[3] << endl;
+    cout << "temp_res is: " << temp_res[0].y.data[0] << endl;
+    cout << "temp_res is: " << temp_res[0].y.data[1] << endl;
+    cout << "temp_res is: " << temp_res[0].y.data[2] << endl;
+    cout << "temp_res is: " << temp_res[0].y.data[3] << endl;
+    cout << "temp_res is: " << temp_res[0].z.data[0] << endl;
+    cout << "temp_res is: " << temp_res[0].z.data[1] << endl;
+    cout << "temp_res is: " << temp_res[0].z.data[2] << endl;
+    cout << "temp_res is: " << temp_res[0].z.data[3] << endl;
+
+    // The result is we'll have num_bucket modules each with num_bucket << c buckets of a single result
+    // cout << "final_result is: " << buckets[0].x.data[0] << endl;
+    // cout << "final_result is: " << buckets[0].x.data[1] << endl;
+    // cout << "final_result is: " << buckets[0].x.data[2] << endl;
+    // cout << "final_result is: " << buckets[0].x.data[3] << endl;
+    
     cudaSetDevice(0);
     size_t free_device_mem = 0;
     size_t total_device_mem = 0;
@@ -500,22 +570,92 @@ scalar_t *scalars, point_t *points, unsigned bitsize, unsigned c, size_t npoints
     // At this point we have n buckets and m bucket modules. Need to first sum up the n buckets per bucket module, and then
     // perform a final accumulation of the bucket modules. Launch 4 threads per bucket module.
 
-    point_t *final_result;
-    cudaMallocManaged(&final_result, num_bucket_modules * 3 * 4 * sizeof(uint64_t));
+    // int j = 0;
+    // for (int i = 0; i < num_bucket_modules; i++) {
+    //     if (buckets[i].x.data[0] != 0) {
+    //         buckets[j].x.data[0] = buckets[i].x.data[0];
+    //         buckets[j].x.data[1] = buckets[i].x.data[1];
+    //         buckets[j].x.data[2] = buckets[i].x.data[2];
+    //         buckets[j].x.data[3] = buckets[i].x.data[3];
+
+    //         buckets[j].y.data[0] = buckets[i].y.data[0];
+    //         buckets[j].y.data[1] = buckets[i].y.data[1];
+    //         buckets[j].y.data[2] = buckets[i].y.data[2];
+    //         buckets[j].y.data[3] = buckets[i].y.data[3];
+            
+    //         buckets[j].z.data[0] = buckets[i].z.data[0];
+    //         buckets[j].z.data[1] = buckets[i].z.data[1];
+    //         buckets[j].z.data[2] = buckets[i].z.data[2];
+    //         buckets[j].z.data[3] = buckets[i].z.data[3];
+    //     }
+    //     j++;
+    // }
+
+    // cout << "\n buckets is: " << buckets[0].x.data[0] << endl;
+    // cout << "buckets is: " << buckets[0].x.data[1] << endl;
+    // cout << "buckets is: " << buckets[0].x.data[2] << endl;
+    // cout << "buckets is: " << buckets[0].x.data[3] << endl;
+
+    // exit(0);
+    
+    // Define parameters 
+    unsigned M = 8;
+    unsigned U = (1 << c) / M; // Need to add some offset here and in for loop
+
+    point_t *S;
+    point_t *G;
+    point_t *result;
+    cudaMallocManaged(&S, num_bucket_modules * M * 3 * 4 * sizeof(uint64_t));
+    cudaMallocManaged(&G, num_bucket_modules * M * 3 * 4 * sizeof(uint64_t));
+    cudaMallocManaged(&result, 3 * 4 * sizeof(uint64_t));
     // or change kernel parameters to num_bucket_modules, 4
     // need to look into replacing this with known sum reduction techniques, since it dominates 90% of the runtime
-    bucket_module_sum_reduction_kernel<<<1, num_bucket_modules * 4>>>(buckets, final_result, num_buckets, c);
+    // Here we're launching 256 with 8 blocks, where each group of 4 threads handles adding 2 points.
+    // so 256 / 4 = 64 x 2 x 8 = 1024 points 
+    // kernels in default stream are invoked sequentially
+    bucket_module_sum_reduction_kernel_1<<<208, 4>>>(buckets, S, G, M, U);
     cudaDeviceSynchronize();
 
-    cout << "\nfinal_result is: " << final_result[0].x.data[0] << endl;
-    cout << "final_result is: " << final_result[0].x.data[1] << endl;
-    cout << "final_result is: " << final_result[0].x.data[2] << endl;
-    cout << "final_result is: " << final_result[0].x.data[3] << endl;
+    // for (int i = 0; i < 1; i++) {
+    //     for (int j = 0; j < LIMBS; j++) {
+    //         printf("result is: %zu\n", G[i].x.data[j]);
+    //     }
+    //     printf("\n");
+    //     for (int j = 0; j < LIMBS; j++) {
+    //         printf("result is: %zu\n", G[i].y.data[j]);
+    //     }
+    //     printf("\n");
+    //     for (int j = 0; j < LIMBS; j++) {
+    //         printf("result is: %zu\n", G[i].z.data[j]);
+    //     }
+    //     printf("!!!!!!!!!");
+    // }
+    // printf("\n");
+
+    // launch where each group of 4 threads will handle a seperate window k and all M segments within a window K -- problem is small
+    bucket_module_sum_reduction_kernel_2<<<26, 4>>>(result, S, G, M, U);
+    cudaDeviceSynchronize();
+
+    for (int i = 0; i < 1; i++) {
+        for (int j = 0; j < LIMBS; j++) {
+            printf("result is: %zu\n", result[i].x.data[j]);
+        }
+        printf("\n");
+        for (int j = 0; j < LIMBS; j++) {
+            printf("result is: %zu\n", result[i].y.data[j]);
+        }
+        printf("\n");
+        for (int j = 0; j < LIMBS; j++) {
+            printf("result is: %zu\n", result[i].z.data[j]);
+        }
+        printf("!!!!!!!!!");
+    }
+    printf("\n");
 
     // Final accumulation kernel can use double and add or be performed on the CPU
     point_t *res;
     cudaMallocManaged(&res, 3 * 4 * sizeof(uint64_t));
-    final_accumulation_kernel<<<1,4>>>(final_result, res, num_bucket_modules, c);
+    final_accumulation_kernel<<<1,4>>>(result, res, num_bucket_modules, c);
     cudaDeviceSynchronize();
 
     cout << "\n res is: " << res[0].x.data[0] << endl;
@@ -523,7 +663,65 @@ scalar_t *scalars, point_t *points, unsigned bitsize, unsigned c, size_t npoints
     cout << "res is: " << res[0].x.data[2] << endl;
     cout << "res is: " << res[0].x.data[3] << endl;
 
-    // cudamemcy
+    point_t *final_res;
+    cudaMallocManaged(&final_res, 3 * 4 * sizeof(uint64_t));
+    sum_reduction_accumulate<<<1,4>>>(res, final_res);
+    cudaDeviceSynchronize();
+
+    cout << "\n final_res is: " << final_res[0].x.data[0] << endl;
+    cout << "final_res is: " << final_res[0].x.data[1] << endl;
+    cout << "final_res is: " << final_res[0].x.data[2] << endl;
+    cout << "final_res is: " << final_res[0].x.data[3] << endl;
+    cout << "\n final_res is: " << final_res[0].y.data[0] << endl;
+    cout << "final_res is: " << final_res[0].y.data[1] << endl;
+    cout << "final_res is: " << final_res[0].y.data[2] << endl;
+    cout << "final_res is: " << final_res[0].y.data[3] << endl;
+    cout << "\n final_res is: " << final_res[0].z.data[0] << endl;
+    cout << "final_res is: " << final_res[0].z.data[1] << endl;
+    cout << "final_res is: " << final_res[0].z.data[2] << endl;
+    cout << "final_res is: " << final_res[0].z.data[3] << endl;
+
+    // // check against naive implementation
+    // fr_gpu *d_scalars;
+    // g1::element *j_points;
+    // g1::element *final_result2;
+    // g1::element *result2;
+    // var *a;
+
+    // // Allocate unified memory accessible by host and device
+    // cudaMallocManaged(&a, LIMBS * sizeof(var));
+
+    // // Allocate cuda memory 
+    // cudaMallocManaged(&d_scalars, NUM_POINTS * LIMBS * sizeof(uint64_t));
+    // cudaMallocManaged(&j_points, 3 * NUM_POINTS * LIMBS * sizeof(uint64_t));
+    // cudaMallocManaged(&result2, 3 * NUM_POINTS * LIMBS * sizeof(uint64_t));
+    // cudaMallocManaged(&final_result2, 3 * NUM_POINTS * LIMBS * sizeof(uint64_t));
+
+    // // Read points and scalars
+    // read_jacobian_curve_points(j_points);
+    // read_scalars(d_scalars);
+
+    // // Naive MSM method
+    // msm_naive_kernel<<<8, 512>>>(j_points, d_scalars, result2, NUM_POINTS);
+
+    // // Sum reduction 
+    // sum_reduction<<<1, 4>>>(result2, final_result2);
+
+    // // Final accumulation
+    // sum_reduction_accumulate<<<1, 4>>>(final_result2, final_result2);
+    // cudaDeviceSynchronize();
+    
+    // // Print results
+    // print_result(final_result2);
+
+    // comparator_kernel<<<1,4>>>(final_result2, final_res, a);
+    // cudaDeviceSynchronize();
+
+    // cout << "\n a is: " << a[0] << endl;
+    // cout << "a is: " << a[1] << endl;
+    // cout << "a is: " << a[2] << endl;
+    // cout << "a is: " << a[3] << endl;
+    
     // free memory
 }
 

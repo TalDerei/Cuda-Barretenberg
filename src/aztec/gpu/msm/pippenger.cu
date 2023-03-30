@@ -53,9 +53,13 @@ Context<bucket_t, point_t, scalar_t, affine_t>* msm_t<A, S, J>::pippenger_initia
  * Perform MSM
  */ 
 template <class A, class S, class J>
-void msm_t<A, S, J>::pippenger_execute(Context<bucket_t, point_t, scalar_t, affine_t> *context, size_t num_points, A* points, S* scalars) {
+void msm_t<A, S, J>::pippenger_execute(Context<bucket_t, point_t, scalar_t, affine_t> *context, size_t num_points, A* points) {
+    // Read scalars
+    fr_gpu *scalars;
+    cudaMallocManaged(&scalars, NUM_POINTS * LIMBS * sizeof(uint64_t));
+    context->pipp.read_scalars(scalars);
+    
     // Create auxilary stream
-    // will need to change this?
     stream_t aux_stream(context->pipp.device);
 
     try {        
@@ -97,32 +101,26 @@ template <class A, class S, class J>
 void msm_t<A, S, J>::naive_msm(Context<bucket_t,point_t,scalar_t,affine_t> *context, size_t npoints, A *points) {
     fr_gpu *d_scalars;
     J *j_points;
-    J *result;
     J *final_result;
-    J *result_acc;
-    fq_gpu *result_2;
+    J *result;
 
     // Allocate cuda memory 
-    cudaMallocManaged(&d_scalars, POINTS * LIMBS * sizeof(uint64_t));
-    cudaMallocManaged(&j_points, 3 * POINTS * LIMBS * sizeof(uint64_t));
-    cudaMallocManaged(&result_acc, 3 * POINTS * LIMBS * sizeof(uint64_t));
-    cudaMallocManaged(&result, 3 * POINTS * LIMBS * sizeof(uint64_t));
-    cudaMallocManaged(&result_2, 3 * POINTS * LIMBS * sizeof(uint64_t));
-    cudaMallocManaged(&final_result, 3 * POINTS * LIMBS * sizeof(uint64_t));
+    cudaMallocManaged(&d_scalars, NUM_POINTS * LIMBS * sizeof(uint64_t));
+    cudaMallocManaged(&j_points, 3 * NUM_POINTS * LIMBS * sizeof(uint64_t));
+    cudaMallocManaged(&result, 3 * NUM_POINTS * LIMBS * sizeof(uint64_t));
+    cudaMallocManaged(&final_result, 3 * NUM_POINTS * LIMBS * sizeof(uint64_t));
 
     // Read points and scalars
-    g1::element *points_r = context->pipp.read_jacobian_curve_points(j_points);
-    fr_gpu *scalars_r = context->pipp.read_scalars(d_scalars);
+    context->pipp.read_jacobian_curve_points(j_points);
+    context->pipp.read_scalars(d_scalars);
 
-    // Perform MSM method 1
-    simple_msm_naive<<<1, 4>>>(j_points, d_scalars, result, POINTS);
-    cudaDeviceSynchronize();
+    // Naive MSM method
+    msm_naive_kernel<<<8, 512>>>(j_points, d_scalars, result, NUM_POINTS);
 
-    // Perform MSM method 2
-    simple_msm_naive_2<<<4, 1024>>>(j_points, d_scalars, result_2, result_acc, POINTS);
+    // Sum reduction 
+    sum_reduction<<<1, 4>>>(result, final_result);
 
-    // Perform final accumulation by summing all elements in the vector
-    sum_reduction<<<1, 8>>>(result_acc, final_result);
+    // Final accumulation
     sum_reduction_accumulate<<<1, 4>>>(final_result, final_result);
     cudaDeviceSynchronize();
     
@@ -139,56 +137,63 @@ void msm_t<A, S, J>::msm_bucket_method(Context<bucket_t,point_t,scalar_t,affine_
     S *d_scalars;
     J *result;
 
-    // cout << "NUM_POINTS IS: " << npoints << endl;
-    // exit(0);
-
     // Allocate unified memory
-    cudaMallocManaged(&j_points, 3 * POINTS * LIMBS * sizeof(uint64_t));
-    cudaMallocManaged(&d_scalars, POINTS * LIMBS * sizeof(uint64_t));
-    cudaMallocManaged(&result, 3 * POINTS * LIMBS * sizeof(uint64_t));
+    cudaMallocManaged(&j_points, 3 * NUM_POINTS * LIMBS * sizeof(uint64_t));
+    cudaMallocManaged(&d_scalars, NUM_POINTS * LIMBS * sizeof(uint64_t));
+    cudaMallocManaged(&result, 3 * NUM_POINTS * LIMBS * sizeof(uint64_t));
+
+    // Calculate maximum occupancy
+    int THREADS;
+    int BLOCKS;
+    cudaOccupancyMaxPotentialBlockSize(&BLOCKS, &THREADS, bucket_module_sum_reduction_kernel_1, 0, 0);
+    cout << "max threads is: " << THREADS << endl;
+    cout << "max blocks is: " << BLOCKS << endl;
 
     // Read points
     context->pipp.read_jacobian_curve_points(j_points);
     context->pipp.read_scalars(d_scalars);
 
-    int THREADS;
-    int BLOCKS;
-
-    cudaOccupancyMaxPotentialBlockSize(&BLOCKS, &THREADS, accumulate_buckets_kernel, 0, 0);
-
-    cout << "max threads is: " << THREADS << endl;
-    cout << "max blocks is: " << BLOCKS << endl;
-
-    // Parameters
-    unsigned bitsize = 255;
+    unsigned bitsize = 254;
     unsigned c = 10;
-    // LOOK INTO MAKING C = 16, SO WE DON'T NEED TO WORRY ABOUT EDGE CASES BETWEEN BUCKETS
-
-        // Calculate the number of windows 
-    unsigned num_bucket_modules = bitsize / c; 
-    if (bitsize / c) {  
-        num_bucket_modules++;
-    }
     
-    // timer
+    // Start timer
     using namespace std::chrono;
     high_resolution_clock::time_point t1 = high_resolution_clock::now();
 
     context->pipp.initialize_buckets(d_scalars, j_points, bitsize, c, npoints);
     
+    // End timer
     high_resolution_clock::time_point t2 = high_resolution_clock::now();
     duration<double> time_span = duration_cast<duration<double>>(t2 - t1);
-    std::cout << "It took me " << time_span.count() << " seconds.";
-    std::cout << std::endl;
-    
+    std::cout << "It took me " << time_span.count() << " seconds." << endl;
+}
 
-    // Scalars are 10-bits, so between 0-1024. There are 26 windows (or bucket modules).
-    // Group elements with the same scalars go into the same buckets, i.e. 6 * G1 means
-    // G1 goes into bucket 6. And you have 2^c total buckets per window.
+/**
+ * Perform naive MSM
+ */ 
+template <class A, class S, class J>
+void msm_t<A, S, J>::pippenger_test(Context<bucket_t,point_t,scalar_t,affine_t> *context, size_t npoints, A *points) {
+    point_t *j_points;
+    S *d_scalars;
+    J *final_result;
+    point_t *result_jacobian;
+    point_t *result_projective;
 
-    // Step 1. Partition b-bit scalars to c-bits
-    // Step 2. Add points to buckets depending on their scalar
-    // step 3. Sum the contents of each bucket into N bucket sums for each window
+    // Allocate cuda memory 
+    cudaMallocManaged(&j_points, 3 * NUM_POINTS * LIMBS * sizeof(uint64_t));
+    cudaMallocManaged(&d_scalars, NUM_POINTS * LIMBS * sizeof(uint64_t));
+    cudaMallocManaged(&result_jacobian, 3 * NUM_POINTS * LIMBS * sizeof(uint64_t));
+    cudaMallocManaged(&result_projective, 3 * NUM_POINTS * LIMBS * sizeof(uint64_t));
+    cudaMallocManaged(&final_result, 3 * NUM_POINTS * LIMBS * sizeof(uint64_t));
+
+    // Read points and scalars
+    context->pipp.read_jacobian_curve_points(j_points);
+    context->pipp.read_scalars(d_scalars);
+
+    test_double_add<<<1,4>>>(j_points, d_scalars, final_result);
+    cudaDeviceSynchronize();
+
+    context->pipp.print_result(final_result);
 }
 
 }

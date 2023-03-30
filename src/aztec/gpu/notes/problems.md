@@ -136,3 +136,24 @@
             that some buckets are empty since they weren't filled. See #3 above.
         5. Apply a sum reduction to reduce all the buckets into a single value in each bucket module
         6. Final accumulation step to sum up the partial sums into a final output.
+
+    Open Questions:
+
+    4. Need to reconcile why it works with c = 10, but not c = 16. Should be the same!
+    The result from accumulate_buckets_kernel is not the same, since different subscalars can be mapped 
+    to a wide larger net of buckets and scalars are split differently, but the result of the partial sums 
+    after bucket_module_sum_reduction_kernel should be the same, but it's not...so i need to pin point the 
+    area where the variance is occuring. Update: because a simple sum reduction kernel is not the correct approach, 
+    instead need to implement the "running sum method". 
+
+    5. The above tasks represent optimizations on top of the baseline correctness. Need to somehow ensure
+    the MSM result is correct? And even then, these optimnizations might not be enough to make this
+    workload fast enough...let's start with correctness first though.
+        Step 1: verify results from naive kernel and compare with barretenberg
+        Step 2: check jacobian addition by 0, and P == Q checks
+        Step 3: think about reducing pippenger to work on just two points
+        Step 4: compare results
+
+    The obvious problems is that [1] sum reduction kernel is inefficient because its performing a standard reduction.
+    [2] the final accumulation is simply a double and add, which scales 273N. And on top of that, i'm not sure whether 
+    the answer is correct. 

@@ -4,13 +4,6 @@
 
 using namespace std;
 
-/**
- * Kernel launch parameters
- */
-static constexpr size_t BLOCKS = 1;
-static constexpr size_t THREADS = 4;
-static constexpr size_t POINTS = 1 << 10;
-
 namespace pippenger_common {
 
 /**
@@ -23,7 +16,9 @@ class msm_t {
         
         Context<bucket_t, point_t, scalar_t, affine_t>* pippenger_initialize(A* points);
         
-        void pippenger_execute(Context<bucket_t, point_t, scalar_t, affine_t> *context, size_t npoints, A* points, S* scalars);
+        void pippenger_test(Context<bucket_t, point_t, scalar_t, affine_t> *context, size_t npoints, A* points);
+
+        void pippenger_execute(Context<bucket_t, point_t, scalar_t, affine_t> *context, size_t npoints, A* points);
         
         void naive_msm(Context<bucket_t, point_t, scalar_t, affine_t> *context, size_t npoints, A* points);
 
