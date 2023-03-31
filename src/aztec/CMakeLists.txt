@@ -5,7 +5,7 @@ set(CMAKE_CUDA_STANDARD 17)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-add_compile_options(-Wall -Wextra -Wconversion -Wsign-conversion -Wno-deprecated -Wno-tautological-compare -Wfatal-errors -fpermissive -g -O0)
+add_compile_options(-Wall -Wextra -Wconversion -Wsign-conversion -Wno-deprecated -Wno-tautological-compare -Wfatal-errors -fpermissive -g)
 
 add_compile_options($<$<COMPILE_LANGUAGE:CXX,Clang>:-fconstexpr-steps=100000000>)
 

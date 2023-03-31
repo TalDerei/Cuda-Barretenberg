@@ -18,13 +18,38 @@
 - [x] Benchmark Aztec's MSM, FFT, and Plonk algorithms on CPU
     - [x] Benchmark Pippenger's bucket algorithm
     - [x] Benchmark Fast Fourier Transform algorithm
-    - [x] Benchmark Plonk prover
-- [ ] Benchmark FF and ECC implementations on GPU
-    - [ ] Create finite field bench suite for GPU
-    - [ ] Create elliptic curve bench suite for GPU
-    - [ ] Benchmark finite field arithemtic and elliptic curve operations to establish GPU baseline
-- [ ] Multi-scalar multiplication (MSM)
-    - [ ] Understand Barretenberg’s multi-exponentiation CPU implementation 
-    - [ ] Understand Supranational’s MSM GPU kernel (sppark) module
+    - [x] Benchmark vanilla Plonk prover
+    - [x] Benchmark TurboPlonk and UltraPlonk provers
+- [ ] Benchmark FF and ECC arithmetic on GPU
+    - [ ] Create finite field bench suite 
+    - [ ] Create elliptic curve bench suite 
+- [ ] Multi-scalar multiplication (MSM) for Pippenger's Bucket Method
+    - [x] Understand Barretenberg’s multi-exponentiation CPU implementation 
     - [x] Benchmark Zprize MSM implementation on GPU 
-    - [ ] Adapt Supranational’s MSM scheme into Barretenberg
+    - [x] Understand Supranational’s SPPARK MSM GPU kernel
+    - [ ] Adapt Supranational’s and Ingonyama's Icicle MSM scheme
+        - [x] Add comments to understand code
+        - [x] Remove rust bindings
+        - [x] Read in curve points and scalars
+        - [ ] Port MSM implemenation over BN-254 curve
+            - [x] Add naive reference method
+            - [ ] Add bucket method
+        - [ ] Experiment between Lagrange SRS over monomial SRS
+        - [ ] Add "inlining" to C++/cuda functions
+- [ ] Test and benchmark MSM kernel implementation on GPU
+    - [x] Create unit test suite
+    - [ ] Create benchmarking suite
+    - [ ] Benchmark and compare against Ingonyama's "Icicle" MSM implementation
+- [x] Implement remaining G1 arthmetic
+    - [x] Finish adding missing elliptic curve functions
+- [ ] Implement Projective coordinates G2 arithmetic
+    - [ ] Add extension fields
+    - [ ] Add zero and infinity checks 
+    - [ ] Create unit test suite for extension fields
+    - [x] Implement Projective coordinates and testing bench
+- [x] Implement simple double-and-add algorithm for correctness
+    - [x] Implement for single finite field elements
+    - [x] Implement for single elliptic curve points
+    - [x] Implement for vector of finite field elements
+    - [x] Implement for vector of elliptic curve points
+- [ ] MVP KZG-10 commitment scheme 

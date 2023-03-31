@@ -1,4 +1,30 @@
 # Problems
+```Need to integrate cuda-fixnum external library and add cuda / nvcc support```
+
+    - The core problem was that I was unable to call Barretenberg dependencies (e.g. #include <ecc/curves/grumpkin/grumpkin.hpp>) from a cuda file (.cu extension). I set the default system compiler as clang/clang++ using the x86_64-linux-clang toolchain. Nvidia's NVCC compiler was forwarding certain flags to the host compiler using the "-XCompiler" command, since certain barretenberg dependencies relied on that flag being set and compiled by the host. Still the compilation errors persisted. Another approach was creating a static library containing these dependencies, and dynamically linking the library to the cuda file upon creating the executable. But from the cuda file, you can only call certain functions from that library (not dependencies) since a static library is just a collection of linkable object .o files. 
+
+    Then I thought it was a cuda-version compatability issue, where the cuda version might not support the compiler setup: https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html#system-requirements. Turns out there wasn't any nvcc compatability issues with any of the installed tooling.
+    
+        ubuntu: Ubuntu 22.04 LTS
+        clang++: 14.0.0-1ubuntu1
+        nvcc: 11.8
+        
+        gcc: can't use since flag that a dependency relies 
+        on (e.g. -fconstexpr-steps=100000000) isn't           
+        recognized by gcc compiler
+
+    Finally, I looked deeper into constexpr (feature added in c++11) which adds performance improvements by evaluating computations at compile-time rather than run-time, which speeds up the execution. Digging deeper, I found that NVCC compiler does not currently support C++20. Barretenberg has files with C20++ features (i.e. is_constant_evaluated()), so the compilation fails. We can't offload this to be compiled by the host compiler either. Only solution is to remove this, and add -std=c++17 as a compilation flag. 
+
+    It's also worth noting that NVCC will always require a general purpose C++ host compiler. You can set CMAKE_CXX_STANDARD and CMAKE_CUDA_STANDARD values to c++17 so C++-files and CUDA-files can both be compiled according to c++17.
+
+```Structure of the finite field arithmetic and elliptic curve operations (BN-254 and Grumpkin) on GPU```
+    - Montgomery representation is alternative way of representing elements of Fr/Fq for more efficient multiplication. Let r be BN-254.r or q be Grumpkin.q and R = 2^256. The Montgomery representation of the nubmer x (e.g. 5) is (xR) mod p. This number then is represented as a little-endian length 4 array of 64-bit integers, where each element in the array is called a limb. 
+
+    Usually we're used to working 32-bit/64-bit integers. With SNARK provers, the integers are much larger. The integers are 256 bits and represented using arrays of integers. For example, we could represent them using an array of 4 64-bit integers (since 4 * 64 = 256 > 254). 
+
+    Q. Difference between BN-254 and Grumpkin curves?
+        BN-254 is pairing-friendly elliptic curve. Grumpkin is a curve on top of BN-254 for SNARK efficient group operations. It forms a curve cycle with BN-254, so the field and group order of Grumpkin are equal group and field order of BN-254. 
+
 ```Starting to dive into the unit testing (each module has its own set of tests). Need to figure out what the hexadecimal represents for bn254/fq.hpp for example, and how simple calculations (i.e. addition/subtraction/multiplication/division) translate between hex numbers?```
 
     - Figured out the modulus is deconstructed into smaller parts, i.e. a 256-bit number is represented by 4 64-bit limbs.
@@ -47,7 +73,87 @@
 
     - Firstly, need to research the limitations around running more threads. Currently running 4 threads, and the execution is running sequentially in a single SM. Also unsure why the execution times are so drastic, as there seems to be some caching built in that's speeding up subsequent runs of the same computation. Also remember to enable compiler optimizations -03 during benchmarking! Update: “just-in-time” compiling PTX code to SASS assembly instructions slows down the first kernel invocation, so need to pass in "-gencode arch=compute_86,code=sm_86" to get around that. 
 
-```Need to figure out why the pippenger and polynomial bench isn't working```
+```Need to figure out why the pippenger and polynomial bench isn't working?```
 
     - Ignition trusted setup ceremony says 100.8M (~2^26-2^27). It’s split up across 20 files, and ./bootstrap.sh was only configured to download the first 3 transcripts. Running “./download_ignition.sh” downloads the rest of the transcripts. Still, the pippenger bench is segfaulting (core dumped) for some reason. Update: I fixed the seg faults by pointing to the correct srs_db directory and commenting out some benchmark tests. Need to also figure out the difference in execution times between the pippenger and polynomial benches for Multi-scalar multiplication...update: seems like std::chrono time is generally slower in benchmarking. 
 
+```Notes while performing simple double and add MSM```
+
+    - Questions:
+    1. How to expand this to perform on an actual Fq point and Fr scalar?
+        --> They operate over different prime fields, but Fr scalar doesn't participate 
+        in the addition / multiplication calculations, only multiples of the Fq curve element. 
+    2. How to expand to add a vector of Fq points?
+    2. How to expand to add a vector of G1 curve points?
+    3. How to expand this to perform on a vector of points and scalars?
+
+    Notes:
+    - Seems like barretenberg doesn't have methods to multipliy fq * g1 or g1 * g1, or fq * g1.x or g1.x * g1.x
+    - Performing a double and then add, e.g. ec + ec = 2ec, then 2ec + ec = 3ec yields the same results in gpu tests
+    and barretenberg. But ec + ec = 2ec, then 2ec + ec = 3ec, then 3ec + ec = 4ec isn't yielding the same results
+    as 2ec + 2ec with doubling. Need to investigate, because seems like a montgomery representation problem. 
+
+    Even on Barretenberg,the results might be different. It's converting everything to montgomery form before starting the calculation,
+    and the assert check still passes. Some conversions going on in the equality '==' check. 
+
+    To standardarize the results between barretenberg and my test suites, we'll do the following:
+    1. For FF code, don't need to convert to and from montgomery representation unless it's a multiplication operation.
+    2. For ECC code, always convert to and from montgomery representation code. 
+
+    We'll follow the same spec as Barretenberg, without all of the extra confusing operator overloading ops. Need to perform both calculations in both ways to and compare the difference.
+
+    Most important thing I've learned building these MSM tests is that a single thread cannot perform multiple calculations inside the kernel invocation, instead things like additions operate on thread blocks of width 4, otherwise the result is corrupted. 
+
+```Where are extension fields used in the calculation?```
+    - Different extensions of the same base field would be used for different polynomials your committing to (e.g. permutation or quotient polynomial for example). The pairing groups, both G2 and GT, are specifically defined over extension fields. 
+
+```Is MSM performed more commonly on affine, jacobian, or projective elements?```
+    - Affine elements are transformed to Jacobian or Projective elements for more efficient modular additions. 
+
+```Notes while performing pippengers bucket method```
+    - 1. We're not handling all the bucket modules for some reason....
+    It's either a occupancy limit problem or data initialization probelem. It doesn't seem to be a data initialization problem,
+    because shifting the blockId by a constant factor revealed the missing data. It has to be an occupancy limit. The naive way 
+    to deal with this is moving to a more powerful GPU, i.e. A10. I need to figure out another standard way to deal with this. Update:
+    the issue here was an if statement within the kernel that blocks the conditional execution of some threads. Fixed.
+
+    2. How are these buckets logically seperated into bucket modules? where's the logical seperation happening in the code?
+    Using offsets
+
+    3. And why are some buckets empty when calling the accumulate_buckets_kernel, and why do we index on single_bucket_indices
+    instead of point_indices?
+    We have N buckets to compute, each with a variable size M. N * M = total num buckets. We're sorting based on single_bucket_indices,
+    so not every sequential indice correpsonds to a filled bucket. So buckets will be empty by design. The more threads you have, the more 
+    densely populated these buckets will be. 
+
+    Steps:
+        1. Initialize buckets num_modules << c
+        2. Split b-bit scalats into c-bit scalars and assign each of them in a "bucket_index". One sub-scalar per index.
+        3. Then group the similiar sub-scalars together into buckets (single_bucket_indices and bucket_sizes) for each bucket. 
+            This is just a logical mapping. The total number of unique buckets will be smaller. So to recape, e.g. we have 16216 unique buckets,
+            those are split into single_bucket_indices up to 26k, and each unique bucket has a non-zero size. 
+        4. Then launch the bucket accumulation to add the points together in each bucket. This is done for each bucket module. Note
+            that some buckets are empty since they weren't filled. See #3 above.
+        5. Apply a sum reduction to reduce all the buckets into a single value in each bucket module
+        6. Final accumulation step to sum up the partial sums into a final output.
+
+    Open Questions:
+
+    4. Need to reconcile why it works with c = 10, but not c = 16. Should be the same!
+    The result from accumulate_buckets_kernel is not the same, since different subscalars can be mapped 
+    to a wide larger net of buckets and scalars are split differently, but the result of the partial sums 
+    after bucket_module_sum_reduction_kernel should be the same, but it's not...so i need to pin point the 
+    area where the variance is occuring. Update: because a simple sum reduction kernel is not the correct approach, 
+    instead need to implement the "running sum method". 
+
+    5. The above tasks represent optimizations on top of the baseline correctness. Need to somehow ensure
+    the MSM result is correct? And even then, these optimnizations might not be enough to make this
+    workload fast enough...let's start with correctness first though.
+        Step 1: verify results from naive kernel and compare with barretenberg
+        Step 2: check jacobian addition by 0, and P == Q checks
+        Step 3: think about reducing pippenger to work on just two points
+        Step 4: compare results
+
+    The obvious problems is that [1] sum reduction kernel is inefficient because its performing a standard reduction.
+    [2] the final accumulation is simply a double and add, which scales 273N. And on top of that, i'm not sure whether 
+    the answer is correct. 

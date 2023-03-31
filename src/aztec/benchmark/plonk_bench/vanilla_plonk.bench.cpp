@@ -8,12 +8,9 @@
 
 using namespace benchmark;
 
-constexpr size_t MAX_GATES = 1 << 20;
-constexpr size_t NUM_CIRCUITS = 10;
+constexpr size_t MAX_GATES = 1 << 26;
+constexpr size_t NUM_CIRCUITS = 15;
 constexpr size_t START = (MAX_GATES) >> (NUM_CIRCUITS - 1);
-// constexpr size_t NUM_HASH_CIRCUITS = 8;
-// constexpr size_t MAX_HASH_ROUNDS = 8192;
-// constexpr size_t START_HASH_ROUNDS = 64;
 
 void generate_test_plonk_circuit(waffle::StandardComposer& composer, size_t num_gates)
 {

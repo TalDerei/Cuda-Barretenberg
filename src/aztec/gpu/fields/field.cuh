@@ -16,12 +16,19 @@ static constexpr size_t LIMBS = 4;
 static constexpr size_t BYTES_PER_ELEM = LIMBS * sizeof(var);
 
 /* -------------------------- Base Field Modulus Fq ---------------------------------------------- */
+
+/**
+ * BN-254 defined by Y^2 = X^3 + 3 over the base field F_q, 
+ * q = 21888242871839275222246405745257275088696311157297823662689037894645226208583
+ */
 __device__ __constant__ static var MOD_Q_BASE[LIMBS] = {
     0x3C208C16D87CFD47UL, 0x97816a916871ca8dUL,
     0xb85045b68181585dUL, 0x30644e72e131a029UL
 };
 
-// R^2 where R = 2^256 mod Q
+/**
+ * R^2 where R = 2^256 mod Q
+ */
 __device__ __constant__ static var R_SQUARED_BASE[LIMBS] = {
     0xF32CFC5B538AFA89UL, 0xB5E71911D44501FBUL,
     0x47AB1EFF0A417FF6UL, 0x06D89F71CAB8351FUL
@@ -57,7 +64,13 @@ __device__ __constant__ static var COSET_GENERATORS_BASE_3[8]{
     0x180a96573d3d9f8ULL,  0xf8b21270ddbb927ULL,  0x1d9598e8a7e39857ULL, 0x2ba010aa41eb7786ULL,
 };
 
-// -Q^{-1} (mod 2^256)
+__device__ __constant__ static var ONE_MONT[LIMBS] = {
+    0xd35d438dc58f0d9d, 0xa78eb28f5c70b3d, 0x666ea36f7879462c, 0xe0a77c19a07df2f
+};
+
+/**
+ * -Q^{-1} (mod 2^256)
+ */ 
 __device__ __constant__ static constexpr var r_inv_base = 0x87d20782e4866389UL;
 
 __device__ __constant__ static var endo_g1_lo_base = 0x7a7bd9d4391eb18d;
@@ -69,15 +82,23 @@ __device__ __constant__ static var endo_minus_b1_lo_base = 0x8211bbeb7d4f1129UL;
 __device__ __constant__ static var endo_minus_b1_mid_base = 0x6f4d8248eeb859fcUL;
 __device__ __constant__ static var endo_b2_lo_base = 0x89d3256894d213e2UL;
 __device__ __constant__ static var endo_b2_mid_base = 0UL;
+__device__ __constant__ static var b = 3;
 
 /* -------------------------- Scalar Field Modulus Fr ---------------------------------------------- */
+
+/**
+ * Scalar field F_r has curve order r,
+ * r = 21888242871839275222246405745257275088548364400416034343698204186575808495617
+ */
 __device__ __constant__
 const var MOD_Q_SCALAR[LIMBS] = {
     0x43E1F593F0000001UL, 0x2833E84879B97091UL,
     0xB85045B68181585DUL, 0x30644E72E131A029UL
 };
 
-// R^2 where R = 2^256 mod Q
+/**
+ * R^2 where R = 2^256 mod Q
+ */
 __device__ __constant__
 const var R_SQUARED_SCALAR[LIMBS] = {
     0x1BB8E645AE216DA7UL, 0x53FE3AB1E35C59E3UL,
@@ -123,7 +144,9 @@ __device__ __constant__ static var endo_minus_b1_mid_scalar = 0x6f4d8248eeb859fc
 __device__ __constant__ static var endo_b2_lo_scalar = 0x89d3256894d213e3UL;
 __device__ __constant__ static var endo_b2_mid_scalar = 0UL;
 
-// -Q^{-1} (mod 2^256)
+/**
+ * -Q^{-1} (mod 2^256)
+ */
 __device__ __constant__ static var r_inv_scalar = 0xc2e1f593efffffffUL;
 
 struct BN254_MOD_BASE {
@@ -132,6 +155,7 @@ struct BN254_MOD_BASE {
     __device__ __forceinline__ static var monty() { return R_SQUARED_BASE[lane()]; }
     __device__ __forceinline__ static var cube() { return CUBE_ROOT_BASE[lane()]; }
     __device__ __forceinline__ static var root() { return PRIMTIVE_ROOTS_UNITY_BASE[lane()]; }
+    __device__ __forceinline__ static var one_mont() { return ONE_MONT[lane()]; }
 };
 
 struct BN254_MOD_SCALAR {
@@ -143,25 +167,27 @@ struct BN254_MOD_SCALAR {
 };
 
 /* -------------------------- Finite Field Arithmetic for G1 ---------------------------------------------- */
-template < typename params, typename _params > 
+
+template < typename params > 
 class field_gpu {
     public:    
         var data[4];    
     
-        // Constructor 
         __device__ field_gpu() noexcept {}
         
         __device__ field_gpu(const var a, const var b, const var c, const var d) noexcept;
 
-        __device__ static field_gpu zero() noexcept;
+        __device__ static field_gpu zero();
         
-        __device__ bool is_zero() const noexcept;
+        __device__ static field_gpu one();
+        
+        __device__ static bool is_zero(const var &x);
 
         __device__ static var equal(const var x, const var y);
 
         __device__ static var load(var x, var &res);
 
-        __device__ static void store(var *mem, const field_gpu &x);
+        __device__ static void store(var *mem, const var &x);
 
         __device__ static var add(const var a, const var b, var &res);
 
@@ -176,9 +202,8 @@ class field_gpu {
         __device__ static var from_monty(var x, var &res);
 
         __device__ static var neg(var &x, var &res);
-    };
-    typedef field_gpu<BN254_MOD_BASE, BN254_MOD_SCALAR> fq_gpu;
-}
+};
+typedef field_gpu<BN254_MOD_BASE> fq_gpu;
+typedef field_gpu<BN254_MOD_SCALAR> fr_gpu;
 
-// TODO: Need to add extension fields (quadtratic and cubic)
-// TODO: Need to add rest of unit tests for Fq and Fr
+}
