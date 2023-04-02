@@ -111,4 +111,35 @@ static fr_gpu omega(var size) {
     }
 }
 
+static fr_gpu omega_inverse(var size) {
+    switch (size) {
+        case 1: return fr_gpu { omega_inverse_1[0], omega_inverse_1[1], omega_inverse_1[2], omega_inverse_1[3] };
+        case 2: return fr_gpu { omega_inverse_2[0], omega_inverse_2[1], omega_inverse_2[2], omega_inverse_2[3] };
+        case 3: return fr_gpu { omega_inverse_3[0], omega_inverse_3[1], omega_inverse_3[2], omega_inverse_3[3] };
+        case 4: return fr_gpu { omega_inverse_4[0], omega_inverse_4[1], omega_inverse_4[2], omega_inverse_4[3] };
+        case 5: return fr_gpu { omega_inverse_5[0], omega_inverse_5[1], omega_inverse_5[2], omega_inverse_5[3] };
+        case 6: return fr_gpu { omega_inverse_6[0], omega_inverse_6[1], omega_inverse_6[2], omega_inverse_6[3] };
+        case 7: return fr_gpu { omega_inverse_7[0], omega_inverse_7[1], omega_inverse_7[2], omega_inverse_7[3] };
+        case 8: return fr_gpu { omega_inverse_8[0], omega_inverse_8[1], omega_inverse_8[2], omega_inverse_8[3] };
+        case 9: return fr_gpu { omega_inverse_9[0], omega_inverse_9[1], omega_inverse_9[2], omega_inverse_9[3] };
+        case 10: return fr_gpu { omega_inverse_10[0], omega_inverse_10[1], omega_inverse_10[2], omega_inverse_10[3] };
+        case 11: return fr_gpu { omega_inverse_11[0], omega_inverse_11[1], omega_inverse_11[2], omega_inverse_11[3] };
+        case 12: return fr_gpu { omega_inverse_12[0], omega_inverse_12[1], omega_inverse_12[2], omega_inverse_12[3] };
+        case 13: return fr_gpu { omega_inverse_13[0], omega_inverse_13[1], omega_inverse_13[2], omega_inverse_13[3] };
+        case 14: return fr_gpu { omega_inverse_14[0], omega_inverse_14[1], omega_inverse_14[2], omega_inverse_14[3] };
+        case 15: return fr_gpu { omega_inverse_15[0], omega_inverse_15[1], omega_inverse_15[2], omega_inverse_15[3] };
+        case 16: return fr_gpu { omega_inverse_16[0], omega_inverse_16[1], omega_inverse_16[2], omega_inverse_16[3] };
+        case 17: return fr_gpu { omega_inverse_17[0], omega_inverse_17[1], omega_inverse_17[2], omega_inverse_17[3] };
+        case 18: return fr_gpu { omega_inverse_18[0], omega_inverse_18[1], omega_inverse_18[2], omega_inverse_18[3] };
+        case 19: return fr_gpu { omega_inverse_19[0], omega_inverse_19[1], omega_inverse_19[2], omega_inverse_19[3] };
+        case 20: return fr_gpu { omega_inverse_20[0], omega_inverse_20[1], omega_inverse_20[2], omega_inverse_20[3] };
+        case 21: return fr_gpu { omega_inverse_21[0], omega_inverse_21[1], omega_inverse_21[2], omega_inverse_21[3] };
+        case 22: return fr_gpu { omega_inverse_22[0], omega_inverse_22[1], omega_inverse_22[2], omega_inverse_22[3] };
+        case 23: return fr_gpu { omega_inverse_23[0], omega_inverse_23[1], omega_inverse_23[2], omega_inverse_23[3] };
+        case 24: return fr_gpu { omega_inverse_24[0], omega_inverse_24[1], omega_inverse_24[2], omega_inverse_24[3] };
+        case 25: return fr_gpu { omega_inverse_25[0], omega_inverse_25[1], omega_inverse_25[2], omega_inverse_25[3] };
+        case 26: return fr_gpu { omega_inverse_26[0], omega_inverse_26[1], omega_inverse_26[2], omega_inverse_26[3] };
+    }
+}
+
 }
