@@ -145,14 +145,14 @@ add_custom_target(
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
 )
 
-# example test
+# sum reduction test
 add_executable(
-    msm_example_test
-    tests/msm/example_test.cu
+    sum_reduction_test
+    tests/msm/sum_reduction_test.cu
 )
 
 target_link_libraries(
-    msm_example_test
+    sum_reduction_test
     PUBLIC
     field_library
     fixnum_library
@@ -160,7 +160,7 @@ target_link_libraries(
 )
 
 add_custom_target(
-    run_msm_example_test
+    run_sum_reduction_test
     COMMAND msm_example_test
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
 )
