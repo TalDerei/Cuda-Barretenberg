@@ -12,6 +12,9 @@ namespace gpu_barretenberg {
 
 /* -------------------------- BN-254 G1 Elliptic Curve Parameters ---------------------------------------------- */
 
+/**
+ * Coefficients of the elliptic curve equation: y^2 = x^3 + 3
+ */
 __device__ __constant__ var a_bn_254 [LIMBS] = { 
     0UL, 0UL, 
     0UL, 0UL
@@ -22,6 +25,9 @@ __device__ __constant__ var b_bn_254 [LIMBS] {
     0x334bea4e696bd284UL, 0x2a1f6744ce179d8eUL 
 };
 
+/**
+ * Generator point = (x, y) = (1, 2)
+ */
 __device__ __constant__ var one_x_bn_254[LIMBS] = {
     0xd35d438dc58f0d9dUL, 0xa78eb28f5c70b3dUL, 
     0x666ea36f7879462cUL, 0xe0a77c19a07df2fUL
