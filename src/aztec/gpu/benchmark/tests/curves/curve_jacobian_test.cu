@@ -422,6 +422,145 @@ __global__ void add_dbl_consistency_repeated
     }
 }
 
+/* -------------------------- Group Exponentiation Check Against Constants Test ---------------------------------------------- */
+__global__ void initialize_group_exponentiation
+(var *a, var *b, var *c, var *expected_x, var *expected_y, var *expected_z) {
+    fq_gpu a_x{ 0x184b38afc6e2e09a, 0x4965cd1c3687f635, 0x334da8e7539e71c4, 0xf708d16cfe6e14 };
+    fq_gpu a_y{ 0x2a6ff6ffc739b3b6, 0x70761d618b513b9, 0xbf1645401de26ba1, 0x114a1616c164b980 };
+    fq_gpu a_z{ 0x10143ade26bbd57a, 0x98cf4e1f6c214053, 0x6bfdc534f6b00006, 0x1875e5068ababf2c };
+    fq_gpu exp_x{ 0xC22BA855EE138794, 0xA61591A7E7FD82BF, 0xE156E7E491B4B7E2, 0x2F4620C8373C106A };
+    fq_gpu exp_y{ 0xFAFBA721679C418, 0xE5491810D637BB55, 0x64B6FAD0A59D97B2, 0x111DA26AEEE41706 };
+    fq_gpu exp_z{ 0x59F11DAE3A07BF31, 0xDB2756DB66333FB, 0x34F2D97DAD44161, 0xD1A485A89C277DA };
+
+    for (int i = 0; i < LIMBS_NUM; i++) {
+        a[i] = a_x.data[i];
+        b[i] = a_y.data[i];
+        c[i] = a_z.data[i];
+        expected_x[i] = exp_x.data[i];
+        expected_y[i] = exp_y.data[i];
+        expected_z[i] = exp_z.data[i];
+    }
+}
+
+__global__ void group_exponentiation(uint64_t *a, uint64_t *b, uint64_t *c, var *res_x, var *res_y, var *res_z) {
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+
+    g1::element one; 
+    g1::element R;
+    g1::element Q;
+
+    fr_gpu exponent{ 0xb67299b792199cf0, 0xc1da7df1e7e12768, 0x692e427911532edf, 0x13dd85e87dc89978 };
+
+    fq_gpu::load(gpu_barretenberg::one_x_bn_254[tid], one.x.data[tid]);
+    fq_gpu::load(gpu_barretenberg::one_y_bn_254[tid], one.y.data[tid]);
+    fq_gpu::load(fq_gpu::one().data[tid], one.z.data[tid]);
+
+    if (tid < LIMBS) {
+        // Initialize 'R' to the identity element, Q to the curve point
+        fq_gpu::load(0, R.x.data[tid]); 
+        fq_gpu::load(0, R.y.data[tid]); 
+        fq_gpu::load(0, R.z.data[tid]); 
+
+        fq_gpu::load(one.x.data[tid], Q.x.data[tid]);
+        fq_gpu::load(one.y.data[tid], Q.y.data[tid]);
+        fq_gpu::load(one.z.data[tid], Q.z.data[tid]);
+
+        // Loop for each limb starting with the last limb
+        for (int j = 3; j >= 0; j--) {
+            // Loop for each bit of scalar
+            for (int i = 64; i >= 0; i--) {
+                // Performs bit-decompositon by traversing the bits of the scalar from MSB to LSB
+                // and extracting the i-th bit of scalar in limb.
+                if (((exponent.data[j] >> i) & 1) ? 1 : 0)
+                    g1::add(
+                        R.x.data[tid], R.y.data[tid], R.z.data[tid], 
+                        Q.x.data[tid], Q.y.data[tid], Q.z.data[tid], 
+                        R.x.data[tid], R.y.data[tid], R.z.data[tid]
+                    );
+                if (i != 0) 
+                    g1::doubling(
+                        R.x.data[tid], R.y.data[tid], R.z.data[tid], 
+                        R.x.data[tid], R.y.data[tid], R.z.data[tid]
+                    );
+            }
+        }
+    }
+
+    // Store the final value of R into the result array for this limb
+    fq_gpu::load(R.x.data[tid], res_x[tid]);
+    fq_gpu::load(R.y.data[tid], res_y[tid]);
+    fq_gpu::load(R.z.data[tid], res_z[tid]);
+
+    // Convert back from montgomery form
+    fq_gpu::from_monty(res_x[tid], res_x[tid]);
+    fq_gpu::from_monty(res_y[tid], res_y[tid]);
+    fq_gpu::from_monty(res_z[tid], res_z[tid]);
+}
+
+/* -------------------------- Operator Ordering Test ---------------------------------------------- */
+__global__ void initialize_operator_ordering(var *a, var *b, var *c, var *d) {
+    fr_gpu scalar{ 0xcfbfd4441138823e, 0xb5f817e28a1ef904, 0xefb7c5629dcc1c42, 0x1a9ed3d6f846230e };
+
+    for (int i = 0; i < LIMBS_NUM; i++) {
+        a[i] = gpu_barretenberg::one_x_bn_254[i];
+        b[i] = gpu_barretenberg::one_y_bn_254[i];
+        c[i] = fq_gpu::one().data[i];
+        d[i] = scalar.data[i];
+    }
+}
+
+__global__ void operator_ordering(uint64_t *a, uint64_t *b, uint64_t *c, uint64_t *d, var *res_x, var *res_y, var *res_z) {
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+
+    g1::element b_new;
+    g1::element c_new;
+    g1::element d_new;
+
+    // Copy a into b
+    fq_gpu::load(a[tid], b_new.x.data[tid]);
+    fq_gpu::load(b[tid], b_new.y.data[tid]);
+    fq_gpu::load(c[tid], b_new.z.data[tid]);
+
+    // c = a + b
+    g1::add(
+        a[tid], b[tid], c[tid], 
+        b_new.x.data[tid], b_new.y.data[tid], b_new.z.data[tid], 
+        c_new.x.data[tid], c_new.y.data[tid], c_new.z.data[tid]
+    );
+
+    // Double is c == 0
+    if (fq_gpu::is_zero(c_new.x.data[tid]) && fq_gpu::is_zero(c_new.y.data[tid]) && fq_gpu::is_zero(c_new.z.data[tid])) {
+        g1::doubling(
+            a[tid], b[tid], c[tid], 
+            c_new.x.data[tid], c_new.y.data[tid], c_new.z.data[tid]
+        );
+    }
+
+    // d = b + a
+    g1::add(
+        b_new.x.data[tid], b_new.y.data[tid], b_new.z.data[tid], 
+        a[tid], b[tid], c[tid], 
+        d_new.x.data[tid], d_new.y.data[tid], d_new.z.data[tid]
+    );
+
+    // Double is d == 0
+    if (fq_gpu::is_zero(d_new.x.data[tid]) && fq_gpu::is_zero(d_new.y.data[tid]) && fq_gpu::is_zero(d_new.z.data[tid])) {
+        g1::doubling(
+            b_new.x.data[tid], b_new.y.data[tid], b_new.z.data[tid], 
+            d_new.x.data[tid], d_new.y.data[tid], d_new.z.data[tid]
+        );
+    }
+
+    // Return final result. Expect c == d
+    fq_gpu::load(d_new.x.data[tid], res_x[tid]);
+    fq_gpu::load(d_new.y.data[tid], res_y[tid]);
+    fq_gpu::load(d_new.z.data[tid], res_z[tid]);
+
+    fq_gpu::from_monty(res_x[tid], res_x[tid]);
+    fq_gpu::from_monty(res_y[tid], res_y[tid]);
+    fq_gpu::from_monty(res_z[tid], res_z[tid]);
+}
+
 /* -------------------------- Executing Initialization and Workload Kernels ---------------------------------------------- */
 
 void assert_checks(var *expected, var *result) {
@@ -447,19 +586,19 @@ void assert_checks(var *expected, var *result) {
 
 void execute_kernels
 (var *a, var *b, var *c, var *x, var *y, var *z, var *expected_x, var *expected_y, var *expected_z, var *res_x, var *res_y, var *res_z) {
-    // // Mixed Addition Test
-    // initialize_mixed_add_check_against_constants<<<BLOCKS, THREADS>>>(a, b, c, x, y, z, expected_x, expected_y, expected_z);
-    // mixed_add_check_against_constants<<<BLOCKS, LIMBS_NUM>>>(a, b, c, x, y, z, res_x, res_y, res_z);
-    // assert_checks(expected_x, res_x);
-    // assert_checks(expected_y, res_y);
-    // assert_checks(expected_z, res_z);
+    // Mixed Addition Test
+    initialize_mixed_add_check_against_constants<<<BLOCKS, THREADS>>>(a, b, c, x, y, z, expected_x, expected_y, expected_z);
+    mixed_add_check_against_constants<<<BLOCKS, LIMBS_NUM>>>(a, b, c, x, y, z, res_x, res_y, res_z);
+    assert_checks(expected_x, res_x);
+    assert_checks(expected_y, res_y);
+    assert_checks(expected_z, res_z);
 
-    // // Doubling Test
-    // initialize_dbl_check_against_constants<<<BLOCKS, THREADS>>>(a, b, c, x, y, z, expected_x, expected_y, expected_z);
-    // dbl_check_against_constants<<<BLOCKS, LIMBS_NUM>>>(a, b, c, x, y, z, res_x, res_y, res_z);
-    // assert_checks(expected_x, res_x);
-    // assert_checks(expected_y, res_y);
-    // assert_checks(expected_z, res_z);
+    // Doubling Test
+    initialize_dbl_check_against_constants<<<BLOCKS, THREADS>>>(a, b, c, x, y, z, expected_x, expected_y, expected_z);
+    dbl_check_against_constants<<<BLOCKS, LIMBS_NUM>>>(a, b, c, x, y, z, res_x, res_y, res_z);
+    assert_checks(expected_x, res_x);
+    assert_checks(expected_y, res_y);
+    assert_checks(expected_z, res_z);
 
     // Addition Test
     initialize_add_check_against_constants<<<BLOCKS, THREADS>>>(a, b, c, x, y, z, expected_x, expected_y, expected_z);
@@ -468,23 +607,37 @@ void execute_kernels
     assert_checks(expected_y, res_y);
     assert_checks(expected_z, res_z);
 
-    // // Add Exception Test
-    // initialize_add_exception_test_dbl<<<BLOCKS, THREADS>>>(a, b, c, x, y, z);
-    // add_exception_test_dbl<<<BLOCKS, LIMBS_NUM>>>(a, b, c, x, y, z, expected_x, expected_y, expected_z, res_x, res_y, res_z);
-    // assert_checks(expected_x, res_x);
-    // assert_checks(expected_y, res_y);
-    // assert_checks(expected_z, res_z);
+    // Add Exception Test
+    initialize_add_exception_test_dbl<<<BLOCKS, THREADS>>>(a, b, c, x, y, z);
+    add_exception_test_dbl<<<BLOCKS, LIMBS_NUM>>>(a, b, c, x, y, z, expected_x, expected_y, expected_z, res_x, res_y, res_z);
+    assert_checks(expected_x, res_x);
+    assert_checks(expected_y, res_y);
+    assert_checks(expected_z, res_z);
 
     // Add Double Consistency Test
-    // initialize_add_dbl_consistency<<<BLOCKS, THREADS>>>(a, b, c, x, y, z);
-    // add_dbl_consistency<<<BLOCKS, LIMBS_NUM>>>(a, b, c, x, y, z, expected_x, expected_y, expected_z, res_x, res_y, res_z);
-    // assert_checks(expected_x, res_x);
-    // assert_checks(expected_y, res_y);
-    // assert_checks(expected_z, res_z);
+    initialize_add_dbl_consistency<<<BLOCKS, THREADS>>>(a, b, c, x, y, z);
+    add_dbl_consistency<<<BLOCKS, LIMBS_NUM>>>(a, b, c, x, y, z, expected_x, expected_y, expected_z, res_x, res_y, res_z);
+    assert_checks(expected_x, res_x);
+    assert_checks(expected_y, res_y);
+    assert_checks(expected_z, res_z);
 
-    // // Add Double Consistency Repeated Test
-    // initialize_add_dbl_consistency_repeated<<<BLOCKS, THREADS>>>(a, b, c);
-    // add_dbl_consistency_repeated<<<BLOCKS, LIMBS_NUM>>>(a, b, c, expected_x, expected_y, expected_z, res_x, res_y, res_z);
+    // Add Double Consistency Repeated Test
+    initialize_add_dbl_consistency_repeated<<<BLOCKS, THREADS>>>(a, b, c);
+    add_dbl_consistency_repeated<<<BLOCKS, LIMBS_NUM>>>(a, b, c, expected_x, expected_y, expected_z, res_x, res_y, res_z);
+
+    // Group Exponentiation Consistency Test
+    initialize_group_exponentiation<<<BLOCKS, THREADS>>>(a, b, c, expected_x, expected_y, expected_z);
+    group_exponentiation<<<BLOCKS, LIMBS_NUM>>>(a, b, c, res_x, res_y, res_z);
+    assert_checks(expected_x, res_x);
+    assert_checks(expected_y, res_y);
+    assert_checks(expected_z, res_z);
+
+    // Operator Ordering Test
+    initialize_operator_ordering<<<BLOCKS, THREADS>>>(a, b, c, x);
+    operator_ordering<<<BLOCKS, LIMBS_NUM>>>(a, b, c, x, res_x, res_y, res_z);
+    assert_checks(expected_x, res_x);
+    assert_checks(expected_y, res_y);
+    assert_checks(expected_z, res_z);
 }
 
 /* -------------------------- Main Entry Function ---------------------------------------------- */

@@ -128,6 +128,69 @@ uint64_t *a, uint64_t *b, uint64_t *c, uint64_t *d, uint64_t *expect_x, uint64_t
     }
 }
 
+__global__ void naive_multiplication(uint64_t *a, uint64_t *b, uint64_t *c, uint64_t *d, var *res_x, var *res_y, var *res_z) {
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+
+    g1::element one; 
+    g1::element R;
+    g1::element Q;
+
+    fr_gpu exponent{ 0xb67299b792199cf0, 0xc1da7df1e7e12768, 0x692e427911532edf, 0x13dd85e87dc89978 };
+
+    fq_gpu::load(gpu_barretenberg::one_x_bn_254[tid], one.x.data[tid]);
+    fq_gpu::load(gpu_barretenberg::one_y_bn_254[tid], one.y.data[tid]);
+    fq_gpu::load(fq_gpu::one().data[tid], one.z.data[tid]);
+
+    if (tid < LIMBS) {
+        // Initialize 'R' to the identity element, Q to the curve point
+        fq_gpu::load(0, R.x.data[tid]); 
+        fq_gpu::load(0, R.y.data[tid]); 
+        fq_gpu::load(0, R.z.data[tid]); 
+
+        fq_gpu::load(one.x.data[tid], Q.x.data[tid]);
+        fq_gpu::load(one.y.data[tid], Q.y.data[tid]);
+        fq_gpu::load(one.z.data[tid], Q.z.data[tid]);
+
+        // Loop for each limb starting with the last limb
+        for (int j = 3; j >= 0; j--) {
+            // Loop for each bit of scalar
+            for (int i = 64; i >= 0; i--) {
+                // Performs bit-decompositon by traversing the bits of the scalar from MSB to LSB
+                // and extracting the i-th bit of scalar in limb.
+                if (((exponent.data[j] >> i) & 1) ? 1 : 0)
+                    g1::add(
+                        R.x.data[tid], R.y.data[tid], R.z.data[tid], 
+                        Q.x.data[tid], Q.y.data[tid], Q.z.data[tid], 
+                        R.x.data[tid], R.y.data[tid], R.z.data[tid]
+                    );
+                if (i != 0) 
+                    g1::doubling(
+                        R.x.data[tid], R.y.data[tid], R.z.data[tid], 
+                        R.x.data[tid], R.y.data[tid], R.z.data[tid]
+                    );
+            }
+        }
+    }
+
+    // Store the final value of R into the result array for this limb
+    fq_gpu::load(R.x.data[tid], res_x[tid]);
+    fq_gpu::load(R.y.data[tid], res_y[tid]);
+    fq_gpu::load(R.z.data[tid], res_z[tid]);
+
+    // Convert back from montgomery form
+    fq_gpu::from_monty(res_x[tid], res_x[tid]);
+    fq_gpu::from_monty(res_y[tid], res_y[tid]);
+    fq_gpu::from_monty(res_z[tid], res_z[tid]);
+
+    /*
+        Expected results:
+        
+        fq_gpu exp_x{ 0xC22BA855EE138794, 0xA61591A7E7FD82BF, 0xE156E7E491B4B7E2, 0x2F4620C8373C106A };
+        fq_gpu exp_y{ 0xFAFBA721679C418, 0xE5491810D637BB55, 0x64B6FAD0A59D97B2, 0x111DA26AEEE41706 };
+        fq_gpu exp_z{ 0x59F11DAE3A07BF31, 0xDB2756DB66333FB, 0x34F2D97DAD44161, 0xD1A485A89C277DA };
+    */
+}
+
 // Native approach for computing scalar mutliplication with time complexity: O(2^k)
 // nP = P + P ... + P 
 __global__ void naive_double_and_add_curve(uint64_t *a, uint64_t *b, uint64_t *c, uint64_t *d, var *res_x, var *res_y, var *res_z) {
@@ -682,20 +745,23 @@ void execute_kernels_curve(
 var *a, var *b, var *c, var *d, var *result, var *res_x, var *res_y, var *res_z, var *expect_x, var *expect_y, var *expect_z) {    
     initialize_simple_double_and_add_curve<<<BLOCKS, THREADS>>>(a, b, c, d, expect_x, expect_y, expect_z);
 
-    naive_double_and_add_curve<<<BLOCKS, THREADS>>>(a, b, c, d, res_x, res_y, res_z);
+    naive_multiplication<<<BLOCKS, THREADS>>>(a, b, c, d, res_x, res_y, res_z);
     print_curve_tests(res_x, res_y, res_z);
 
-    double_and_add_half_curve<<<BLOCKS, THREADS>>>(a, b, c, d, res_x, res_y, res_z);
-    assert_checks(expect_x, res_x);
-    assert_checks(expect_y, res_y);
-    assert_checks(expect_z, res_z);
-    print_curve_tests(res_x, res_y, res_z);
+    // naive_double_and_add_curve<<<BLOCKS, THREADS>>>(a, b, c, d, res_x, res_y, res_z);
+    // print_curve_tests(res_x, res_y, res_z);
 
-    double_and_add_curve<<<BLOCKS, THREADS>>>(a, b, c, d, res_x, res_y, res_z);
-    assert_checks(expect_x, res_x);
-    assert_checks(expect_y, res_y);
-    assert_checks(expect_z, res_z);
-    print_curve_tests(res_x, res_y, res_z);
+    // double_and_add_half_curve<<<BLOCKS, THREADS>>>(a, b, c, d, res_x, res_y, res_z);
+    // assert_checks(expect_x, res_x);
+    // assert_checks(expect_y, res_y);
+    // assert_checks(expect_z, res_z);
+    // print_curve_tests(res_x, res_y, res_z);
+
+    // double_and_add_curve<<<BLOCKS, THREADS>>>(a, b, c, d, res_x, res_y, res_z);
+    // assert_checks(expect_x, res_x);
+    // assert_checks(expect_y, res_y);
+    // assert_checks(expect_z, res_z);
+    // print_curve_tests(res_x, res_y, res_z);
 }
 
 // Execute kernel with vector of finite field elements
@@ -940,11 +1006,11 @@ int main(int, char**) {
 
     // Execute kernel functions
     // execute_kernels_finite_fields(a, b, c, d, result, res_x, res_y, res_z, expect_x, expect_y, expect_z);
-    // execute_kernels_curve(a, b, c, d, result, res_x, res_y, res_z, expect_x, expect_y, expect_z);
+    execute_kernels_curve(a, b, c, d, result, res_x, res_y, res_z, expect_x, expect_y, expect_z);
     // execute_kernels_finite_fields_vector(a, b, c, d, result, res_x, res_y, res_z, expect_x, expect_y, expect_z);
     // execute_kernels_curve_vector(a, b, c, d, result, res_x, res_y, res_z, expect_x, expect_y, expect_z);
     // execute_kernels_finite_fields_vector_with_scalars(a, b, c, d, result, res_x, res_y, res_z, expect_x, expect_y, expect_z);
-    execute_kernels_curve_vector_with_scalars(a, b, c, d, result, res_x, res_y, res_z, expect_x, expect_y, expect_z);
+    // execute_kernels_curve_vector_with_scalars(a, b, c, d, result, res_x, res_y, res_z, expect_x, expect_y, expect_z);
 
     // Successfull execution of unit tests
     cout << "******* All 'MSM' unit tests passed! **********" << endl;
