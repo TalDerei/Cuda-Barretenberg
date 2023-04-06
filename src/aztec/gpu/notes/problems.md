@@ -157,3 +157,5 @@
     The obvious problems is that [1] sum reduction kernel is inefficient because its performing a standard reduction.
     [2] the final accumulation is simply a double and add, which scales 273N. And on top of that, i'm not sure whether 
     the answer is correct. 
+
+    6. ***Cannot just simply multiple a field element by a group element in order to calculate an exponentiation. The naive method would be a double and add formula, as I implemented. 

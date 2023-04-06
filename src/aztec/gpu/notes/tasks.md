@@ -32,7 +32,8 @@
         - [x] Remove rust bindings
         - [x] Read in curve points and scalars
         - [ ] Port MSM implemenation over BN-254 curve
-            - [x] Add naive reference method
+            - [x] Add naive double and add kernel (reference)
+            - [x] Add sum reduction kernel 
             - [ ] Add bucket method
         - [ ] Experiment between Lagrange SRS over monomial SRS
         - [ ] Add "inlining" to C++/cuda functions
@@ -53,3 +54,7 @@
     - [x] Implement for vector of finite field elements
     - [x] Implement for vector of elliptic curve points
 - [ ] MVP KZG-10 commitment scheme 
+- [ ] NTT port
+    - [x] Generate twiddle factors (roots of unity) over BN-254
+    - [x] Store twiddle factors in table
+    - [ ] Check how to verify final result for correcntess
