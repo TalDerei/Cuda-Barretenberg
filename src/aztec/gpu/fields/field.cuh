@@ -110,6 +110,9 @@ __device__ __constant__ var CUBE_ROOT_SCALAR[LIMBS] = {
     0x8be4ba08b19a750aUL, 0x1cbd5653a5661c25UL
 };
 
+/**
+ * Primitive roots of unity
+ */
 __device__ __constant__ var PRIMTIVE_ROOTS_UNITY_SCALAR[LIMBS] = {
     0x636e735580d13d9cUL, 0xa22bf3742445ffd6UL,
     0x56452ac01eb203d8UL, 0x1860ef942963f9e7UL

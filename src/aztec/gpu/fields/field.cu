@@ -114,7 +114,7 @@ __device__ var field_gpu<params>::neg(var &x, var &res) {
 }
 
 /**
- * Mongomery multiplication (CIOS algorithm) for modular multiplications
+ * Montgomery multiplication (CIOS algorithm) for modular multiplications
  */
 template<class params> 
 __device__ var field_gpu<params>::mul(const var a, const var b, var &res) {
