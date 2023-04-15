@@ -159,3 +159,44 @@
     the answer is correct. 
 
     6. ***Cannot just simply multiple a field element by a group element in order to calculate an exponentiation. The naive method would be a double and add formula, as I implemented. 
+
+    7. Need to reconcile why a different value of C leads to different answers?
+    Starting from the top, there are 5 kernels in the MSM calculation. The 'initialize_buckets_kernel'
+    is trivial and will not be the problem. 'split_scalars_kernel' may be a problem, but I don't see any
+    other way instead of using 64-bit values as barriers to split the scalars. The sorting algorithms 
+    aren't the problem because it's the same code as used in Icicle. The 'accumulate_buckets_kernel'
+    kernel seems to be correct since it's simply adding the value in the bucket, which will be a single value
+    --- ie. the original point. The 'bucket_module_sum_reduction_lernel_0' kernel was checked using another
+    kernel 'test_kernel' and the results match. The 'final_accumulation_kernel' performing the final
+    double and add using "Horner's Rule" was checked against the exponentiation operation in barretenberg,
+    and they yield the same results. 
+
+    Therefore, I'm 1. not sure where the problem here lies, and 2. not sure why the value of 'c' is yielding
+    different results. The only variable here is the split kernels method, but that was also directly
+    taken from Ingonyama's Icicle library. Need to look deeper into what the problem here is...can't move
+    on without solving this critical problem.
+
+    I will check against the original Icicle library outputs and try to compare the logic, even though it's
+    over a different elliptic curve (BLS-381). 
+
+    Another option to experiemnt with using different point representations in the file, i.e. 1,2,1 instead?
+    Update: looking at the original Icicle library, different choices of c result in a different answer, but 
+    the overall MSM answer is correct. Additionally, the short_msm, large_msm, and reference_msm are all 
+    yielding different answers, but the making conversions in rust to a final correct form. Need to investigate
+    this. 
+
+    Update: The issue was with the how the answer was being represented, i.e. montgomery form. Of course!
+
+    8. Add notes on the different types of MSM baseline implementations.
+    There is 1. Baseline MSM which performs a standard double and add, 2. Sum reduction technique,
+    and 3. Bucket method. 
+
+    9. At the moment, we have correctness errors for MSM with multiple points (ie. 2 points and 2 scalars for example)?
+    Need to figure out why there's correctness issues. I'm also not getting the correct results trying to compare the
+    naive double and add result to the pippenger result in barretenberg for some reason...Update: Seems like my naive double-and
+    add and MSM implemnentation are yielding the same results for multiple points, and the result is correct when comparing against
+    the naive double-and-add in the barretenberg repo. But, still remains the original conflict: comparing the naive double-and-add
+    and MSM implementations in the barretneber codebase. Not sure what's causing that mismatch. 
+
+    10. The performance is not good for the MSM kernel...Need to figure out what's bottlenecking the performance?
+    I think it's because there's conditional branching due to the double function...look into it.
