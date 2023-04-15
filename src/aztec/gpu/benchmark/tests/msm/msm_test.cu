@@ -107,7 +107,7 @@ __global__ void double_and_add_field(uint64_t *scalar, uint64_t *point, uint64_t
 /* -------------------------- Kernel Functions For Elliptic Curve Tests ---------------------------------------------- */
 
 // Initialize points and scalars
-__global__ void initialize_simple_double_and_add_curve(
+__global__ void initialize_simple_double_and_add_curve_single(
 uint64_t *a, uint64_t *b, uint64_t *c, uint64_t *d, uint64_t *expect_x, uint64_t *expect_y, uint64_t *expect_z) {
     fq_gpu point_x{ 0x184b38afc6e2e09a, 0x4965cd1c3687f635, 0x334da8e7539e71c4, 0xf708d16cfe6e14 };
     fq_gpu point_y{ 0x2a6ff6ffc739b3b6, 0x70761d618b513b9, 0xbf1645401de26ba1, 0x114a1616c164b980 };
@@ -128,7 +128,8 @@ uint64_t *a, uint64_t *b, uint64_t *c, uint64_t *d, uint64_t *expect_x, uint64_t
     }
 }
 
-__global__ void naive_multiplication(uint64_t *a, uint64_t *b, uint64_t *c, uint64_t *d, var *res_x, var *res_y, var *res_z) {
+// working double and add with a single point and scalar as baseline reference
+__global__ void naive_multiplication_single(uint64_t *a, uint64_t *b, uint64_t *c, uint64_t *d, var *res_x, var *res_y, var *res_z) {
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
 
     g1::element one; 
@@ -178,17 +179,96 @@ __global__ void naive_multiplication(uint64_t *a, uint64_t *b, uint64_t *c, uint
     fq_gpu::load(R.z.data[tid], res_z[tid]);
 
     // Convert back from montgomery form
-    fq_gpu::from_monty(res_x[tid], res_x[tid]);
-    fq_gpu::from_monty(res_y[tid], res_y[tid]);
-    fq_gpu::from_monty(res_z[tid], res_z[tid]);
+    // fq_gpu::from_monty(res_x[tid], res_x[tid]);
+    // fq_gpu::from_monty(res_y[tid], res_y[tid]);
+    // fq_gpu::from_monty(res_z[tid], res_z[tid]);
+}
 
-    /*
-        Expected results:
-        
-        fq_gpu exp_x{ 0xC22BA855EE138794, 0xA61591A7E7FD82BF, 0xE156E7E491B4B7E2, 0x2F4620C8373C106A };
-        fq_gpu exp_y{ 0xFAFBA721679C418, 0xE5491810D637BB55, 0x64B6FAD0A59D97B2, 0x111DA26AEEE41706 };
-        fq_gpu exp_z{ 0x59F11DAE3A07BF31, 0xDB2756DB66333FB, 0x34F2D97DAD44161, 0xD1A485A89C277DA };
-    */
+// working double and add with multiple points and scalars as baseline reference
+__global__ void naive_multiplication_multiple(fr_gpu *test_scalars, g1::element *test_points, g1::element *final_result) {
+int tid = blockIdx.x * blockDim.x + threadIdx.x;
+
+    g1::element R;
+    g1::element Q;
+
+    // Initialize points and scalars
+    fr_gpu scalar0 { 0xE49C36330BB35C4E, 0x22A5041C3B1B0B19, 0x37EDFE43AB6771EF, 0xCDA9012E9BF4459 };
+    fr_gpu scalar1 { 0xCE3F41131DD7E353, 0xF089615FED1CDBFE, 0x9E0724A3FA817F99, 0xCB83233939D786B };
+    fq_gpu point0_x { 0xD35D438DC58F0D9D, 0xA78EB28F5C70B3D, 0x666EA36F7879462C, 0xE0A77C19A07DF2F };
+    fq_gpu point0_y { 0xA6BA871B8B1E1B3A, 0x14F1D651EB8E167B, 0xCCDD46DEF0F28C58, 0x1C14EF83340FBE5E };
+    fq_gpu point0_z { 0xD35D438DC58F0D9D, 0xA78EB28F5C70B3D, 0x666EA36F7879462C, 0xE0A77C19A07DF2F };
+    fq_gpu point1_x { 0x71930C11D782E155, 0xA6BB947CFFBE3323, 0xAA303344D4741444, 0x2C3B3F0D26594943 };
+    fq_gpu point1_y { 0xD186911225DBDF54, 0x1A10FED0E5557E9E, 0xA3C3448E12102463, 0x44B3AD628E5381F4 };
+    fq_gpu point1_z { 0xD35D438DC58F0D9D, 0xA78EB28F5C70B3D, 0x666EA36F7879462C, 0xE0A77C19A07DF2F };
+
+    // Load points and scalars
+    fq_gpu::load(scalar0.data[tid % 4], test_scalars[0].data[tid % 4]); 
+    fq_gpu::load(scalar1.data[tid % 4], test_scalars[1].data[tid % 4]); 
+    fq_gpu::load(point0_x.data[tid % 4], test_points[0].x.data[tid % 4]); 
+    fq_gpu::load(point0_y.data[tid % 4], test_points[0].y.data[tid % 4]); 
+    fq_gpu::load(point0_z.data[tid % 4], test_points[0].z.data[tid % 4]); 
+    fq_gpu::load(point1_x.data[tid % 4], test_points[1].x.data[tid % 4]); 
+    fq_gpu::load(point1_y.data[tid % 4], test_points[1].y.data[tid % 4]); 
+    fq_gpu::load(point1_z.data[tid % 4], test_points[1].z.data[tid % 4]); 
+
+    if (tid < LIMBS) {
+        // Initialize result as 0
+        fq_gpu::load(0, final_result[0].x.data[tid % 4]); 
+        fq_gpu::load(0, final_result[0].y.data[tid % 4]); 
+        fq_gpu::load(0, final_result[0].z.data[tid % 4]); 
+        // Loop for each bucket module
+        for (unsigned z = 0; z < 2; z++) {
+            // Initialize 'R' to the identity element, Q to the curve point
+            fq_gpu::load(0, R.x.data[tid % 4]); 
+            fq_gpu::load(0, R.y.data[tid % 4]); 
+            fq_gpu::load(0, R.z.data[tid % 4]); 
+
+            // Load partial sums
+            // change index to 'z'
+            fq_gpu::load(test_points[z].x.data[tid % 4], Q.x.data[tid % 4]);
+            fq_gpu::load(test_points[z].y.data[tid % 4], Q.y.data[tid % 4]);
+            fq_gpu::load(test_points[z].z.data[tid % 4], Q.z.data[tid % 4]);
+
+            // Sync loads
+            __syncthreads();
+    
+            // Loop for each limb starting with the last limb
+            for (int j = 3; j >= 0; j--) {
+                // Loop for each bit of scalar
+                for (int i = 64; i >= 0; i--) {   
+                    // Performs bit-decompositon by traversing the bits of the scalar from MSB to LSB
+                    // and extracting the i-th bit of scalar in limb.
+                    if (((test_scalars[z].data[j] >> i) & 1) ? 1 : 0)
+                        g1::add(
+                            Q.x.data[tid % 4], Q.y.data[tid % 4], Q.z.data[tid % 4], 
+                            R.x.data[tid % 4], R.y.data[tid % 4], R.z.data[tid % 4], 
+                            R.x.data[tid % 4], R.y.data[tid % 4], R.z.data[tid % 4]
+                        );
+                    if (i != 0) 
+                        g1::doubling(
+                            R.x.data[tid % 4], R.y.data[tid % 4], R.z.data[tid % 4], 
+                            R.x.data[tid % 4], R.y.data[tid % 4], R.z.data[tid % 4]
+                        );
+                }
+            }
+            g1::add(
+                R.x.data[tid % 4], 
+                R.y.data[tid % 4], 
+                R.z.data[tid % 4],
+                final_result[0].x.data[tid % 4],
+                final_result[0].y.data[tid % 4],
+                final_result[0].z.data[tid % 4],
+                final_result[0].x.data[tid % 4], 
+                final_result[0].y.data[tid % 4], 
+                final_result[0].z.data[tid % 4]
+            );
+        }
+    }
+
+    // Convert back from montgomery form
+    // fq_gpu::from_monty(final_result[0].x.data[tid % 4], final_result[0].x.data[tid % 4]);
+    // fq_gpu::from_monty(final_result[0].y.data[tid % 4], final_result[0].y.data[tid % 4]);
+    // fq_gpu::from_monty(final_result[0].z.data[tid % 4], final_result[0].z.data[tid % 4]);
 }
 
 // Native approach for computing scalar mutliplication with time complexity: O(2^k)
@@ -743,25 +823,20 @@ var *a, var *b, var *c, var *d, var *result, var *res_x, var *res_y, var *res_z,
 // Execute kernel with curve elements
 void execute_kernels_curve(
 var *a, var *b, var *c, var *d, var *result, var *res_x, var *res_y, var *res_z, var *expect_x, var *expect_y, var *expect_z) {    
-    initialize_simple_double_and_add_curve<<<BLOCKS, THREADS>>>(a, b, c, d, expect_x, expect_y, expect_z);
-
-    naive_multiplication<<<BLOCKS, THREADS>>>(a, b, c, d, res_x, res_y, res_z);
+    naive_double_and_add_curve<<<BLOCKS, THREADS>>>(a, b, c, d, res_x, res_y, res_z);
     print_curve_tests(res_x, res_y, res_z);
 
-    // naive_double_and_add_curve<<<BLOCKS, THREADS>>>(a, b, c, d, res_x, res_y, res_z);
-    // print_curve_tests(res_x, res_y, res_z);
+    double_and_add_half_curve<<<BLOCKS, THREADS>>>(a, b, c, d, res_x, res_y, res_z);
+    assert_checks(expect_x, res_x);
+    assert_checks(expect_y, res_y);
+    assert_checks(expect_z, res_z);
+    print_curve_tests(res_x, res_y, res_z);
 
-    // double_and_add_half_curve<<<BLOCKS, THREADS>>>(a, b, c, d, res_x, res_y, res_z);
-    // assert_checks(expect_x, res_x);
-    // assert_checks(expect_y, res_y);
-    // assert_checks(expect_z, res_z);
-    // print_curve_tests(res_x, res_y, res_z);
-
-    // double_and_add_curve<<<BLOCKS, THREADS>>>(a, b, c, d, res_x, res_y, res_z);
-    // assert_checks(expect_x, res_x);
-    // assert_checks(expect_y, res_y);
-    // assert_checks(expect_z, res_z);
-    // print_curve_tests(res_x, res_y, res_z);
+    double_and_add_curve<<<BLOCKS, THREADS>>>(a, b, c, d, res_x, res_y, res_z);
+    assert_checks(expect_x, res_x);
+    assert_checks(expect_y, res_y);
+    assert_checks(expect_z, res_z);
+    print_curve_tests(res_x, res_y, res_z);    
 }
 
 // Execute kernel with vector of finite field elements
@@ -982,6 +1057,134 @@ var *a, var *b, var *c, var *d, var *result, var *res_x, var *res_y, var *res_z,
     print_curve_tests(res_x, res_y, res_z);
 }
 
+/* -------------------------- Executing Double-And-Add Functions ---------------------------------------------- */
+
+// Execute kernel with curve elements
+void execute_double_and_add_single(
+var *a, var *b, var *c, var *d, var *result, var *res_x, var *res_y, var *res_z, var *expect_x, var *expect_y, var *expect_z) {    
+    initialize_simple_double_and_add_curve_single<<<BLOCKS, THREADS>>>(a, b, c, d, expect_x, expect_y, expect_z);
+
+    naive_multiplication_single<<<BLOCKS, THREADS>>>(a, b, c, d, res_x, res_y, res_z);
+    cudaDeviceSynchronize();
+    print_curve_tests(res_x, res_y, res_z);
+
+    g1::element *final_res;
+    g1::element *expected_1;
+    g1::element *expected_2;
+    var *result_1;
+    var *result_2;
+    cudaMallocManaged(&final_res, 3 * LIMBS * 1 * sizeof(var));
+    cudaMallocManaged(&expected_1, 3 * LIMBS * 1 * sizeof(var));
+    cudaMallocManaged(&expected_2, 3 * LIMBS * 1 * sizeof(var));
+    cudaMallocManaged(&result_1, LIMBS * 1 * sizeof(var));
+    cudaMallocManaged(&result_2, LIMBS * 1 * sizeof(var));
+
+    // Convert final result
+    final_res[0].x.data[0] = res_x[0];
+    final_res[0].x.data[1] = res_x[1];
+    final_res[0].x.data[2] = res_x[2];
+    final_res[0].x.data[3] = res_x[3];
+    final_res[0].y.data[0] = res_y[0];
+    final_res[0].y.data[1] = res_y[1];
+    final_res[0].y.data[2] = res_y[2];
+    final_res[0].y.data[3] = res_y[3];
+    final_res[0].z.data[0] = res_z[0];
+    final_res[0].z.data[1] = res_z[1];
+    final_res[0].z.data[2] = res_z[2];
+    final_res[0].z.data[3] = res_z[3];
+
+    // Expected results from naive double-and-add kernel from Barretenberg
+    expected_1[0].x.data[0] = 0x9C9320BC891ED9DE;
+    expected_1[0].x.data[1] = 0xACE55F06AA29C3F2;
+    expected_1[0].x.data[2] = 0x24DB84E75A391315;
+    expected_1[0].x.data[3] = 0x595DBA53EFD6FD5B;
+    expected_1[0].y.data[0] = 0x9ECB0640B15EC4D0;
+    expected_1[0].y.data[1] = 0x7B9C653CA35FA1AE;
+    expected_1[0].y.data[2] = 0x5B387CDD03D7F5EA;
+    expected_1[0].y.data[3] = 0x4FCFDCA5887EEB8E;
+    expected_1[0].z.data[0] = 0xA35A8F1E4C0E6A4F;
+    expected_1[0].z.data[1] = 0x6715FFC8177D607C;
+    expected_1[0].z.data[2] = 0x71EFC8CAC5C4F073;
+    expected_1[0].z.data[3] = 0x2BFA6FF080354472;
+
+    // Expected results from custom MSM kernel
+    expected_2[0].x.data[0] = 0xE62BB32C93AA0F8A;
+    expected_2[0].x.data[1] = 0x97CEA47D1C9918D8;
+    expected_2[0].x.data[2] = 0x6E4F6B103D5CB238;
+    expected_2[0].x.data[3] = 0xCC97B85B5D3266B;
+    expected_2[0].y.data[0] = 0x384B9977174D6D23;
+    expected_2[0].y.data[1] = 0x9EB9C140BF105B1;
+    expected_2[0].y.data[2] = 0xEF83689C8B6B86AB;
+    expected_2[0].y.data[3] = 0x1DEE77175CFD916E;
+    expected_2[0].z.data[0] = 0x51EC9058273498D3;
+    expected_2[0].z.data[1] = 0x54FA2618A1043D98;
+    expected_2[0].z.data[2] = 0x86005E4D5FEBEB41;
+    expected_2[0].z.data[3] = 0x171CBD46E7C215D3;
+
+    comparator_kernel<<<1, 4>>>(final_res, expected_1, result_1);
+    comparator_kernel<<<1, 4>>>(final_res, expected_2, result_2);
+    cudaDeviceSynchronize();
+    print_field_tests(result_1);
+    print_field_tests(result_2);
+}
+
+// Execute kernel with curve elements
+void execute_double_and_add_multiple(
+var *a, var *b, var *c, var *d, var *result, var *res_x, var *res_y, var *res_z, var *expect_x, var *expect_y, var *expect_z) {    
+    // Allocate unified memory accessible by host and device
+    fr_gpu *scalars;
+    g1::element *points;
+    g1::element *final_result;
+    g1::element *expected_1;
+    g1::element *expected_2;
+    var *result_1;
+    var *result_2;
+    cudaMallocManaged(&scalars, 2 * LIMBS * sizeof(var));
+    cudaMallocManaged(&points, 2 * 3 * LIMBS * sizeof(var));
+    cudaMallocManaged(&final_result, 3 * LIMBS * sizeof(var));
+    cudaMallocManaged(&expected_1, 3 * LIMBS * sizeof(var));
+    cudaMallocManaged(&expected_2, 3 * LIMBS * sizeof(var));
+    cudaMallocManaged(&result_1, LIMBS * sizeof(var));
+    cudaMallocManaged(&result_2, LIMBS * sizeof(var));
+
+    naive_multiplication_multiple<<<BLOCKS, THREADS>>>(scalars, points, final_result);
+    cudaDeviceSynchronize();
+
+    // Expected results from custom MSM kernel
+    expected_1[0].x.data[0] = 0x7D08D399C74D6F60;
+    expected_1[0].x.data[1] = 0x8B7E6B6EB490841B;
+    expected_1[0].x.data[2] = 0xD4D3B85D62A522F0;
+    expected_1[0].x.data[3] = 0xA88CC30AEC67D21;
+    expected_1[0].y.data[0] = 0x4760C013E773E092;
+    expected_1[0].y.data[1] = 0x27AF313043E09A67;
+    expected_1[0].y.data[2] = 0x1B1C6848E1C81D14;
+    expected_1[0].y.data[3] = 0xD404C6D6230ABCF;
+    expected_1[0].z.data[0] = 0x8CEA309B633D24D2;
+    expected_1[0].z.data[1] = 0xC02A4EA980DA9C0;
+    expected_1[0].z.data[2] = 0x4C73226DC94B0750;
+    expected_1[0].z.data[3] = 0x148BF6C82971F1A0;
+
+    // Expected results from naive double-and-add kernel
+    expected_2[0].x.data[0] = 0x22D564276729916F;
+    expected_2[0].x.data[1] = 0xCE84C2A015B18E50;
+    expected_2[0].x.data[2] = 0xB609ED7D21C3346B;
+    expected_2[0].x.data[3] = 0x5CBE8AB22BDF0611;
+    expected_2[0].y.data[0] = 0x77D41ED256685368;
+    expected_2[0].y.data[1] = 0x3AC1367E35FA7D3B;
+    expected_2[0].y.data[2] = 0x35173845C2840DD4;
+    expected_2[0].y.data[3] = 0x1353139CDE2A848F;
+    expected_2[0].z.data[0] = 0xFBA158CF61C2E612;
+    expected_2[0].z.data[1] = 0x8F32B98BC4097D0F;
+    expected_2[0].z.data[2] = 0x82396ABF83AC1599;
+    expected_2[0].z.data[3] = 0x21498DDAAB185B8C;
+
+    comparator_kernel<<<1, 4>>>(final_result, expected_1, result_1);
+    comparator_kernel<<<1, 4>>>(final_result, expected_2, result_2);
+    cudaDeviceSynchronize();
+    print_field_tests(result_1);
+    print_field_tests(result_2);
+}
+
 /* -------------------------- Main Entry Function ---------------------------------------------- */
 
 int main(int, char**) {
@@ -1006,11 +1209,13 @@ int main(int, char**) {
 
     // Execute kernel functions
     // execute_kernels_finite_fields(a, b, c, d, result, res_x, res_y, res_z, expect_x, expect_y, expect_z);
-    execute_kernels_curve(a, b, c, d, result, res_x, res_y, res_z, expect_x, expect_y, expect_z);
+    // execute_kernels_curve(a, b, c, d, result, res_x, res_y, res_z, expect_x, expect_y, expect_z);
     // execute_kernels_finite_fields_vector(a, b, c, d, result, res_x, res_y, res_z, expect_x, expect_y, expect_z);
     // execute_kernels_curve_vector(a, b, c, d, result, res_x, res_y, res_z, expect_x, expect_y, expect_z);
     // execute_kernels_finite_fields_vector_with_scalars(a, b, c, d, result, res_x, res_y, res_z, expect_x, expect_y, expect_z);
     // execute_kernels_curve_vector_with_scalars(a, b, c, d, result, res_x, res_y, res_z, expect_x, expect_y, expect_z);
+    execute_double_and_add_single(a, b, c, d, result, res_x, res_y, res_z, expect_x, expect_y, expect_z);
+    execute_double_and_add_multiple(a, b, c, d, result, res_x, res_y, res_z, expect_x, expect_y, expect_z);
 
     // Successfull execution of unit tests
     cout << "******* All 'MSM' unit tests passed! **********" << endl;
