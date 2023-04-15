@@ -10,7 +10,7 @@ include_directories(../curves)
 # NTT
 add_executable(
     ntt
-    ntt.cu
+    main.cu
 )
 
 target_link_libraries(

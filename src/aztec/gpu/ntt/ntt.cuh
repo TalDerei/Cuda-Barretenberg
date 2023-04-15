@@ -1,9 +1,13 @@
 #include <iostream>
 #include "group.cu"
+#include <fstream>
 
 using namespace std;
 
 namespace ntt_common {
+
+size_t POINTS = 1 << 5;
+const uint64_t MAX_NUM_THREADS = 1024U;
 
 /**
  * Cooley-Tuckey NTT function decleration 
@@ -13,11 +17,19 @@ class ntt_t {
     public: 
         ntt_t() {}
         
-        uint64_t ntt_end2end(fr_gpu *arr, uint64_t n, bool inverse);
+        static void ntt_execute(uint64_t n, bool inverse);
         
-        fr_gpu *fill_twiddle_factors_array(uint64_t n_twiddles, fr_gpu omega);
+        static S *fill_twiddle_factors_array(uint64_t n_twiddles, S omega);
 
-        fr_gpu *ntt_template(fr_gpu *arr, uint64_t n, fr_gpu *d_twiddles, uint64_t n_twiddles, bool inverse);
+        static S *ntt_template(S *arr, uint64_t n, S *d_twiddles, uint64_t n_twiddles, bool inverse);
+        
+        static S *read_scalars(S *scalars);
+
+        static S *template_reverse_order(S *arr, uint64_t n, uint64_t logn);
+
+        static uint64_t reverseBits(uint64_t num, uint64_t logn);
+
+        static void template_ntt_on_device_memory(S *d_arr, uint64_t n, uint64_t logn, S *d_twiddles, uint64_t n_twiddles);
 };
 
 /**
