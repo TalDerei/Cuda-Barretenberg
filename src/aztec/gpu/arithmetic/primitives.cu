@@ -5,7 +5,7 @@
 #include <type_traits>
 
 // Perform operations on fixed-precision integers using 
-// Instructions in Nvidia's PTX Assemblt Language
+// Instructions in Nvidia's inline PTX Assembly Language
 namespace internal {
     typedef std::uint32_t u32;
     typedef std::uint64_t u64;

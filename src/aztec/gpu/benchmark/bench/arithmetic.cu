@@ -23,7 +23,8 @@ __global__ void initialize_mont_mult(uint64_t *a, uint64_t *b, uint64_t *res) {
 }
 
 // Each thread performs a single multiplication, so the total number of multiplications is 
-// equal to the total number of threads launched, which is NUM_POINTS * 4.
+// equal to the total number of blocks launched and each thread per block, which is POINTS * 4.
+// The launch parameters define 'GRID' blocks of 'THREADS' threads each.
 __global__ void mont_mult(uint64_t *a, uint64_t *b, uint64_t *res) {
     // Calculate global thread ID 
     size_t tid = (blockDim.x * blockIdx.x) + threadIdx.x;
@@ -85,3 +86,7 @@ int main(int, char**) {
 
     return 0;
 }
+
+/**
+ * TODO: Add assert check
+*/

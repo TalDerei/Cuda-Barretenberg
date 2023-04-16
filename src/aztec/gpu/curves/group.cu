@@ -3,54 +3,45 @@
 using namespace std;
 using namespace gpu_barretenberg;
 
-template <class fq_gpu> 
-__device__ void group_gpu<fq_gpu>::load_affine(affine_element & X, const var * y) {
+/* -------------------------- Affine and Jacobian Coordinate Operations ---------------------------------------------- */
 
+template <class fq_gpu, class fr_gpu> 
+__device__ void group_gpu<fq_gpu, fr_gpu>::load_affine(affine_element &X, affine_element &result) {
+    fq_gpu::load(X.x.data[0], result.x.data[0]);      
+    fq_gpu::load(X.x.data[1], result.x.data[1]);      
+    fq_gpu::load(X.x.data[2], result.x.data[2]);      
+    fq_gpu::load(X.x.data[3], result.x.data[3]);    
+        
+    fq_gpu::load(X.x.data[0], result.y.data[0]);      
+    fq_gpu::load(X.x.data[1], result.y.data[1]);      
+    fq_gpu::load(X.x.data[2], result.y.data[2]);      
+    fq_gpu::load(X.x.data[3], result.y.data[3]);  
 }
 
-template <class fq_gpu> 
-__device__ void group_gpu<fq_gpu>::load_jacobian(element & X, const var * y) {
+template <class fq_gpu, class fr_gpu> 
+__device__ void group_gpu<fq_gpu, fr_gpu>::load_jacobian(element &X, element &result) {
+    fq_gpu::load(X.x.data[0], result.x.data[0]);      
+    fq_gpu::load(X.x.data[1], result.x.data[1]);      
+    fq_gpu::load(X.x.data[2], result.x.data[2]);      
+    fq_gpu::load(X.x.data[3], result.x.data[3]);    
+        
+    fq_gpu::load(X.x.data[0], result.y.data[0]);      
+    fq_gpu::load(X.x.data[1], result.y.data[1]);      
+    fq_gpu::load(X.x.data[2], result.y.data[2]);      
+    fq_gpu::load(X.x.data[3], result.y.data[3]);  
 
+    fq_gpu::load(X.z.data[0], result.z.data[0]);      
+    fq_gpu::load(X.z.data[1], result.z.data[1]);      
+    fq_gpu::load(X.z.data[2], result.z.data[2]);      
+    fq_gpu::load(X.z.data[3], result.z.data[3]);  
 }
 
-template <class fq_gpu> 
-__device__ void group_gpu<fq_gpu>::is_affine(const affine_element &X) {
 
-}
-
-template <class fq_gpu> 
-__device__ void group_gpu<fq_gpu>::is_affine_equal(const affine_element & X) {
-
-}
-
-template <class fq_gpu> 
-__device__ void group_gpu<fq_gpu>::is_jacobian_equal(const affine_element & X) {
-
-}
-
-template <class fq_gpu> 
-__device__ void group_gpu<fq_gpu>::store_affine(const affine_element &X, const var *y) {
-
-}
-
-template <class fq_gpu> 
-__device__ void group_gpu<fq_gpu>::store_jacobian(const element &X, const var *y) {
-
-}
-
-template <class fq_gpu> 
-__device__ void group_gpu<fq_gpu>::set_zero(const element &X) {
-
-}
-
-template <class fq_gpu> 
-__device__ void group_gpu<fq_gpu>::is_zero(const element &X) {
-
-}
-
-// Elliptic curve algorithms: https://hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-0.html#addition-zadd-2007-m
-template <class fq_gpu>
-__device__ void group_gpu<fq_gpu>::mixed_add(var X, var Y, var Z, var A, var B, var &res_x, var &res_y, var &res_z) noexcept {
+/**
+ * Elliptic curve algorithms: https://hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-0.html#addition-zadd-2007-m
+ */
+template <class fq_gpu, class fr_gpu> 
+__device__ void group_gpu<fq_gpu, fr_gpu>::mixed_add(var X, var Y, var Z, var A, var B, var &res_x, var &res_y, var &res_z) {
     var z1z1, u2, s2, h, hh, i, j, r, v, t0, t1;
     
     // X Element
@@ -58,9 +49,7 @@ __device__ void group_gpu<fq_gpu>::mixed_add(var X, var Y, var Z, var A, var B, 
     fq_gpu::mul(A, z1z1, u2); 
     fq_gpu::mul(B, Z, s2);
     fq_gpu::mul(s2, z1z1, s2); 
-    // if (fq_gpu::equal(u2, X) && fq_gpu::equal(s2, Y)) {
-    //     // double
-    // }
+
     fq_gpu::sub(u2, X, h);   
     fq_gpu::square(h, hh);    
     fq_gpu::add(hh, hh, i);     
@@ -88,9 +77,14 @@ __device__ void group_gpu<fq_gpu>::mixed_add(var X, var Y, var Z, var A, var B, 
     fq_gpu::sub(t0, hh, res_z); 
 }
 
-template <class fq_gpu>
-__device__ void group_gpu<fq_gpu>::doubling(var X, var Y, var Z, var &res_x, var &res_y, var &res_z) noexcept {
+template <class fq_gpu, class fr_gpu> 
+__device__ void group_gpu<fq_gpu, fr_gpu>::doubling(var X, var Y, var Z, var &res_x, var &res_y, var &res_z) {
     var T0, T1, T2, T3;
+
+   // Check P == 0
+    if (fq_gpu::is_zero(Z)) {
+        fq_gpu::zero();
+    }
 
     // X Element
     fq_gpu::square(X, T0);              // T0 = x*x
@@ -121,9 +115,25 @@ __device__ void group_gpu<fq_gpu>::doubling(var X, var Y, var Z, var &res_x, var
     fq_gpu::sub(Y, T2, res_y);          // Y = Y - T2
 }
 
-template <class fq_gpu>
-__device__ void group_gpu<fq_gpu>::add(var X1, var Y1, var Z1, var X2, var Y2, var Z2, var &res_x, var &res_y, var &res_z) noexcept {
+/**
+ * Jacobian addition has cost 16T multiplications
+ */
+template <class fq_gpu, class fr_gpu> 
+__device__ void group_gpu<fq_gpu, fr_gpu>::add(var X1, var Y1, var Z1, var X2, var Y2, var Z2, var &res_x, var &res_y, var &res_z) {
     var Z1Z1, Z2Z2, U1, U2, S1, S2, F, H, I, J;
+
+    // Check P == 0 or Q == 0
+    if (fq_gpu::is_zero(Z1)) {
+        res_x = X2;
+        res_y = Y2;
+        res_z = Z2;
+        return;
+    } else if (fq_gpu::is_zero(Z2)) {
+        res_x = X1;
+        res_y = Y1;
+        res_z = Z1;
+        return;
+    }
 
     // X Element
     fq_gpu::square(Z1, Z1Z1);            // Z1Z1 = Z1^2
@@ -164,5 +174,87 @@ __device__ void group_gpu<fq_gpu>::add(var X1, var Y1, var Z1, var X2, var Y2, v
     fq_gpu::load(Z1, res_z);             // res_z = Z1;
 }
 
-// TODO: add is_zero() tests
-// TODO: add inifinty check tests
+/* -------------------------- Projective Coordinate Operations ---------------------------------------------- */
+
+template <class fq_gpu, class fr_gpu> 
+__device__ void group_gpu<fq_gpu, fr_gpu>::load_projective(projective_element &X, projective_element &result) {
+    fq_gpu::load(X.x.data[0], result.x.data[0]);      
+    fq_gpu::load(X.x.data[1], result.x.data[1]);      
+    fq_gpu::load(X.x.data[2], result.x.data[2]);      
+    fq_gpu::load(X.x.data[3], result.x.data[3]);    
+        
+    fq_gpu::load(X.x.data[0], result.y.data[0]);      
+    fq_gpu::load(X.x.data[1], result.y.data[1]);      
+    fq_gpu::load(X.x.data[2], result.y.data[2]);      
+    fq_gpu::load(X.x.data[3], result.y.data[3]);  
+
+    fq_gpu::load(X.z.data[0], result.z.data[0]);      
+    fq_gpu::load(X.z.data[1], result.z.data[1]);      
+    fq_gpu::load(X.z.data[2], result.z.data[2]);      
+    fq_gpu::load(X.z.data[3], result.z.data[3]);  
+}
+
+template <class fq_gpu, class fr_gpu> 
+projective_element<fq_gpu, fr_gpu> group_gpu<fq_gpu, fr_gpu>::from_affine(const affine_element &other) {
+    projective_element projective;
+    projective.x = other.x;
+    projective.y = other.y;
+    return { projective.x, projective.y, fq_gpu::one() };
+}
+
+/**
+ * Projective addition has cost 14T multiplications
+ */
+template <class fq_gpu, class fr_gpu> 
+__device__ void group_gpu<fq_gpu, fr_gpu>::add_projective(
+var X1, var Y1, var Z1, var X2, var Y2, var Z2, var &res_x, var &res_y, var &res_z) {
+    var t00, t01, t02, t03, t04, t05, t06, t07, t08, t09, t10;
+    var t11, t12, t13, t14, t15, t16, t17, t18, t19, t20, t21;
+    var t22, t23, t24, t25, t26, t27, t28, t29, t30, t31;
+    var X3, Y3, Z3;
+
+    fq_gpu::mul(X1, X2, t00);                                       // t00 ← X1 · X2
+    fq_gpu::mul(Y1, Y2, t01);                                       // t01 ← Y1 · Y2
+    fq_gpu::mul(Z1, Z2, t02);                                       // t02 ← Z1 · Z2
+    fq_gpu::add(X1, Y1, t03);                                       // t03 ← X1 + Y1
+    fq_gpu::add(X2, Y2, t04);                                       // t04 ← X2 + Y2
+    fq_gpu::mul(t03, t04, t03);                                     // t03 ← t03 + t04
+    fq_gpu::add(t00, t01, t04);                                     // t04 ← t00 + t01
+    fq_gpu::sub(t03, t04, t03);                                     // t03 ← t03 - t04
+    fq_gpu::add(X1, Z1, t04);                                       // t04 ← X1 + Z1
+    fq_gpu::add(X2, Z2, t05);                                       // t05 ← X2 + Z2
+    fq_gpu::mul(t04, t05, t04);                                     // t04 ← t04 * t05
+    fq_gpu::add(t00, t02, t05);                                     // t05 ← t00 + t02
+    fq_gpu::sub(t04, t05, t04);                                     // t04 ← t04 - t05
+    fq_gpu::add(Y1, Z1, t05);                                       // t05 ← Y1 + Z1
+    fq_gpu::add(Y2, Z2, X3);                                        // X3 ← Y2 + Z23
+    fq_gpu::mul(t05, X3, t05);                                      // t05 ← t05 * X3
+    fq_gpu::add(t01, t02, X3);                                      // X3 ← t01 + t02
+    fq_gpu::sub(t05, X3, t05);                                      // t05 ← t05 - X3
+    fq_gpu::mul(0, t04, Z3);                                        // Z3 ← a * t04
+    fq_gpu::mul(3 * gpu_barretenberg::b, t02, X3);                  // X3 ← b3 * t02 
+    fq_gpu::add(X3, Z3, Z3);                                        // Z3 ← X3 + Z3
+    fq_gpu::sub(t01, Z3, X3);                                       // X3 ← t01 - Z3
+    fq_gpu::add(t01, Z3, Z3);                                       // Z3 ← t01 + Z3
+    fq_gpu::mul(X3, Z3, Y3);                                        // Y3 ← X3 * Z3
+    fq_gpu::add(t00, t00, t01);                                     // t01 ← t00 + t00
+    fq_gpu::add(t01, t00, t01);                                     // t01 ← t01 + t00
+    fq_gpu::mul(0, t02, t02);                                       // t02 ← a * t02
+    fq_gpu::mul(3 * gpu_barretenberg::b, t04, t04);                 // t04 ← b3 * t04 
+    fq_gpu::add(t01, t02, t01);                                     // t01 ← t01 + t02
+    fq_gpu::sub(t00, t02, t02);                                     // t02 ← t00 - t02
+    fq_gpu::mul(0, t02, t02);                                       // t02 ← a * t02
+    fq_gpu::add(t04, t02, t04);                                     // t04 ← t04 + t02
+    fq_gpu::mul(t01, t04, t00);                                     // t00 ← t01 * t04
+    fq_gpu::add(Y3, t00, Y3);                                       // Y3 ← Y3 + t00
+    fq_gpu::mul(t05, t04, t00);                                     // t00 ← t05 * t04
+    fq_gpu::mul(t03, X3, X3);                                       // X3 ← t03 * X3
+    fq_gpu::sub(X3, t00, X3);                                       // X3 ← X3 - t00
+    fq_gpu::mul(t03, t01, t00);                                     // t00 ← t03 * t01
+    fq_gpu::mul(t05, Z3, Z3);                                       // Z3 ← t05 * Z3
+    fq_gpu::add(Z3, t00, Z3);                                       // Z3 ← Z3 + t00
+
+    fq_gpu::load(X3, res_x);  
+    fq_gpu::load(Y3, res_y);  
+    fq_gpu::load(Z3, res_z);  
+}
