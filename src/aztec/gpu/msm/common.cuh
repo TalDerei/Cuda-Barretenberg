@@ -18,7 +18,8 @@ namespace pippenger_common {
 #define WBITS 17                              // Scalar size
 #define NWINS ((NBITS + WBITS - 1) / WBITS)   // Windowing size 
 
-size_t NUM_POINTS = 1 << 10;
+// change NUM_POINTS
+size_t NUM_POINTS = 2;
 static const size_t NUM_BATCH_THREADS = 2;
 static thread_pool_t batch_pool(NUM_BATCH_THREADS);
 
@@ -144,9 +145,7 @@ class pippenger_t {
 
         void print_result(point_t *result);
 
-        void initialize_buckets(scalar_t *scalars, point_t *points, unsigned bitsize, unsigned c, size_t npoints);
-
-        void decompose_scalar_digit(unsigned digit_num, unsigned digit_width);
+        point_t* execute_bucket_method(scalar_t *scalars, point_t *points, unsigned bitsize, unsigned c, size_t npoints);
 };
 typedef pippenger_t<bucket_t, point_t, scalar_t, affine_t> pipp_t;
 

@@ -1183,6 +1183,8 @@ var *a, var *b, var *c, var *d, var *result, var *res_x, var *res_y, var *res_z,
     naive_multiplication_multiple<<<BLOCKS, THREADS>>>(scalars, points, final_result);
     cudaDeviceSynchronize();
 
+    cout << "final_result: " << final_result[0].x.data[0] << endl;
+
     // Expected results from custom MSM kernel
     expected_1[0].x.data[0] = 0x7D08D399C74D6F60;
     expected_1[0].x.data[1] = 0x8B7E6B6EB490841B;

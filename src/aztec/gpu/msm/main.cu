@@ -11,24 +11,23 @@ int main(int, char**) {
     auto reference_string = std::make_shared<gpu_waffle::FileReferenceString>(NUM_POINTS, "../srs_db");
     g1::affine_element* points = reference_string->get_monomials();
 
-    // Initialize MSM
+    // Initialize 'context' object
     Context<bucket_t, point_t, scalar_t, affine_t> *context = msm->pippenger_initialize(points);
+    msm->pippenger_execute(context, NUM_POINTS, points);
 
-    // MSM test
-    msm->pippenger_test(context, NUM_POINTS, points);
+    // Execute "Double-And-Add" reference kernel
+    g1::element *final_result_1 = msm->naive_double_and_add(context, NUM_POINTS, points);
 
-    // MSM 1
-    // msm->pippenger_execute(context, NUM_POINTS, points);
+    // Execute "Pippenger's Bucket Method" kernel
+    g1::element *final_result_2 = msm->msm_bucket_method(context, NUM_POINTS, points);
 
-    // MSM 2
-    // msm->naive_msm(context, NUM_POINTS, points);
-
-    // MSM 3 -- "Bucket Method"
-    // msm->msm_bucket_method(context, NUM_POINTS, points);
+    // Verify the results match
+    msm->verify_result(final_result_1, final_result_2);
 }
 
 /**
- * TODO: C++/cuda inline of functions
+ * TODO: Add correctness tests
+ * TODO: Add "inlining" to C++/cuda functions
  * TODO: benchmark Ingonyama "Icicle" MSM
  * TODO: add multiple stream support
  * TODO: look into cuda graph support 
@@ -40,7 +39,7 @@ int main(int, char**) {
  * TODO: incorperate cooperative groups in accmulation 
  * TODO: choose block sizes based on occupancy in terms of active blocks
  * TODO: free memory
- * TODO: look into shared memory optimizations
+ * TODO: look into shared memory optimizations instead of global memory accesses
  * TODO: remove extraneous loops
  * TODO: adjust kernel parameters to reduce overhead
  * TODO: look into loop unrolling with pragma

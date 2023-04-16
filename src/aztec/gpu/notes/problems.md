@@ -196,7 +196,8 @@
     naive double and add result to the pippenger result in barretenberg for some reason...Update: Seems like my naive double-and
     add and MSM implemnentation are yielding the same results for multiple points, and the result is correct when comparing against
     the naive double-and-add in the barretenberg repo. But, still remains the original conflict: comparing the naive double-and-add
-    and MSM implementations in the barretneber codebase. Not sure what's causing that mismatch. 
+    and MSM implementations in the barretneber codebase. Not sure what's causing that mismatch. Update: The reason was because we 
+    were using pippenger_unsafe instead of pippenger, which may have triggered an exception for small problem size. 
 
     10. The performance is not good for the MSM kernel...Need to figure out what's bottlenecking the performance?
     I think it's because there's conditional branching due to the double function...look into it.
