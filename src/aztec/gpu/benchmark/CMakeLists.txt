@@ -8,25 +8,6 @@ include_directories(../fields)
 include_directories(../curves)
 include_directories(../srs)
 
-# montgomery multiplication
-add_executable(
-    montgomery
-    common/montgomery.cpp
-)
-
-target_link_libraries(
-    montgomery
-    PUBLIC
-    ecc
-    env
-)
-
-add_custom_target(
-    run_montgomery
-    COMMAND montgomery
-    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-)
-
 # fq field test
 add_executable(
     field_fq_test
@@ -125,14 +106,14 @@ add_custom_target(
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
 )
 
-# msm test
+# msm test gpu
 add_executable(
-    msm_test
-    tests/msm/msm_test.cu
+    msm_test_gpu
+    tests/msm/msm_test_gpu.cu
 )
 
 target_link_libraries(
-    msm_test
+    msm_test_gpu
     PUBLIC
     field_library
     fixnum_library
@@ -140,8 +121,28 @@ target_link_libraries(
 )
 
 add_custom_target(
-    run_msm_test
-    COMMAND msm_test
+    run_msm_test_gpu
+    COMMAND msm_test_gpu
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+)
+
+# msm test cpu
+add_executable(
+    msm_test_cpu
+    tests/msm/msm_test_cpu.cpp
+)
+
+target_link_libraries(
+    msm_test_cpu
+    PUBLIC
+    polynomials
+    plonk
+    env
+)
+
+add_custom_target(
+    run_msm_test_cpu
+    COMMAND msm_test_cpu
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
 )
 

@@ -9,6 +9,7 @@ static constexpr size_t BLOCKS = 1;
 static constexpr size_t THREADS = 1;
 
 /* -------------------------- Mixed Addition Test ---------------------------------------------- */
+
 __global__ void initialize_mixed_add_check_against_constants
 (var *a, var *b, var *c, var *x, var *y, var *z, var *expected_x, var *expected_y, var *expected_z) {
     fq_gpu a_x{ 0x92716caa6cac6d26, 0x1e6e234136736544, 0x1bb04588cde00af0, 0x9a2ac922d97e6f5 };
@@ -63,6 +64,7 @@ __global__ void mixed_add_check_against_constants
 }
 
 /* -------------------------- Doubling Test ---------------------------------------------- */
+
 __global__ void initialize_dbl_check_against_constants
 (var *a, var *b, var *c, var *x, var *y, var *z, var *expected_x, var *expected_y, var *expected_z) {
     fq_gpu a_x{ 0x8d1703aa518d827f, 0xd19cc40779f54f63, 0xabc11ce30d02728c, 0x10938940de3cbeec };
@@ -119,6 +121,7 @@ __global__ void dbl_check_against_constants
 }
 
 /* -------------------------- Addition Test ---------------------------------------------- */
+
 __global__ void initialize_add_check_against_constants
 (var *a, var *b, var *c, var *x, var *y, var *z, var *expected_x, var *expected_y, var *expected_z) {
     fq_gpu a_x{ 0x184b38afc6e2e09a, 0x4965cd1c3687f635, 0x334da8e7539e71c4, 0xf708d16cfe6e14 };
@@ -176,6 +179,7 @@ __global__ void add_check_against_constants
 }
 
 /* -------------------------- Add Exception Test ---------------------------------------------- */
+
 __global__ void initialize_add_exception_test_dbl
 (var *a, var *b, var *c, var *x, var *y, var *z) {
     fq_gpu a_x{ 0x184b38afc6e2e09a, 0x4965cd1c3687f635, 0x334da8e7539e71c4, 0xf708d16cfe6e14 };
@@ -248,6 +252,7 @@ __global__ void add_exception_test_dbl
 }
 
 /* -------------------------- Add Double Consistency Test ---------------------------------------------- */
+
 __global__ void initialize_add_dbl_consistency
 (var *a, var *b, var *c, var *x, var *y, var *z) {
     fq_gpu a_x{ 0x184b38afc6e2e09a, 0x4965cd1c3687f635, 0x334da8e7539e71c4, 0xf708d16cfe6e14 };
@@ -339,6 +344,7 @@ __global__ void add_dbl_consistency
 }
 
 /* -------------------------- Add Double Consistency Repeated Test ---------------------------------------------- */
+
 __global__ void initialize_add_dbl_consistency_repeated
 (var *a, var *b, var *c) {
     fq_gpu a_x{ 0x184b38afc6e2e09a, 0x4965cd1c3687f635, 0x334da8e7539e71c4, 0xf708d16cfe6e14 };
@@ -423,6 +429,7 @@ __global__ void add_dbl_consistency_repeated
 }
 
 /* -------------------------- Group Exponentiation Check Against Constants Test ---------------------------------------------- */
+
 __global__ void initialize_group_exponentiation
 (var *a, var *b, var *c, var *expected_x, var *expected_y, var *expected_z) {
     fq_gpu a_x{ 0x184b38afc6e2e09a, 0x4965cd1c3687f635, 0x334da8e7539e71c4, 0xf708d16cfe6e14 };
@@ -498,6 +505,7 @@ __global__ void group_exponentiation(uint64_t *a, uint64_t *b, uint64_t *c, var 
 }
 
 /* -------------------------- Operator Ordering Test ---------------------------------------------- */
+
 __global__ void initialize_operator_ordering(var *a, var *b, var *c, var *d) {
     fr_gpu scalar{ 0xcfbfd4441138823e, 0xb5f817e28a1ef904, 0xefb7c5629dcc1c42, 0x1a9ed3d6f846230e };
 

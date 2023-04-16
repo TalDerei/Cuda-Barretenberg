@@ -335,32 +335,32 @@ void execute_kernels(var *a, var *b, var *expected, var *result) {
     subtract<<<BLOCKS, LIMBS_NUM>>>(a, b, result);
     assert_checks(expected, result);
 
-    // Convert To Montgomery Form
+    // Convert To Montgomery Form Test
     initialize_to_montgomery_form<<<BLOCKS, THREADS>>>(a, expected);
     to_montgomery_form<<<BLOCKS, LIMBS_NUM>>>(a, result);
     assert_checks(expected, result);
 
-    // Convert From Montgomery Form
+    // Convert From Montgomery Form Test
     initialize_from_montgomery_form<<<BLOCKS, THREADS>>>(a, expected);
     from_montgomery_form<<<BLOCKS, LIMBS_NUM>>>(a, result);
     assert_checks(expected, result);
 
-    // Montgomery Consistency Check
+    // Montgomery Consistency Check Test
     initialize_montgomery_consistency_check<<<BLOCKS, THREADS>>>(a, b);
     montgomery_consistency_check<<<BLOCKS, LIMBS_NUM>>>(a, b, expected, result);
     assert_checks(expected, result);
 
-    // Add Multiplication Consistency
+    // Add Multiplication Consistency Test
     initialize_add_mul_consistency<<<BLOCKS, THREADS>>>(a, b);
     add_mul_consistency<<<BLOCKS, LIMBS_NUM>>>(a, b, expected, result);
     assert_checks(expected, result);
 
-    // Subtract Multiplication Consistency
+    // Subtract Multiplication Consistency Test
     initialize_sub_mul_consistency<<<BLOCKS, THREADS>>>(a, b);
     sub_mul_consistency<<<BLOCKS, LIMBS_NUM>>>(a, b, expected, result);
     assert_checks(expected, result);
 
-    // Cube Root
+    // Cube Root Test
     initialize_cube<<<BLOCKS, THREADS>>>(a);
     cube<<<BLOCKS, LIMBS_NUM>>>(a, expected, result);
     assert_checks(expected, result);

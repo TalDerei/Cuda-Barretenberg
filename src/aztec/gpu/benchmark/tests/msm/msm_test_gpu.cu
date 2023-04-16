@@ -17,7 +17,6 @@ static constexpr size_t POINTS = 1 << 10;
 
 /* -------------------------- Kernel Functions For Finite Field Tests ---------------------------------------------- */
 
-// Initialize points and scalars
 __global__ void initialize_simple_double_and_add_field(
 uint64_t *a, uint64_t *b, uint64_t *expect_x) {
     fq_gpu point{ 0x2523b6fa3956f038, 0x158aa08ecdd9ec1d, 0xf48216a4c74738d4, 0x2514cc93d6f0a1bf };
@@ -31,7 +30,9 @@ uint64_t *a, uint64_t *b, uint64_t *expect_x) {
     }
 }
 
-// Simple montgomery multiplication as a baseline reference
+/**
+ * Simple montgomery multiplication as a baseline reference
+ */ 
 __global__ void simple_multiplication_field(uint64_t *scalar, uint64_t *point, uint64_t *result) {
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
     if (tid < LIMBS) {
@@ -40,8 +41,10 @@ __global__ void simple_multiplication_field(uint64_t *scalar, uint64_t *point, u
     }
 }
 
-// Native approach for computing scalar mutliplication with time complexity: O(2^k)
-// nP = P + P ... + P 
+/**
+ * Native approach for computing scalar mutliplication for field elements with time complexity: O(2^k)
+ * nP = P + P ... + P 
+ */ 
 __global__ void naive_double_and_add_field(uint64_t *scalar, uint64_t *point, uint64_t *result) {
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
     if (tid < LIMBS) {
@@ -56,7 +59,9 @@ __global__ void naive_double_and_add_field(uint64_t *scalar, uint64_t *point, ui
     }
 }
 
-// Double and add implementation using bit-decomposition with time complexity: O(2^k / 2)
+/**
+ * Native approach for computing scalar mutliplication for field elements with time complexity: O(2^k / 2)
+ */ 
 __global__ void double_and_add_half_field(uint64_t *scalar, uint64_t *point, uint64_t *result) {
     fq_gpu R;
     fq_gpu Q;
@@ -79,7 +84,9 @@ __global__ void double_and_add_half_field(uint64_t *scalar, uint64_t *point, uin
     fq_gpu::load(R.data[tid], result[tid]);
 }
 
-// Double and add implementation using bit-decomposition with time complexity: O(k)
+/**
+ * Double and add implementation for a single limb using bit-decomposition with time complexity: O(k)
+ */ 
 __global__ void double_and_add_field(uint64_t *scalar, uint64_t *point, uint64_t *result) {
     fq_gpu R;
     fq_gpu Q;
@@ -106,7 +113,6 @@ __global__ void double_and_add_field(uint64_t *scalar, uint64_t *point, uint64_t
 
 /* -------------------------- Kernel Functions For Elliptic Curve Tests ---------------------------------------------- */
 
-// Initialize points and scalars
 __global__ void initialize_simple_double_and_add_curve_single(
 uint64_t *a, uint64_t *b, uint64_t *c, uint64_t *d, uint64_t *expect_x, uint64_t *expect_y, uint64_t *expect_z) {
     fq_gpu point_x{ 0x184b38afc6e2e09a, 0x4965cd1c3687f635, 0x334da8e7539e71c4, 0xf708d16cfe6e14 };
@@ -128,151 +134,10 @@ uint64_t *a, uint64_t *b, uint64_t *c, uint64_t *d, uint64_t *expect_x, uint64_t
     }
 }
 
-// working double and add with a single point and scalar as baseline reference
-__global__ void naive_multiplication_single(uint64_t *a, uint64_t *b, uint64_t *c, uint64_t *d, var *res_x, var *res_y, var *res_z) {
-    int tid = blockIdx.x * blockDim.x + threadIdx.x;
-
-    g1::element one; 
-    g1::element R;
-    g1::element Q;
-
-    fr_gpu exponent{ 0xb67299b792199cf0, 0xc1da7df1e7e12768, 0x692e427911532edf, 0x13dd85e87dc89978 };
-
-    fq_gpu::load(gpu_barretenberg::one_x_bn_254[tid], one.x.data[tid]);
-    fq_gpu::load(gpu_barretenberg::one_y_bn_254[tid], one.y.data[tid]);
-    fq_gpu::load(fq_gpu::one().data[tid], one.z.data[tid]);
-
-    if (tid < LIMBS) {
-        // Initialize 'R' to the identity element, Q to the curve point
-        fq_gpu::load(0, R.x.data[tid]); 
-        fq_gpu::load(0, R.y.data[tid]); 
-        fq_gpu::load(0, R.z.data[tid]); 
-
-        fq_gpu::load(one.x.data[tid], Q.x.data[tid]);
-        fq_gpu::load(one.y.data[tid], Q.y.data[tid]);
-        fq_gpu::load(one.z.data[tid], Q.z.data[tid]);
-
-        // Loop for each limb starting with the last limb
-        for (int j = 3; j >= 0; j--) {
-            // Loop for each bit of scalar
-            for (int i = 64; i >= 0; i--) {
-                // Performs bit-decompositon by traversing the bits of the scalar from MSB to LSB
-                // and extracting the i-th bit of scalar in limb.
-                if (((exponent.data[j] >> i) & 1) ? 1 : 0)
-                    g1::add(
-                        R.x.data[tid], R.y.data[tid], R.z.data[tid], 
-                        Q.x.data[tid], Q.y.data[tid], Q.z.data[tid], 
-                        R.x.data[tid], R.y.data[tid], R.z.data[tid]
-                    );
-                if (i != 0) 
-                    g1::doubling(
-                        R.x.data[tid], R.y.data[tid], R.z.data[tid], 
-                        R.x.data[tid], R.y.data[tid], R.z.data[tid]
-                    );
-            }
-        }
-    }
-
-    // Store the final value of R into the result array for this limb
-    fq_gpu::load(R.x.data[tid], res_x[tid]);
-    fq_gpu::load(R.y.data[tid], res_y[tid]);
-    fq_gpu::load(R.z.data[tid], res_z[tid]);
-
-    // Convert back from montgomery form
-    // fq_gpu::from_monty(res_x[tid], res_x[tid]);
-    // fq_gpu::from_monty(res_y[tid], res_y[tid]);
-    // fq_gpu::from_monty(res_z[tid], res_z[tid]);
-}
-
-// working double and add with multiple points and scalars as baseline reference
-__global__ void naive_multiplication_multiple(fr_gpu *test_scalars, g1::element *test_points, g1::element *final_result) {
-int tid = blockIdx.x * blockDim.x + threadIdx.x;
-
-    g1::element R;
-    g1::element Q;
-
-    // Initialize points and scalars
-    fr_gpu scalar0 { 0xE49C36330BB35C4E, 0x22A5041C3B1B0B19, 0x37EDFE43AB6771EF, 0xCDA9012E9BF4459 };
-    fr_gpu scalar1 { 0xCE3F41131DD7E353, 0xF089615FED1CDBFE, 0x9E0724A3FA817F99, 0xCB83233939D786B };
-    fq_gpu point0_x { 0xD35D438DC58F0D9D, 0xA78EB28F5C70B3D, 0x666EA36F7879462C, 0xE0A77C19A07DF2F };
-    fq_gpu point0_y { 0xA6BA871B8B1E1B3A, 0x14F1D651EB8E167B, 0xCCDD46DEF0F28C58, 0x1C14EF83340FBE5E };
-    fq_gpu point0_z { 0xD35D438DC58F0D9D, 0xA78EB28F5C70B3D, 0x666EA36F7879462C, 0xE0A77C19A07DF2F };
-    fq_gpu point1_x { 0x71930C11D782E155, 0xA6BB947CFFBE3323, 0xAA303344D4741444, 0x2C3B3F0D26594943 };
-    fq_gpu point1_y { 0xD186911225DBDF54, 0x1A10FED0E5557E9E, 0xA3C3448E12102463, 0x44B3AD628E5381F4 };
-    fq_gpu point1_z { 0xD35D438DC58F0D9D, 0xA78EB28F5C70B3D, 0x666EA36F7879462C, 0xE0A77C19A07DF2F };
-
-    // Load points and scalars
-    fq_gpu::load(scalar0.data[tid % 4], test_scalars[0].data[tid % 4]); 
-    fq_gpu::load(scalar1.data[tid % 4], test_scalars[1].data[tid % 4]); 
-    fq_gpu::load(point0_x.data[tid % 4], test_points[0].x.data[tid % 4]); 
-    fq_gpu::load(point0_y.data[tid % 4], test_points[0].y.data[tid % 4]); 
-    fq_gpu::load(point0_z.data[tid % 4], test_points[0].z.data[tid % 4]); 
-    fq_gpu::load(point1_x.data[tid % 4], test_points[1].x.data[tid % 4]); 
-    fq_gpu::load(point1_y.data[tid % 4], test_points[1].y.data[tid % 4]); 
-    fq_gpu::load(point1_z.data[tid % 4], test_points[1].z.data[tid % 4]); 
-
-    if (tid < LIMBS) {
-        // Initialize result as 0
-        fq_gpu::load(0, final_result[0].x.data[tid % 4]); 
-        fq_gpu::load(0, final_result[0].y.data[tid % 4]); 
-        fq_gpu::load(0, final_result[0].z.data[tid % 4]); 
-        // Loop for each bucket module
-        for (unsigned z = 0; z < 2; z++) {
-            // Initialize 'R' to the identity element, Q to the curve point
-            fq_gpu::load(0, R.x.data[tid % 4]); 
-            fq_gpu::load(0, R.y.data[tid % 4]); 
-            fq_gpu::load(0, R.z.data[tid % 4]); 
-
-            // Load partial sums
-            // change index to 'z'
-            fq_gpu::load(test_points[z].x.data[tid % 4], Q.x.data[tid % 4]);
-            fq_gpu::load(test_points[z].y.data[tid % 4], Q.y.data[tid % 4]);
-            fq_gpu::load(test_points[z].z.data[tid % 4], Q.z.data[tid % 4]);
-
-            // Sync loads
-            __syncthreads();
-    
-            // Loop for each limb starting with the last limb
-            for (int j = 3; j >= 0; j--) {
-                // Loop for each bit of scalar
-                for (int i = 64; i >= 0; i--) {   
-                    // Performs bit-decompositon by traversing the bits of the scalar from MSB to LSB
-                    // and extracting the i-th bit of scalar in limb.
-                    if (((test_scalars[z].data[j] >> i) & 1) ? 1 : 0)
-                        g1::add(
-                            Q.x.data[tid % 4], Q.y.data[tid % 4], Q.z.data[tid % 4], 
-                            R.x.data[tid % 4], R.y.data[tid % 4], R.z.data[tid % 4], 
-                            R.x.data[tid % 4], R.y.data[tid % 4], R.z.data[tid % 4]
-                        );
-                    if (i != 0) 
-                        g1::doubling(
-                            R.x.data[tid % 4], R.y.data[tid % 4], R.z.data[tid % 4], 
-                            R.x.data[tid % 4], R.y.data[tid % 4], R.z.data[tid % 4]
-                        );
-                }
-            }
-            g1::add(
-                R.x.data[tid % 4], 
-                R.y.data[tid % 4], 
-                R.z.data[tid % 4],
-                final_result[0].x.data[tid % 4],
-                final_result[0].y.data[tid % 4],
-                final_result[0].z.data[tid % 4],
-                final_result[0].x.data[tid % 4], 
-                final_result[0].y.data[tid % 4], 
-                final_result[0].z.data[tid % 4]
-            );
-        }
-    }
-
-    // Convert back from montgomery form
-    // fq_gpu::from_monty(final_result[0].x.data[tid % 4], final_result[0].x.data[tid % 4]);
-    // fq_gpu::from_monty(final_result[0].y.data[tid % 4], final_result[0].y.data[tid % 4]);
-    // fq_gpu::from_monty(final_result[0].z.data[tid % 4], final_result[0].z.data[tid % 4]);
-}
-
-// Native approach for computing scalar mutliplication with time complexity: O(2^k)
-// nP = P + P ... + P 
+/**
+ * Native approach for computing scalar mutliplication for curve elements with time complexity: O(2^k)
+ * nP = P + P ... + P 
+ */ 
 __global__ void naive_double_and_add_curve(uint64_t *a, uint64_t *b, uint64_t *c, uint64_t *d, var *res_x, var *res_y, var *res_z) {
     g1::element ec;
     
@@ -352,7 +217,9 @@ __global__ void naive_double_and_add_curve(uint64_t *a, uint64_t *b, uint64_t *c
     }
 }
 
-// Double and add implementation using bit-decomposition with time complexity: O(2^k / 2)
+/**
+ * Native approach for computing scalar mutliplication for curve elements with time complexity: O(2^k / 2)
+ */ 
 __global__ void double_and_add_half_curve(uint64_t *a, uint64_t *b, uint64_t *c, uint64_t *d, var *res_x, var *res_y, var *res_z) {
     g1::element ec;
     
@@ -402,7 +269,9 @@ __global__ void double_and_add_half_curve(uint64_t *a, uint64_t *b, uint64_t *c,
     }
 }
 
-// Double and add implementation using bit-decomposition with time complexity: O(k)
+/**
+ *  Double and add implementation for single limb of curve elements using bit-decomposition with time complexity: O(k)
+ */ 
 __global__ void double_and_add_curve(
 uint64_t *point_x, uint64_t *point_y, uint64_t *point_z, uint64_t *scalar, var *res_x, var *res_y, var *res_z) {
     g1::element R;
@@ -450,9 +319,148 @@ uint64_t *point_x, uint64_t *point_y, uint64_t *point_z, uint64_t *scalar, var *
     fq_gpu::from_monty(res_z[tid], res_z[tid]);
 }
 
+/**
+ * Double and add implementation for single point and scalar using bit-decomposition with time complexity: O(k)
+ */ 
+__global__ void naive_multiplication_single(uint64_t *a, uint64_t *b, uint64_t *c, uint64_t *d, var *res_x, var *res_y, var *res_z) {
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+
+    g1::element one; 
+    g1::element R;
+    g1::element Q;
+
+    fr_gpu exponent{ 0xb67299b792199cf0, 0xc1da7df1e7e12768, 0x692e427911532edf, 0x13dd85e87dc89978 };
+
+    fq_gpu::load(gpu_barretenberg::one_x_bn_254[tid], one.x.data[tid]);
+    fq_gpu::load(gpu_barretenberg::one_y_bn_254[tid], one.y.data[tid]);
+    fq_gpu::load(fq_gpu::one().data[tid], one.z.data[tid]);
+
+    if (tid < LIMBS) {
+        // Initialize 'R' to the identity element, Q to the curve point
+        fq_gpu::load(0, R.x.data[tid]); 
+        fq_gpu::load(0, R.y.data[tid]); 
+        fq_gpu::load(0, R.z.data[tid]); 
+
+        fq_gpu::load(one.x.data[tid], Q.x.data[tid]);
+        fq_gpu::load(one.y.data[tid], Q.y.data[tid]);
+        fq_gpu::load(one.z.data[tid], Q.z.data[tid]);
+
+        // Loop for each limb starting with the last limb
+        for (int j = 3; j >= 0; j--) {
+            // Loop for each bit of scalar
+            for (int i = 64; i >= 0; i--) {
+                // Performs bit-decompositon by traversing the bits of the scalar from MSB to LSB
+                // and extracting the i-th bit of scalar in limb.
+                if (((exponent.data[j] >> i) & 1) ? 1 : 0)
+                    g1::add(
+                        R.x.data[tid], R.y.data[tid], R.z.data[tid], 
+                        Q.x.data[tid], Q.y.data[tid], Q.z.data[tid], 
+                        R.x.data[tid], R.y.data[tid], R.z.data[tid]
+                    );
+                if (i != 0) 
+                    g1::doubling(
+                        R.x.data[tid], R.y.data[tid], R.z.data[tid], 
+                        R.x.data[tid], R.y.data[tid], R.z.data[tid]
+                    );
+            }
+        }
+    }
+
+    // Store the final value of R into the result array for this limb
+    fq_gpu::load(R.x.data[tid], res_x[tid]);
+    fq_gpu::load(R.y.data[tid], res_y[tid]);
+    fq_gpu::load(R.z.data[tid], res_z[tid]);
+}
+
+/**
+ * Double and add implementation for multiple points and scalars using bit-decomposition with time complexity: O(k)
+ */ 
+__global__ void naive_multiplication_multiple(fr_gpu *test_scalars, g1::element *test_points, g1::element *final_result) {
+int tid = blockIdx.x * blockDim.x + threadIdx.x;
+
+    g1::element R;
+    g1::element Q;
+
+    // Initialize points and scalars
+    fr_gpu scalar0 { 0xE49C36330BB35C4E, 0x22A5041C3B1B0B19, 0x37EDFE43AB6771EF, 0xCDA9012E9BF4459 };
+    fr_gpu scalar1 { 0xCE3F41131DD7E353, 0xF089615FED1CDBFE, 0x9E0724A3FA817F99, 0xCB83233939D786B };
+    fq_gpu point0_x { 0xD35D438DC58F0D9D, 0xA78EB28F5C70B3D, 0x666EA36F7879462C, 0xE0A77C19A07DF2F };
+    fq_gpu point0_y { 0xA6BA871B8B1E1B3A, 0x14F1D651EB8E167B, 0xCCDD46DEF0F28C58, 0x1C14EF83340FBE5E };
+    fq_gpu point0_z { 0xD35D438DC58F0D9D, 0xA78EB28F5C70B3D, 0x666EA36F7879462C, 0xE0A77C19A07DF2F };
+    fq_gpu point1_x { 0x71930C11D782E155, 0xA6BB947CFFBE3323, 0xAA303344D4741444, 0x2C3B3F0D26594943 };
+    fq_gpu point1_y { 0xD186911225DBDF54, 0x1A10FED0E5557E9E, 0xA3C3448E12102463, 0x44B3AD628E5381F4 };
+    fq_gpu point1_z { 0xD35D438DC58F0D9D, 0xA78EB28F5C70B3D, 0x666EA36F7879462C, 0xE0A77C19A07DF2F };
+
+    // Load points and scalars
+    fq_gpu::load(scalar0.data[tid % 4], test_scalars[0].data[tid % 4]); 
+    fq_gpu::load(scalar1.data[tid % 4], test_scalars[1].data[tid % 4]); 
+    fq_gpu::load(point0_x.data[tid % 4], test_points[0].x.data[tid % 4]); 
+    fq_gpu::load(point0_y.data[tid % 4], test_points[0].y.data[tid % 4]); 
+    fq_gpu::load(point0_z.data[tid % 4], test_points[0].z.data[tid % 4]); 
+    fq_gpu::load(point1_x.data[tid % 4], test_points[1].x.data[tid % 4]); 
+    fq_gpu::load(point1_y.data[tid % 4], test_points[1].y.data[tid % 4]); 
+    fq_gpu::load(point1_z.data[tid % 4], test_points[1].z.data[tid % 4]); 
+
+    if (tid < LIMBS) {
+        // Initialize result as 0
+        fq_gpu::load(0, final_result[0].x.data[tid % 4]); 
+        fq_gpu::load(0, final_result[0].y.data[tid % 4]); 
+        fq_gpu::load(0, final_result[0].z.data[tid % 4]); 
+        // Loop for each bucket module
+        for (unsigned z = 0; z < 2; z++) {
+            // Initialize 'R' to the identity element, Q to the curve point
+            fq_gpu::load(0, R.x.data[tid % 4]); 
+            fq_gpu::load(0, R.y.data[tid % 4]); 
+            fq_gpu::load(0, R.z.data[tid % 4]); 
+
+            // Load partial sums
+            // change index to 'z'
+            fq_gpu::load(test_points[z].x.data[tid % 4], Q.x.data[tid % 4]);
+            fq_gpu::load(test_points[z].y.data[tid % 4], Q.y.data[tid % 4]);
+            fq_gpu::load(test_points[z].z.data[tid % 4], Q.z.data[tid % 4]);
+
+            // Sync loads
+            __syncthreads();
+    
+            // Loop for each limb starting with the last limb
+            for (int j = 3; j >= 0; j--) {
+                // Loop for each bit of scalar
+                for (int i = 64; i >= 0; i--) {   
+                    // Performs bit-decompositon by traversing the bits of the scalar from MSB to LSB
+                    // and extracting the i-th bit of scalar in limb.
+                    if (((test_scalars[z].data[j] >> i) & 1) ? 1 : 0)
+                        g1::add(
+                            Q.x.data[tid % 4], Q.y.data[tid % 4], Q.z.data[tid % 4], 
+                            R.x.data[tid % 4], R.y.data[tid % 4], R.z.data[tid % 4], 
+                            R.x.data[tid % 4], R.y.data[tid % 4], R.z.data[tid % 4]
+                        );
+                    if (i != 0) 
+                        g1::doubling(
+                            R.x.data[tid % 4], R.y.data[tid % 4], R.z.data[tid % 4], 
+                            R.x.data[tid % 4], R.y.data[tid % 4], R.z.data[tid % 4]
+                        );
+                }
+            }
+            g1::add(
+                R.x.data[tid % 4], 
+                R.y.data[tid % 4], 
+                R.z.data[tid % 4],
+                final_result[0].x.data[tid % 4],
+                final_result[0].y.data[tid % 4],
+                final_result[0].z.data[tid % 4],
+                final_result[0].x.data[tid % 4], 
+                final_result[0].y.data[tid % 4], 
+                final_result[0].z.data[tid % 4]
+            );
+        }
+    }
+}
+
 /* -------------------------- Kernel Functions For Vector of Finite Field Tests ---------------------------------------------- */
 
-// Convert result from montgomery form
+/**
+ * Convert result from montgomery form
+ */ 
 __global__ void convert_field(fq_gpu *point, uint64_t *result) {
     int tid = (blockDim.x * blockIdx.x) + threadIdx.x;
     if (tid < LIMBS) {
@@ -469,7 +477,9 @@ __global__ void convert_curve(g1::element *point, uint64_t *res_x, uint64_t *res
     }
 }
 
-// Naive double and add using sequential implementation
+/**
+ * Naive double and add using sequential implementation
+ */ 
 __global__ void naive_double_and_add_field_vector_simple(fq_gpu *point, fq_gpu *result_vec, uint64_t *result) { 
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
     fq_gpu res{ 0, 0, 0, 0 };
@@ -480,7 +490,9 @@ __global__ void naive_double_and_add_field_vector_simple(fq_gpu *point, fq_gpu *
     fq_gpu::from_monty(result[tid], result[tid]);
 }
 
-// Naive double and add using multiple kernel invocations with block-level grandularity
+/**
+ * Naive double and add using multiple kernel invocations with block-level grandularity
+ */ 
 __global__ void naive_double_and_add_field_vector(fq_gpu *point, fq_gpu *result_vec, uint64_t *result) { 
     fq_gpu::add(
         point[blockIdx.x * 2].data[threadIdx.x], point[(blockIdx.x * 2) + 1].data[threadIdx.x], result_vec[blockIdx.x].data[threadIdx.x]
@@ -499,7 +511,9 @@ __global__ void naive_double_and_add_field_vector(fq_gpu *point, fq_gpu *result_
 
 /* -------------------------- Kernel Functions For Vector of Elliptic Curve Tests ---------------------------------------------- */
 
-// Naive double and add using sequential implementation
+/**
+ * Naive double and add using sequential implementation
+ */ 
 __global__ void naive_double_and_add_curve_vector_simple(g1::element *point, g1::element *result_vec, uint64_t *res_x, uint64_t *res_y,  uint64_t *res_z) { 
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
     
@@ -537,7 +551,9 @@ __global__ void naive_double_and_add_curve_vector_simple(g1::element *point, g1:
     fq_gpu::from_monty(res_z[tid], res_z[tid]);
 }
 
-// Naive double and add using multiple kernel invocations with block-level grandularity
+/**
+ * Naive double and add using multiple kernel invocations with block-level grandularity
+ */ 
 __global__ void naive_double_and_add_curve_vector(g1::element *point, g1::element *result_vec, uint64_t *res_x,  uint64_t *res_y,  uint64_t *res_z) {     
     g1::add(
         point[blockIdx.x * 2].x.data[threadIdx.x], point[blockIdx.x * 2].y.data[threadIdx.x], point[blockIdx.x * 2].z.data[threadIdx.x],
@@ -546,33 +562,11 @@ __global__ void naive_double_and_add_curve_vector(g1::element *point, g1::elemen
     );
 }
 
-// Compare two elliptic curve elements
-__global__ void comparator_kernel(g1::element *point, g1::element *point_2, uint64_t *result) {     
-    fq_gpu lhs_zz;
-    fq_gpu lhs_zzz;
-    fq_gpu rhs_zz;
-    fq_gpu rhs_zzz;
-    fq_gpu lhs_x;
-    fq_gpu lhs_y;
-    fq_gpu rhs_x;
-    fq_gpu rhs_y;
-
-    int tid = blockIdx.x * blockDim.x + threadIdx.x;
-    
-    lhs_zz.data[tid] =  fq_gpu::square(point[0].z.data[tid], lhs_zz.data[tid]);
-    lhs_zzz.data[tid] = fq_gpu::mul(lhs_zz.data[tid], point[0].z.data[tid], lhs_zzz.data[tid]);
-    rhs_zz.data[tid] = fq_gpu::square(point_2[0].z.data[tid], rhs_zz.data[tid]);
-    rhs_zzz.data[tid] = fq_gpu::mul(rhs_zz.data[tid], point_2[0].z.data[tid], rhs_zzz.data[tid]);
-    lhs_x.data[tid] = fq_gpu::mul(point[0].x.data[tid], rhs_zz.data[tid], lhs_x.data[tid]);
-    lhs_y.data[tid] = fq_gpu::mul(point[0].y.data[tid], rhs_zzz.data[tid], lhs_y.data[tid]);
-    rhs_x.data[tid] = fq_gpu::mul(point_2[0].x.data[tid], lhs_zz.data[tid], rhs_x.data[tid]);
-    rhs_y.data[tid] = fq_gpu::mul(point_2[0].y.data[tid], lhs_zzz.data[tid], rhs_y.data[tid]);
-    result[tid] = ((lhs_x.data[tid] == rhs_x.data[tid]) && (lhs_y.data[tid] == rhs_y.data[tid]));
-}
-
 /* -------------------------- Kernel Functions For Vector of Finite Field With Scalars Tests ---------------------------------------------- */
 
-// Naive double and add using sequential implementation using scalars
+/**
+ * Naive double and add of vector of field elements and scalars using sequential implementation
+ */ 
 __global__ void naive_double_and_add_field_vector_with_scalars(fq_gpu *point, fr_gpu *scalar, fq_gpu *result_vec, uint64_t *result) { 
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -589,7 +583,10 @@ __global__ void naive_double_and_add_field_vector_with_scalars(fq_gpu *point, fr
     fq_gpu::from_monty(result[tid], result[tid]);
 }
 
-// Double and add implementation using bit-decomposition with time complexity: O(k)
+/**
+ * Double and add implementation with vector of field elements and scalars
+ * using bit-decomposition with time complexity: O(k)
+ */
 __global__ void double_and_add_field_vector_with_scalars(fq_gpu *point, fr_gpu *scalar, uint64_t *result) {
     // Holders for points and scalars
     fq_gpu R;
@@ -635,9 +632,11 @@ __global__ void double_and_add_field_vector_with_scalars(fq_gpu *point, fr_gpu *
     fq_gpu::load(outer_accumulator.data[tid], result[tid]);
 }
 
-/* -------------------------- Kernel Functions For Vector of Finite Field With Scalars Tests ---------------------------------------------- */
+/* -------------------------- Kernel Functions For Vector of Curve Elements With Scalars Tests ---------------------------------------------- */
 
-// Naive double and add using sequential implementation using scalars
+/**
+ * Naive double and add of vector of curve elements and scalars using sequential implementation
+ */
 __global__ void naive_double_and_add_curve_with_scalars(
 g1::element *point, fr_gpu *scalar, g1::element *result_vec, uint64_t *res_x, uint64_t *res_y, uint64_t *res_z) { 
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
@@ -679,7 +678,9 @@ g1::element *point, fr_gpu *scalar, g1::element *result_vec, uint64_t *res_x, ui
 
 /* -------------------------- Helper Functions ---------------------------------------------- */
 
-// Read field points
+/**
+ * Read field points
+ */ 
 template <class B>
 B* read_field_points() {
     fq_gpu *points = new fq_gpu[POINTS];
@@ -695,7 +696,9 @@ B* read_field_points() {
     return points;
 } 
 
-// Read curve points
+/**
+ * Read curve points
+ */ 
 template <class B>
 B* read_curve_points() {
     g1::element *points = new g1::element[3 * LIMBS * POINTS * sizeof(var)];
@@ -718,7 +721,9 @@ B* read_curve_points() {
     return points;
 } 
 
-// Read scalars
+/**
+ * Read scalars
+ */ 
 template <class B>
 B* read_scalars() {
     fr_gpu *scalars = new fr_gpu[POINTS];
@@ -740,7 +745,35 @@ B* read_scalars() {
     return scalars;
 }
 
-// Print results
+/**
+ * Compare two elliptic curve elements
+ */ 
+__global__ void comparator_kernel(g1::element *point, g1::element *point_2, uint64_t *result) {     
+    fq_gpu lhs_zz;
+    fq_gpu lhs_zzz;
+    fq_gpu rhs_zz;
+    fq_gpu rhs_zzz;
+    fq_gpu lhs_x;
+    fq_gpu lhs_y;
+    fq_gpu rhs_x;
+    fq_gpu rhs_y;
+
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    
+    lhs_zz.data[tid] =  fq_gpu::square(point[0].z.data[tid], lhs_zz.data[tid]);
+    lhs_zzz.data[tid] = fq_gpu::mul(lhs_zz.data[tid], point[0].z.data[tid], lhs_zzz.data[tid]);
+    rhs_zz.data[tid] = fq_gpu::square(point_2[0].z.data[tid], rhs_zz.data[tid]);
+    rhs_zzz.data[tid] = fq_gpu::mul(rhs_zz.data[tid], point_2[0].z.data[tid], rhs_zzz.data[tid]);
+    lhs_x.data[tid] = fq_gpu::mul(point[0].x.data[tid], rhs_zz.data[tid], lhs_x.data[tid]);
+    lhs_y.data[tid] = fq_gpu::mul(point[0].y.data[tid], rhs_zzz.data[tid], lhs_y.data[tid]);
+    rhs_x.data[tid] = fq_gpu::mul(point_2[0].x.data[tid], lhs_zz.data[tid], rhs_x.data[tid]);
+    rhs_y.data[tid] = fq_gpu::mul(point_2[0].y.data[tid], lhs_zzz.data[tid], rhs_y.data[tid]);
+    result[tid] = ((lhs_x.data[tid] == rhs_x.data[tid]) && (lhs_y.data[tid] == rhs_y.data[tid]));
+}
+
+/**
+ * Print results
+ */ 
 void print_field_tests(var *result) {
     // Explicit synchronization barrier
     cudaDeviceSynchronize();
@@ -1214,7 +1247,7 @@ int main(int, char**) {
     // execute_kernels_curve_vector(a, b, c, d, result, res_x, res_y, res_z, expect_x, expect_y, expect_z);
     // execute_kernels_finite_fields_vector_with_scalars(a, b, c, d, result, res_x, res_y, res_z, expect_x, expect_y, expect_z);
     // execute_kernels_curve_vector_with_scalars(a, b, c, d, result, res_x, res_y, res_z, expect_x, expect_y, expect_z);
-    execute_double_and_add_single(a, b, c, d, result, res_x, res_y, res_z, expect_x, expect_y, expect_z);
+    // execute_double_and_add_single(a, b, c, d, result, res_x, res_y, res_z, expect_x, expect_y, expect_z);
     execute_double_and_add_multiple(a, b, c, d, result, res_x, res_y, res_z, expect_x, expect_y, expect_z);
 
     // Successfull execution of unit tests

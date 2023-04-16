@@ -355,52 +355,52 @@ void execute_kernels(var *a, var *b, var *expected, var *result) {
     mont_mult_short<<<BLOCKS, LIMBS_NUM>>>(a, b, result);
     assert_checks(expected, result);
 
-    // Multiply - Square Consistency 
+    // Multiply Test - Square Consistency 
     initialize_mul_square_consistency<<<BLOCKS, THREADS>>>(a, b);
     mul_square_consistency<<<BLOCKS, LIMBS_NUM>>>(a, b, expected, result);
     assert_checks(expected, result);
 
-    // Multiply - Square Against Constants 
+    // Multiply Test - Square Against Constants 
     initialize_sqr_check_against_constants<<<BLOCKS, THREADS>>>(a, expected);
     sqr_check_against_constants<<<BLOCKS, LIMBS_NUM>>>(a, result);
     assert_checks(expected, result);
 
-    // Add - Check Against Constants
+    // Add Test - Check Against Constants
     initialize_add_check_against_constants<<<BLOCKS, THREADS>>>(a, b, expected);
     add_check_against_constants<<<BLOCKS, LIMBS_NUM>>>(a, b, result);
     assert_checks(expected, result);
 
-    // Subtract - Check Against Constant
+    // Subtract Test - Check Against Constant
     initialize_sub_check_against_constants<<<BLOCKS, THREADS>>>(a, b, expected);
     sub_check_against_constants<<<BLOCKS, LIMBS_NUM>>>(a, b, result);
     assert_checks(expected, result);
 
-    // Convert To Montgomery Form
+    // Convert To Montgomery Form Test
     initialize_to_montgomery_form<<<BLOCKS, THREADS>>>(a, expected);
     to_montgomery_form<<<BLOCKS, LIMBS_NUM>>>(a, result);
     assert_checks(expected, result);
 
-    // Convert From Montgomery Form
+    // Convert From Montgomery Form Test
     initialize_from_montgomery_form<<<BLOCKS, THREADS>>>(a, expected);
     from_montgomery_form<<<BLOCKS, LIMBS_NUM>>>(a, result);
     assert_checks(expected, result);
 
-    // Montgomery Consistency Check
+    // Montgomery Consistency Check Test
     initialize_montgomery_consistency_check<<<BLOCKS, THREADS>>>(a, b);
     montgomery_consistency_check<<<BLOCKS, LIMBS_NUM>>>(a, b, expected, result);
     assert_checks(expected, result);
 
-    // Add Multiplication Consistency
+    // Add Multiplication Consistency Test
     initialize_add_mul_consistency<<<BLOCKS, THREADS>>>(a, b);
     add_mul_consistency<<<BLOCKS, LIMBS_NUM>>>(a, b, expected, result);
     assert_checks(expected, result);
 
-    // Subtract Multiplication Consistency
+    // Subtract Multiplication Consistency test
     initialize_sub_mul_consistency<<<BLOCKS, THREADS>>>(a, b);
     sub_mul_consistency<<<BLOCKS, LIMBS_NUM>>>(a, b, expected, result);
     assert_checks(expected, result);
 
-    // Cube Root
+    // Cube Root Test
     initialize_cube<<<BLOCKS, THREADS>>>(a);
     cube<<<BLOCKS, LIMBS_NUM>>>(a, expected, result);
     assert_checks(expected, result);

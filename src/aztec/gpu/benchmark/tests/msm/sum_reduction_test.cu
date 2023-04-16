@@ -27,7 +27,9 @@ static constexpr size_t POINTS = 1 << 16;
 
 /* -------------------------- Kernel 1 ---------------------------------------------- */
 
-// Sum reduction with warp divergence
+/**
+ * Sum reduction with warp divergence
+ */ 
 __global__ void sum_reduction_1(int *v, int *v_r) { 
     // Global thread ID
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
@@ -57,8 +59,10 @@ __global__ void sum_reduction_1(int *v, int *v_r) {
 
 /* -------------------------- Kernel 2 ---------------------------------------------- */
 
-// Sum reduction using sequential threads (eliminating warp divergence and modulo operation). 
-// This performs ~2x compared to sum_reduction_1. 
+/**
+ * Sum reduction using sequential threads (eliminating warp divergence and modulo operation). 
+ * This performs ~2x compared to sum_reduction_1.
+ */ 
 __global__ void sum_reduction_2(int *v, int *v_r) { 
     // Global thread ID
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
@@ -91,8 +95,10 @@ __global__ void sum_reduction_2(int *v, int *v_r) {
 
 /* -------------------------- Kernel 3 ---------------------------------------------- */
 
-// Contiguous memory access instead of strided access, avoiding shared memory bank conflicts.
-// Bank conflicts arise because of some specific access pattern of data in shared memory.
+/**
+ * Contiguous memory access instead of strided access, avoiding shared memory bank conflicts.
+ * Bank conflicts arise because of some specific access pattern of data in shared memory.
+ */ 
 __global__ void sum_reduction_3(int *v, int *v_r) { 
     // Global thread ID
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
@@ -122,8 +128,10 @@ __global__ void sum_reduction_3(int *v, int *v_r) {
 
 /* -------------------------- Kernel 4 ---------------------------------------------- */
 
-// Half the threads are idle after the first iteration. Instead,
-// launch half the number of threads and pack more work. 
+/**
+ * Half the threads are idle after the first iteration. Instead,
+ * launch half the number of threads and pack more work. 
+ */ 
 __global__ void sum_reduction_4(int *v, int *v_r) { 
     // Global thread ID
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
@@ -157,8 +165,10 @@ __global__ void sum_reduction_4(int *v, int *v_r) {
 
 /* -------------------------- Kernel 4 ---------------------------------------------- */
 
-// Used for last iteration to save useless work
-// 'volatile' to prevent caching in registers (compiler optimization)
+/**
+ * Used for last iteration to save useless work. 
+ * Use 'volatile' to prevent caching in registers (compiler optimization)
+ */ 
 __device__ void warpReduce(volatile int *shared_mem_ptr, int t) {
     shared_mem_ptr[t] += shared_mem_ptr[t + 32];
     shared_mem_ptr[t] += shared_mem_ptr[t + 16];
@@ -224,7 +234,9 @@ void print_field_tests(var *result) {
 
 /* -------------------------- Executing Initialization and Workload Kernels ---------------------------------------------- */
 
-// Execute sum reduction kernel
+/**
+ * Execute all sum reduction kernels
+ */ 
 void execute_sum_reduction(var *a, var *b, var *c, var *d, var *result, var *res_x, var *res_y, var *res_z) {    
     size_t bytes = POINTS * sizeof(int);
 
@@ -247,17 +259,17 @@ void execute_sum_reduction(var *a, var *b, var *c, var *d, var *result, var *res
     int GRID_SIZE = (int)ceil(POINTS / 256);
 
     // Launch kernels
-    // sum_reduction_1<<<GRID_SIZE, 256>>>(d_v, d_v_r);
-    // sum_reduction_1<<<1, GRID_SIZE>>>(d_v_r, d_v_r);
+    sum_reduction_1<<<GRID_SIZE, 256>>>(d_v, d_v_r);
+    sum_reduction_1<<<1, GRID_SIZE>>>(d_v_r, d_v_r);
 
-    // sum_reduction_2<<<GRID_SIZE, 256>>>(d_v, d_v_r);
-    // sum_reduction_2<<<1, GRID_SIZE>>>(d_v_r, d_v_r);
+    sum_reduction_2<<<GRID_SIZE, 256>>>(d_v, d_v_r);
+    sum_reduction_2<<<1, GRID_SIZE>>>(d_v_r, d_v_r);
 
-    // sum_reduction_3<<<GRID_SIZE, 256>>>(d_v, d_v_r);
-    // sum_reduction_3<<<1, GRID_SIZE>>>(d_v_r, d_v_r);
+    sum_reduction_3<<<GRID_SIZE, 256>>>(d_v, d_v_r);
+    sum_reduction_3<<<1, GRID_SIZE>>>(d_v_r, d_v_r);
 
-    // sum_reduction_4<<<GRID_SIZE / 2, 256>>>(d_v, d_v_r);
-    // sum_reduction_4<<<1, GRID_SIZE / 2>>>(d_v_r, d_v_r);
+    sum_reduction_4<<<GRID_SIZE / 2, 256>>>(d_v, d_v_r);
+    sum_reduction_4<<<1, GRID_SIZE / 2>>>(d_v_r, d_v_r);
 
     sum_reduction_5<<<GRID_SIZE / 2, 256>>>(d_v, d_v_r);
     sum_reduction_5<<<1, GRID_SIZE / 2>>>(d_v_r, d_v_r);

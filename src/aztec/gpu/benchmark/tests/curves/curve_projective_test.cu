@@ -10,6 +10,7 @@ static constexpr size_t THREADS = 4;
 static constexpr size_t POINTS = 1 << 10;
 
 /* -------------------------- Addition Test ---------------------------------------------- */
+
 __global__ void initialize_add_check_against_constants
 (var *a, var *b, var *c, var *x, var *y, var *z, var *expected_x, var *expected_y, var *expected_z, g1::element *t1, g1::element *t2, g1::element *expected) {
     int tid = (blockDim.x * blockIdx.x) + threadIdx.x;
