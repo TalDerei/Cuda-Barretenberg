@@ -32,21 +32,22 @@ void generate_test_plonk_circuit(waffle::StandardComposer& composer, size_t num_
 int main(int, char**) {
     cout << "Entered Plonk on GPU!\n" << endl;
 
-    cout << "------------Constructing witness---------------------" << endl; 
+    // Initialize composer and generate test plonk circuit
     waffle::StandardComposer composer = waffle::StandardComposer();
     generate_test_plonk_circuit(composer, static_cast<size_t>(MAX_GATES));
-    composer.compute_witness();
     
-    cout << "------------Constructing prover and proving key---------------------" << endl; 
-    composer.compute_proving_key();    
+    cout << "Constructed prover instance!" << endl; 
     provers = composer.create_prover();
 
-    cout << "------------Generatring proof---------------------" << endl; 
+    cout << "Constructed verifier instance!" << endl; 
+    verifiers = composer.create_verifier();
+
+    cout << "Generated proof!" << endl; 
     proofs = provers.construct_proof();
 
-    cout << "------------Constructing verifier instance and verify proof---------------------" << endl; 
-    composer.preprocess();
-    verifiers = composer.create_verifier();
+    cout << "Verified proof!" << endl; 
     verifiers.verify_proof(proofs);
+
+    cout << "Successfully generated and verified proof for circuit of size: " << MAX_GATES << endl;
 }
 
