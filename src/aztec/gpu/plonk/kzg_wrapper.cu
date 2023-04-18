@@ -1,1 +1,1 @@
-#include "pippenger_wrapper.cuh"
+#include "kzg_wrapper.cuh"

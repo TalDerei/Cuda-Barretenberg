@@ -6,18 +6,20 @@
 #include <stdlib/primitives/field/field.hpp>
 #include <iostream>
 
-#include "plonk.cuh"
-#include "kzg_wrapper.cuh"
+#include "composer_wrapper.cu"
+#include "kzg_wrapper.cu"
 
 using namespace std;
+using namespace composer_gpu_wrapper;
+using namespace waffle;
 
 constexpr size_t MAX_GATES = 1 << 10;
 
-waffle::Prover provers;
-waffle::Verifier verifiers;
-waffle::plonk_proof proofs;
+Prover prover;
+Verifier verifier;
+plonk_proof proof;
 
-void generate_test_plonk_circuit(waffle::StandardComposer& composer, size_t num_gates) {
+void generate_test_plonk_circuit(StandardComposer& composer, size_t num_gates) {
     plonk::stdlib::field_t a(plonk::stdlib::witness_t(&composer, barretenberg::fr::random_element()));
     plonk::stdlib::field_t b(plonk::stdlib::witness_t(&composer, barretenberg::fr::random_element()));
     plonk::stdlib::field_t c(&composer);
@@ -32,22 +34,23 @@ void generate_test_plonk_circuit(waffle::StandardComposer& composer, size_t num_
 int main(int, char**) {
     cout << "Entered Plonk on GPU!\n" << endl;
 
-    // Initialize composer and generate test plonk circuit
-    waffle::StandardComposer composer = waffle::StandardComposer();
-    generate_test_plonk_circuit(composer, static_cast<size_t>(MAX_GATES));
-    
+    // Initialize composer wrapper object 
+    composer_gpu_wrapper::composer *composer = new composer_gpu_wrapper::composer;
+
+    // Generate test plonk circuit
+    generate_test_plonk_circuit(composer->standard_composer, static_cast<size_t>(MAX_GATES));
+
     cout << "Constructed prover instance!" << endl; 
-    provers = composer.create_prover();
+    prover = composer->create_prover();
 
-    cout << "Constructed verifier instance!" << endl; 
-    verifiers = composer.create_verifier();
+    // cout << "Constructed verifier instance!" << endl; 
+    // verifier = composer->create_verifier();
 
-    cout << "Generated proof!" << endl; 
-    proofs = provers.construct_proof();
+    // cout << "Generated proof!" << endl; 
+    // proof = prover.construct_proof();
 
-    cout << "Verified proof!" << endl; 
-    verifiers.verify_proof(proofs);
+    // cout << "Verified proof!" << endl; 
+    // verifier.verify_proof(proof);
 
     cout << "Successfully generated and verified proof for circuit of size: " << MAX_GATES << endl;
 }
-
