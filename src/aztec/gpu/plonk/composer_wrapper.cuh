@@ -1,15 +1,3 @@
-#include <plonk/composer/standard_composer.hpp>
-#include <ecc/curves/bn254/scalar_multiplication/scalar_multiplication.hpp>
-#include <numeric/bitop/get_msb.hpp>
-#include <plonk/composer/standard/compute_verification_key.hpp>
-#include <plonk/proof_system/widgets/transition_widgets/arithmetic_widget.hpp>
-#include <plonk/proof_system/widgets/random_widgets/permutation_widget.hpp>
-#include <plonk/proof_system/types/polynomial_manifest.hpp>
-#include <plonk/proof_system/commitment_scheme/kate_commitment_scheme.hpp>
-#include <unordered_set>
-#include <unordered_map>
-#include <iostream> 
-
 #include "prover_wrapper.cu"
 
 using namespace std;
