@@ -7,17 +7,13 @@
 #include <iostream>
 
 #include "composer_wrapper.cu"
-#include "kzg_wrapper.cu"
 
 using namespace std;
 using namespace composer_gpu_wrapper;
 using namespace waffle;
+using namespace prover_wrapper;
 
 constexpr size_t MAX_GATES = 1 << 10;
-
-Prover prover;
-Verifier verifier;
-plonk_proof proof;
 
 void generate_test_plonk_circuit(StandardComposer& composer, size_t num_gates) {
     plonk::stdlib::field_t a(plonk::stdlib::witness_t(&composer, barretenberg::fr::random_element()));
@@ -34,23 +30,21 @@ void generate_test_plonk_circuit(StandardComposer& composer, size_t num_gates) {
 int main(int, char**) {
     cout << "Entered Plonk on GPU!\n" << endl;
 
-    // Initialize composer wrapper object 
+    // Initialize composer and prover wrapper objects
     composer_gpu_wrapper::composer *composer = new composer_gpu_wrapper::composer;
+    StandardComposer *composer_wrapper = &(*composer);
+    Prover *prover = new prover_wrapper::Prover_Wrapper;
 
     // Generate test plonk circuit
-    generate_test_plonk_circuit(composer->standard_composer, static_cast<size_t>(MAX_GATES));
+    generate_test_plonk_circuit(composer->composer_wrapper, static_cast<size_t>(MAX_GATES));
 
-    cout << "Constructed prover instance!" << endl; 
-    prover = composer->create_prover();
+    // Construct prover and verifier instances
+    *prover = composer_wrapper->create_prover();
+    Verifier verifier = composer_wrapper->create_verifier();
 
-    // cout << "Constructed verifier instance!" << endl; 
-    // verifier = composer->create_verifier();
+    // Generate and verify proof
+    plonk_proof proof = prover->construct_proof();
+    verifier.verify_proof(proof);
 
-    // cout << "Generated proof!" << endl; 
-    // proof = prover.construct_proof();
-
-    // cout << "Verified proof!" << endl; 
-    // verifier.verify_proof(proof);
-
-    cout << "Successfully generated and verified proof for circuit of size: " << MAX_GATES << endl;
+    cout << "Successfully verified proof for circuit of size: " << MAX_GATES << endl;
 }
