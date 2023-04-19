@@ -11,10 +11,10 @@ namespace composer_gpu_wrapper {
  * derives the 'StandardComposer' base class, which derives the 'ComposerBase' base class.
  */
 
-class composer : public StandardComposer {
+class ComposerWrapper : public StandardComposer {
     public:    
         // Inline constructor 
-        composer () : StandardComposer() {}
+        ComposerWrapper () : StandardComposer() {}
         
         StandardComposer composer_wrapper;
         

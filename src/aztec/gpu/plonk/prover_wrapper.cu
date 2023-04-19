@@ -5,7 +5,7 @@
  *
  * @return proof
  * */
-waffle::plonk_proof &prover_wrapper::Prover_Wrapper::construct_proof() {
+waffle::plonk_proof &prover_wrapper::ProverWrapper::construct_proof() {
     cout << "Entered virtual construct_proof()" << endl;
     
     // Execute init round. Randomize witness polynomials

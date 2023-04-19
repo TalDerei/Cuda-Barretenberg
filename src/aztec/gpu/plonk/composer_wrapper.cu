@@ -1,12 +1,11 @@
 #include "composer_wrapper.cuh"
-#include "kzg_wrapper.cu"
 
 /**
  * Create prover
  * 
  * @return Initialized prover
  * */
-waffle::Prover composer_gpu_wrapper::composer::create_prover() {
+waffle::Prover composer_gpu_wrapper::ComposerWrapper::create_prover() {
     cout << "Entered virtual create_prover()" << endl;
 
     // Construct proving key

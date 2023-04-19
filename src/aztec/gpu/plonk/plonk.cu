@@ -31,9 +31,9 @@ int main(int, char**) {
     cout << "Entered Plonk on GPU!\n" << endl;
 
     // Initialize composer and prover wrapper objects
-    composer_gpu_wrapper::composer *composer = new composer_gpu_wrapper::composer;
+    composer_gpu_wrapper::ComposerWrapper *composer = new composer_gpu_wrapper::ComposerWrapper;
     StandardComposer *composer_wrapper = &(*composer);
-    Prover *prover = new prover_wrapper::Prover_Wrapper;
+    Prover *prover = new prover_wrapper::ProverWrapper;
 
     // Generate test plonk circuit
     generate_test_plonk_circuit(composer->composer_wrapper, static_cast<size_t>(MAX_GATES));
@@ -46,5 +46,5 @@ int main(int, char**) {
     plonk_proof proof = prover->construct_proof();
     verifier.verify_proof(proof);
 
-    cout << "Successfully verified proof for circuit of size: " << MAX_GATES << endl;
+    cout << "Successfully verifier proof for circuit of size: " << MAX_GATES << endl;
 }
