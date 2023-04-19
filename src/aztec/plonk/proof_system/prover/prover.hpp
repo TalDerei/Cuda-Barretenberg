@@ -38,7 +38,7 @@ template <typename settings> class ProverBase {
     void compute_linearisation_coefficients();
     void add_blinding_to_quotient_polynomial_parts();
     waffle::plonk_proof& export_proof();
-    waffle::plonk_proof& construct_proof();
+    virtual waffle::plonk_proof& construct_proof();
 
     size_t get_circuit_size() const { return n; }
 

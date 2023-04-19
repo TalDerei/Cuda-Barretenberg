@@ -483,7 +483,7 @@ template <typename settings> void ProverBase<settings>::compute_linearisation_co
         fr linear_eval = r.evaluate(zeta, size);
         // This condition checks if r(z) = 0 but does not abort.
         if (linear_eval != fr(0)) {
-            info("linear_eval is not 0.");
+            // info("linear_eval is not 0.");
         }
     } else {
         fr t_eval = polynomial_arithmetic::evaluate({ &key->quotient_polynomial_parts[0][0],
