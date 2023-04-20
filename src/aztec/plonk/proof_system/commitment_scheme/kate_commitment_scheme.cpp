@@ -51,7 +51,7 @@ void KateCommitmentScheme<settings>::compute_opening_polynomial(
     }
 
     // commit to the opened polynomial
-    KateCommitmentScheme::commit(dest, tag, item_constant, queue);
+    commit(dest, tag, item_constant, queue);
 }
 
 template <typename settings>

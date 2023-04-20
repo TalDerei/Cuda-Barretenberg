@@ -8,6 +8,9 @@
 #include "./work_queue.hpp"
 #include "../widgets/transition_widgets/transition_widget.hpp"
 #include "../commitment_scheme/commitment_scheme.hpp"
+// #include <iostream>
+
+// using namespace std;
 namespace waffle {
 
 template <typename settings> class ProverBase {
@@ -22,12 +25,12 @@ template <typename settings> class ProverBase {
     ProverBase& operator=(ProverBase&& other);
 
     void execute_preamble_round();
-    void execute_first_round();
-    void execute_second_round();
-    void execute_third_round();
-    void execute_fourth_round();
-    void execute_fifth_round();
-    void execute_sixth_round();
+    virtual void execute_first_round();
+    virtual void execute_second_round();
+    virtual void execute_third_round();
+    virtual void execute_fourth_round();
+    virtual void execute_fifth_round();
+    virtual void execute_sixth_round();
 
     void add_polynomial_evaluations_to_transcript();
     void compute_batch_opening_polynomials();
