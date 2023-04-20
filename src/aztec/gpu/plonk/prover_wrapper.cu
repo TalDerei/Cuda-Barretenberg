@@ -1,11 +1,13 @@
 #include "prover_wrapper.cuh"
 
+using namespace prover_wrapper;
+
 /**
- * Construct proof by running prover rounds
+ * Construct a proof by executing the prover rounds. 
  *
- * @return proof
+ * @return Proof π. 
  * */
-waffle::plonk_proof &prover_wrapper::ProverWrapper::construct_proof() {
+plonk_proof &ProverWrapper::construct_proof() {
     cout << "Entered virtual construct_proof()" << endl;
     
     // Execute init round. Randomize witness polynomials
@@ -33,4 +35,14 @@ waffle::plonk_proof &prover_wrapper::ProverWrapper::construct_proof() {
     queue.process_queue();
 
     return export_proof();
+}
+
+void ProverWrapper::execute_first_round() {
+    cout << "Entered virtual execute_first_round()" << endl;
+
+    queue.flush_queue();
+    compute_wire_pre_commitments();
+    for (auto& widget : random_widgets) {
+        widget->compute_round_commitments(transcript, 1, queue);
+    }
 }

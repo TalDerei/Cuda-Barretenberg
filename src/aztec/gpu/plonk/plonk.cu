@@ -9,9 +9,7 @@
 #include "composer_wrapper.cu"
 
 using namespace std;
-using namespace composer_gpu_wrapper;
 using namespace waffle;
-using namespace prover_wrapper;
 
 constexpr size_t MAX_GATES = 1 << 10;
 
@@ -44,6 +42,7 @@ int main(int, char**) {
 
     // Generate and verify proof
     plonk_proof proof = prover->construct_proof();
+
     verifier.verify_proof(proof);
 
     cout << "Successfully verifier proof for circuit of size: " << MAX_GATES << endl;
