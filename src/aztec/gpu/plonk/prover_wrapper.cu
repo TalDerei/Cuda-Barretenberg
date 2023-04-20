@@ -1,6 +1,6 @@
 #include "prover_wrapper.cuh"
 
-using namespace prover_wrapper;
+using namespace prover_gpu_wrapper;
 
 /**
  * Construct a proof by executing the prover rounds. 

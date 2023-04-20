@@ -27,10 +27,10 @@ waffle::Prover ComposerWrapper::create_prover() {
     output_state.random_widgets.emplace_back(std::move(permutation_widget));
     output_state.transition_widgets.emplace_back(std::move(arithmetic_widget));
 
-    std::unique_ptr<KateCommitmentScheme<standard_settings>> kate_commitment_scheme =
-        std::make_unique<KateCommitmentScheme<standard_settings>>();
-
-    output_state.commitment_scheme = std::move(kate_commitment_scheme);
+    // Create object and pass it to a smart pointer
+    std::unique_ptr<KateCommitmentScheme<standard_settings>> kzg(new kzg_gpu_wrapper::KzgWrapper());
+    kzg = std::make_unique<kzg_gpu_wrapper::KzgWrapper>();
+    output_state.commitment_scheme = std::move(kzg);    
     
     return output_state;
 }

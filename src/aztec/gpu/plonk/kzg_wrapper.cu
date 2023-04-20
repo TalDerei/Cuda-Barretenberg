@@ -1,9 +1,15 @@
 #include "kzg_wrapper.cuh"
 
-void kzg_wrapper::KzgWrapper::execute_test() {
-    cout << "Execute_test()!" << endl;
-}
+using namespace kzg_gpu_wrapper;
 
-// void kzg_wrapper::KzgWrapper::commit(fr* coefficients, std::string tag, fr item_constant, work_queue& queue) {
-//     cout << "Entered virtual commit()" << endl;
-// }
+void kzg_gpu_wrapper::KzgWrapper::commit(fr *coefficients, std::string tag, fr item_constant, work_queue &queue) {
+    cout << "Entered virtual commit()" << endl;
+    
+    queue.add_to_queue({
+        work_queue::WorkType::SCALAR_MULTIPLICATION,
+        coefficients,
+        tag,
+        item_constant,
+        0,
+    });
+}

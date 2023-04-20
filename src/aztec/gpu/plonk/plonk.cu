@@ -31,7 +31,7 @@ int main(int, char**) {
     // Initialize composer and prover wrapper objects
     composer_gpu_wrapper::ComposerWrapper *composer = new composer_gpu_wrapper::ComposerWrapper;
     StandardComposer *composer_wrapper = &(*composer);
-    Prover *prover = new prover_wrapper::ProverWrapper;
+    Prover *prover = new prover_gpu_wrapper::ProverWrapper;
 
     // Generate test plonk circuit
     generate_test_plonk_circuit(composer->composer_wrapper, static_cast<size_t>(MAX_GATES));

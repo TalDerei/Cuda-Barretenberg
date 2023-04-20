@@ -3,7 +3,7 @@
 using namespace std;
 using namespace waffle;
 
-namespace queue_wrapper {
+namespace queue_gpu_wrapper {
 
 /**
  * Polymorphic 'QueueWrapper' class that represents the top-level prover functions and 

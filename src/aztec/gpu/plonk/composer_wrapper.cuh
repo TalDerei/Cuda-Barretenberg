@@ -2,7 +2,7 @@
 
 using namespace std;
 using namespace waffle;
-using namespace prover_wrapper;
+using namespace prover_gpu_wrapper;
 
 namespace composer_gpu_wrapper {
 
