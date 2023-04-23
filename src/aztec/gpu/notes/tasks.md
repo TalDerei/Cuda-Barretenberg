@@ -20,7 +20,7 @@
     - [x] Benchmark Fast Fourier Transform algorithm
     - [x] Benchmark vanilla Plonk prover
     - [x] Benchmark TurboPlonk and UltraPlonk provers
-- [ ] Multi-scalar multiplication (MSM) for Pippenger's Bucket Method
+- [x] Multi-scalar multiplication (MSM) for Pippenger's Bucket Method
     - [x] Understand Barretenberg’s multi-exponentiation CPU implementation 
     - [x] Benchmark Zprize MSM implementation on GPU 
     - [x] Understand Supranational’s SPPARK MSM GPU kernel
@@ -32,12 +32,18 @@
             - [x] Add naive double and add kernel (reference)
             - [x] Add sum reduction kernel 
             - [x] Add bucket method
-- [ ] Test and benchmark MSM kernel implementation on GPU
+        - [x] Implement simple double-and-add algorithm for correctness
+            - [x] Implement for single finite field elements
+            - [x] Implement for single elliptic curve points
+            - [x] Implement for vector of finite field elements
+            - [x] Implement for vector of elliptic curve points
+        - [x] MVP KZG-10 commitment scheme 
+- [x] Test MSM kernel implementation on GPU
     - [x] Create unit test suite
-    - [ ] Create benchmarking suite
-- [ ] Benchmark FF and ECC arithmetic on GPU
+- [ ] Benchmark FF and ECC arithmetic and MSM on GPU
     - [ ] Create finite field bench suite 
     - [ ] Create elliptic curve bench suite 
+    - [ ] Create MSM bench suite
 - [x] Implement remaining G1 arthmetic
     - [x] Finish adding missing elliptic curve functions
 - [ ] Implement Projective coordinates G2 arithmetic
@@ -45,12 +51,11 @@
     - [ ] Add zero and infinity checks 
     - [ ] Create unit test suite for extension fields
     - [x] Implement Projective coordinates and testing bench
-- [x] Implement simple double-and-add algorithm for correctness
-    - [x] Implement for single finite field elements
-    - [x] Implement for single elliptic curve points
-    - [x] Implement for vector of finite field elements
-    - [x] Implement for vector of elliptic curve points
-- [ ] MVP KZG-10 commitment scheme 
 - [x] NTT port
     - [x] Generate twiddle factors (roots of unity) over BN-254
     - [x] Store twiddle factors in table
+- [ ] Implement Plonk pipeline wrapper
+    - [x] General wrapper that overrides prover functions
+    - [ ] Connect wrapper to MSM GPU kernel
+- [ ] Enhance MSM with performance optimizations
+- [ ] Design memory pipeline for data used in MSM GPU kernel
