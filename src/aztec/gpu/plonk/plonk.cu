@@ -6,7 +6,7 @@
 #include <stdlib/primitives/field/field.hpp>
 #include <iostream>
 
-#include "composer_wrapper.cu"
+#include "composer_wrapper.cuh"
 
 using namespace std;
 using namespace waffle;

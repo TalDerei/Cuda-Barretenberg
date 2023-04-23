@@ -23,10 +23,6 @@ class ComposerWrapper : public StandardComposer {
     public:    
         // Inline constructor 
         ComposerWrapper () : StandardComposer() {}
-
         StandardComposer composer_wrapper;
-        
-        virtual Prover create_prover() override; 
 };
-
 }
