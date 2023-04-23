@@ -12,9 +12,7 @@ namespace kzg_gpu_wrapper {
  */
 class KzgWrapper : public KateCommitmentScheme<standard_settings> {
     public:    
-        std::unique_ptr<KateCommitmentScheme<standard_settings>> kate_commitment_scheme;
-
-        virtual void commit(fr* coefficients, std::string tag, fr item_constant, work_queue& queue) override;
+        virtual void commit(fr* coefficients, std::string tag, fr item_constant, std::unique_ptr<work_queue>& queue) override;
 };
 
 }

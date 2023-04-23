@@ -30,7 +30,7 @@ waffle::Prover ComposerWrapper::create_prover() {
     // Create object and pass it to a smart pointer
     std::unique_ptr<KateCommitmentScheme<standard_settings>> kzg(new kzg_gpu_wrapper::KzgWrapper());
     kzg = std::make_unique<kzg_gpu_wrapper::KzgWrapper>();
-    output_state.commitment_scheme = std::move(kzg);    
-    
+    output_state.commitment_scheme = std::move(kzg);  
+
     return output_state;
 }

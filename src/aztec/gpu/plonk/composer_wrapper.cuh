@@ -19,12 +19,11 @@ namespace composer_gpu_wrapper {
  * 'StandardComposer' inherents from the 'ComposerBase' base class, which defines functions
  * for computing the selector (gate), witness (wire), and sigma permutation polynomials. 
  */
-
 class ComposerWrapper : public StandardComposer {
     public:    
         // Inline constructor 
         ComposerWrapper () : StandardComposer() {}
-        
+
         StandardComposer composer_wrapper;
         
         virtual Prover create_prover() override; 

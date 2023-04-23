@@ -14,9 +14,8 @@ namespace prover_gpu_wrapper {
 class ProverWrapper : public ProverBase<standard_settings> {
     public:    
         virtual plonk_proof& construct_proof() override;
-        virtual void execute_first_round() override;
-};
 
-// Might need to inherent ProverWrapper from KzgWrapper.
+        virtual ProverBase<standard_settings>& operator=(ProverBase<standard_settings>&& other) override;
+};
 
 }
