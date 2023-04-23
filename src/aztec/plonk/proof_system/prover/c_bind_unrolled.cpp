@@ -8,7 +8,7 @@ extern "C" {
 
 WASM_EXPORT void unrolled_prover_process_queue(waffle::UnrolledTurboProver* prover)
 {
-    prover->queue.process_queue();
+    prover->queue->process_queue();
 }
 
 WASM_EXPORT size_t unrolled_prover_get_circuit_size(waffle::UnrolledTurboProver* prover)

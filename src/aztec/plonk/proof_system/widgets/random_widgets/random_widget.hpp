@@ -51,7 +51,7 @@ class ProverRandomWidget {
 
     virtual ~ProverRandomWidget() {}
 
-    virtual void compute_round_commitments(transcript::StandardTranscript&, const size_t, work_queue&){};
+    virtual void compute_round_commitments(transcript::StandardTranscript&, const size_t, std::unique_ptr<work_queue>&){};
 
     virtual barretenberg::fr compute_quotient_contribution(const barretenberg::fr& alpha_base,
                                                            const transcript::StandardTranscript& transcript) = 0;

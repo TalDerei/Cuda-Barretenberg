@@ -11,9 +11,9 @@ KateCommitmentScheme<settings>::KateCommitmentScheme()
 {}
 
 template <typename settings>
-void KateCommitmentScheme<settings>::commit(fr* coefficients, std::string tag, fr item_constant, work_queue& queue)
+void KateCommitmentScheme<settings>::commit(fr* coefficients, std::string tag, fr item_constant, std::unique_ptr<work_queue>& queue)
 {
-    queue.add_to_queue({
+    queue->add_to_queue({
         work_queue::WorkType::SCALAR_MULTIPLICATION,
         coefficients,
         tag,
@@ -24,7 +24,7 @@ void KateCommitmentScheme<settings>::commit(fr* coefficients, std::string tag, f
 
 template <typename settings>
 void KateCommitmentScheme<settings>::compute_opening_polynomial(
-    const fr* src, fr* dest, const fr& z_point, const size_t n, std::string tag, fr item_constant, work_queue& queue)
+    const fr* src, fr* dest, const fr& z_point, const size_t n, std::string tag, fr item_constant, std::unique_ptr<work_queue>& queue)
 {
     // open({cm_i}, {cm'_i}, {z, z'}, {s_i, s'_i})
 
@@ -51,7 +51,7 @@ void KateCommitmentScheme<settings>::compute_opening_polynomial(
     }
 
     // commit to the opened polynomial
-    KateCommitmentScheme::commit(dest, tag, item_constant, queue);
+    commit(dest, tag, item_constant, queue);
 }
 
 template <typename settings>
@@ -64,7 +64,7 @@ void KateCommitmentScheme<settings>::generic_batch_open(const fr* src,
                                                         const size_t n,
                                                         std::string* tags,
                                                         fr* item_constants,
-                                                        work_queue& queue)
+                                                        std::unique_ptr<work_queue>& queue)
 {
     // In this function, we compute the opening polynomials using Kate scheme for multiple input
     // polynomials with multiple evaluation points. The input polynomials are separated according
@@ -130,7 +130,7 @@ void KateCommitmentScheme<settings>::generic_batch_open(const fr* src,
 
 template <typename settings>
 void KateCommitmentScheme<settings>::batch_open(const transcript::StandardTranscript& transcript,
-                                                work_queue& queue,
+                                                std::unique_ptr<work_queue>& queue,
                                                 std::shared_ptr<proving_key> input_key,
                                                 std::shared_ptr<program_witness> witness)
 {

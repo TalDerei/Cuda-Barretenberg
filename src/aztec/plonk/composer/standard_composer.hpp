@@ -2,6 +2,10 @@
 #include "composer_base.hpp"
 #include <plonk/reference_string/file_reference_string.hpp>
 #include <plonk/transcript/manifest.hpp>
+#include <iostream>
+
+using namespace std;
+
 namespace waffle {
 enum StandardSelectors {
     QM = 0,
@@ -27,6 +31,7 @@ class StandardComposer : public ComposerBase {
     StandardComposer(const size_t size_hint = 0)
         : ComposerBase(5, size_hint, standard_sel_props())
     {
+        cout << "Enetered StandardComposer constructor!" << endl;
         w_l.reserve(size_hint);
         w_r.reserve(size_hint);
         w_o.reserve(size_hint);
@@ -96,7 +101,7 @@ class StandardComposer : public ComposerBase {
      * @return A new initialized prover.
      */
     Prover preprocess() { return create_prover(); };
-    Prover create_prover();
+    virtual Prover create_prover();
     UnrolledVerifier create_unrolled_verifier();
     UnrolledProver create_unrolled_prover();
 

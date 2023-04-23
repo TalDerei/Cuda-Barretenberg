@@ -241,20 +241,20 @@ void ProverPlookupWidget<num_roots_cut_out_of_vanishing_polynomial>::compute_gra
 
 template <const size_t num_roots_cut_out_of_vanishing_polynomial>
 void ProverPlookupWidget<num_roots_cut_out_of_vanishing_polynomial>::compute_round_commitments(
-    transcript::StandardTranscript& transcript, const size_t round_number, work_queue& queue)
+    transcript::StandardTranscript& transcript, const size_t round_number, std::unique_ptr<work_queue>& queue)
 {
     if (round_number == 2) {
         compute_sorted_list_commitment(transcript);
         polynomial& s = witness->wires.at("s");
 
-        queue.add_to_queue({
+        queue->add_to_queue({
             work_queue::WorkType::SCALAR_MULTIPLICATION,
             s.get_coefficients(),
             "S",
             barretenberg::fr(0),
             0,
         });
-        queue.add_to_queue({
+        queue->add_to_queue({
             work_queue::WorkType::FFT,
             nullptr,
             "s",
@@ -267,14 +267,14 @@ void ProverPlookupWidget<num_roots_cut_out_of_vanishing_polynomial>::compute_rou
         compute_grand_product_commitment(transcript);
         polynomial& z = witness->wires.at("z_lookup");
 
-        queue.add_to_queue({
+        queue->add_to_queue({
             work_queue::WorkType::SCALAR_MULTIPLICATION,
             z.get_coefficients(),
             "Z_LOOKUP",
             barretenberg::fr(0),
             0,
         });
-        queue.add_to_queue({
+        queue->add_to_queue({
             work_queue::WorkType::FFT,
             nullptr,
             "z_lookup",

@@ -5,7 +5,9 @@
 #include <ecc/curves/bn254/scalar_multiplication/scalar_multiplication.hpp>
 #include <polynomials/iterate_over_domain.hpp>
 #include <polynomials/polynomial_arithmetic.hpp>
+#include <iostream>
 
+using namespace std;
 using namespace barretenberg;
 
 namespace waffle {
@@ -27,7 +29,6 @@ ProverBase<settings>::ProverBase(std::shared_ptr<proving_key> input_key,
     , transcript(input_manifest, settings::hash_type, settings::num_challenge_bytes)
     , key(input_key)
     , witness(input_witness)
-    , queue(key.get(), witness.get(), &transcript)
 {
     if (input_witness && witness->wires.count("z") == 0) {
         witness->wires.insert({ "z", polynomial(n, n) });
@@ -41,7 +42,6 @@ ProverBase<settings>::ProverBase(ProverBase<settings>&& other)
     , key(std::move(other.key))
     , witness(std::move(other.witness))
     , commitment_scheme(std::move(other.commitment_scheme))
-    , queue(key.get(), witness.get(), &transcript)
 {
     for (size_t i = 0; i < other.random_widgets.size(); ++i) {
         random_widgets.emplace_back(std::move(other.random_widgets[i]));
@@ -68,7 +68,9 @@ template <typename settings> ProverBase<settings>& ProverBase<settings>::operato
     witness = std::move(other.witness);
     commitment_scheme = std::move(other.commitment_scheme);
 
-    queue = work_queue(key.get(), witness.get(), &transcript);
+    std::unique_ptr<work_queue> queue_(new work_queue(key.get(), witness.get(), &transcript));
+    queue = std::move(queue_);  
+
     return *this;
 }
 
@@ -155,7 +157,7 @@ template <typename settings> void ProverBase<settings>::compute_quotient_pre_com
  * */
 template <typename settings> void ProverBase<settings>::execute_preamble_round()
 {
-    queue.flush_queue();
+    queue->flush_queue();
     transcript.add_element("circuit_size",
                            { static_cast<uint8_t>(n >> 24),
                              static_cast<uint8_t>(n >> 16),
@@ -203,7 +205,7 @@ template <typename settings> void ProverBase<settings>::execute_preamble_round()
 
         barretenberg::polynomial& wire_fft = key->wire_ffts.at(wire_tag + "_fft");
         barretenberg::polynomial_arithmetic::copy_polynomial(&wire[0], &wire_fft[0], n, n);
-        queue.add_to_queue({
+        queue->add_to_queue({
             work_queue::WorkType::IFFT,
             nullptr,
             wire_tag,
@@ -222,7 +224,7 @@ template <typename settings> void ProverBase<settings>::execute_preamble_round()
  * */
 template <typename settings> void ProverBase<settings>::execute_first_round()
 {
-    queue.flush_queue();
+    queue->flush_queue();
 #ifdef DEBUG_TIMING
     std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
 #endif
@@ -261,7 +263,7 @@ template <typename settings> void ProverBase<settings>::execute_first_round()
  * */
 template <typename settings> void ProverBase<settings>::execute_second_round()
 {
-    queue.flush_queue();
+    queue->flush_queue();
     transcript.apply_fiat_shamir("eta");
     for (auto& widget : random_widgets) {
         widget->compute_round_commitments(transcript, 2, queue);
@@ -276,7 +278,7 @@ template <typename settings> void ProverBase<settings>::execute_second_round()
  * */
 template <typename settings> void ProverBase<settings>::execute_third_round()
 {
-    queue.flush_queue();
+    queue->flush_queue();
     transcript.apply_fiat_shamir("beta");
 #ifdef DEBUG_TIMING
     std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
@@ -295,7 +297,7 @@ template <typename settings> void ProverBase<settings>::execute_third_round()
 
     for (size_t i = 0; i < settings::program_width; ++i) {
         std::string wire_tag = "w_" + std::to_string(i + 1);
-        queue.add_to_queue({
+        queue->add_to_queue({
             work_queue::WorkType::FFT,
             nullptr,
             wire_tag,
@@ -312,7 +314,7 @@ template <typename settings> void ProverBase<settings>::execute_third_round()
 
 template <typename settings> void ProverBase<settings>::execute_fourth_round()
 {
-    queue.flush_queue();
+    queue->flush_queue();
     transcript.apply_fiat_shamir("alpha");
 #ifdef DEBUG_TIMING
     std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
@@ -411,7 +413,7 @@ template <typename settings> void ProverBase<settings>::execute_fourth_round()
 
 template <typename settings> void ProverBase<settings>::execute_fifth_round()
 {
-    queue.flush_queue();
+    queue->flush_queue();
     transcript.apply_fiat_shamir("z"); // end of 4th round
 #ifdef DEBUG_TIMING
     std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
@@ -426,7 +428,7 @@ template <typename settings> void ProverBase<settings>::execute_fifth_round()
 
 template <typename settings> void ProverBase<settings>::execute_sixth_round()
 {
-    queue.flush_queue();
+    queue->flush_queue();
     transcript.apply_fiat_shamir("nu");
     commitment_scheme->batch_open(transcript, queue, key, witness);
 }
@@ -483,7 +485,7 @@ template <typename settings> void ProverBase<settings>::compute_linearisation_co
         fr linear_eval = r.evaluate(zeta, size);
         // This condition checks if r(z) = 0 but does not abort.
         if (linear_eval != fr(0)) {
-            info("linear_eval is not 0.");
+            // info("linear_eval is not 0.");
         }
     } else {
         fr t_eval = polynomial_arithmetic::evaluate({ &key->quotient_polynomial_parts[0][0],
@@ -542,25 +544,25 @@ template <typename settings> waffle::plonk_proof& ProverBase<settings>::construc
 {
     // Execute init round. Randomize witness polynomials.
     execute_preamble_round();
-    queue.process_queue();
+    queue->process_queue();
     // Compute wire precommitments and sometimes random widget round commitments
     execute_first_round();
-    queue.process_queue();
+    queue->process_queue();
 
     // Fiat-Shamir eta + execute random widgets.
     execute_second_round();
-    queue.process_queue();
+    queue->process_queue();
 
     // Fiat-Shamir beta, execute random widgets (Permutation widget is executed here)
     // and fft the witnesses
     execute_third_round();
-    queue.process_queue();
+    queue->process_queue();
 
     execute_fourth_round();
-    queue.process_queue();
+    queue->process_queue();
     execute_fifth_round();
     execute_sixth_round();
-    queue.process_queue();
+    queue->process_queue();
     return export_proof();
 }
 

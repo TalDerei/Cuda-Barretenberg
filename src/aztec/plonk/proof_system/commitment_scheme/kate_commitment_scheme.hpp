@@ -7,7 +7,7 @@ template <typename settings> class KateCommitmentScheme : public CommitmentSchem
   public:
     KateCommitmentScheme();
 
-    void commit(fr* coefficients, std::string tag, fr item_constant, work_queue& queue) override;
+    void commit(fr* coefficients, std::string tag, fr item_constant, std::unique_ptr<work_queue>& queue) override;
 
     void compute_opening_polynomial(const fr* src,
                                     fr* dest,
@@ -15,7 +15,7 @@ template <typename settings> class KateCommitmentScheme : public CommitmentSchem
                                     const size_t n,
                                     std::string tag,
                                     fr item_constant,
-                                    work_queue& queue) override;
+                                    std::unique_ptr<work_queue>& queue) override;
 
     void generic_batch_open(const fr* src,
                             fr* dest,
@@ -26,10 +26,10 @@ template <typename settings> class KateCommitmentScheme : public CommitmentSchem
                             const size_t n,
                             std::string* tags,
                             fr* item_constants,
-                            work_queue& queue) override;
+                            std::unique_ptr<work_queue>& queue) override;
 
     void batch_open(const transcript::StandardTranscript& transcript,
-                    work_queue& queue,
+                    std::unique_ptr<work_queue>& queue,
                     std::shared_ptr<proving_key> input_key = nullptr,
                     std::shared_ptr<program_witness> witness = nullptr) override;
 

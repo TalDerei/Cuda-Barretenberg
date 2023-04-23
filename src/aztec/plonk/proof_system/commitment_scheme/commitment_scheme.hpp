@@ -19,10 +19,10 @@ class CommitmentScheme {
 
     virtual ~CommitmentScheme() {}
 
-    virtual void commit(fr* coefficients, std::string tag, fr item_constant, work_queue& queue) = 0;
+    virtual void commit(fr* coefficients, std::string tag, fr item_constant, std::unique_ptr<work_queue>& queue) = 0;
 
     virtual void compute_opening_polynomial(
-        const fr* src, fr* dest, const fr& z, const size_t n, std::string tag, fr item_constant, work_queue& queue) = 0;
+        const fr* src, fr* dest, const fr& z, const size_t n, std::string tag, fr item_constant, std::unique_ptr<work_queue>& queue) = 0;
 
     virtual void generic_batch_open(const fr* src,
                                     fr* dest,
@@ -33,10 +33,10 @@ class CommitmentScheme {
                                     const size_t n,
                                     std::string* tags,
                                     fr* item_constants,
-                                    work_queue& queue) = 0;
+                                    std::unique_ptr<work_queue>& queue) = 0;
 
     virtual void batch_open(const transcript::StandardTranscript& transcript,
-                            work_queue& queue,
+                            std::unique_ptr<work_queue>& queue,
                             std::shared_ptr<proving_key> input_key = nullptr,
                             std::shared_ptr<program_witness> witness = nullptr) = 0;
 

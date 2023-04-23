@@ -906,4 +906,5 @@ bool StandardComposer::check_circuit()
     }
     return true;
 }
+
 } // namespace waffle
