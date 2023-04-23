@@ -51,7 +51,7 @@ ProverPermutationWidget<program_width, idpolys, num_roots_cut_out_of_vanishing_p
 
 template <size_t program_width, bool idpolys, const size_t num_roots_cut_out_of_vanishing_polynomial>
 void ProverPermutationWidget<program_width, idpolys, num_roots_cut_out_of_vanishing_polynomial>::
-    compute_round_commitments(transcript::StandardTranscript& transcript, const size_t round_number, work_queue& queue)
+    compute_round_commitments(transcript::StandardTranscript& transcript, const size_t round_number, std::unique_ptr<work_queue>& queue)
 {
     if (round_number != 3) {
         return;
@@ -312,14 +312,14 @@ void ProverPermutationWidget<program_width, idpolys, num_roots_cut_out_of_vanish
         aligned_free(accumulators[(k - 1) * 2 + 1]);
     }
 
-    queue.add_to_queue({
+    queue->add_to_queue({
         work_queue::WorkType::SCALAR_MULTIPLICATION,
         z.get_coefficients(),
         "Z",
         barretenberg::fr(0),
         0,
     });
-    queue.add_to_queue({
+    queue->add_to_queue({
         work_queue::WorkType::FFT,
         nullptr,
         "z",

@@ -7,6 +7,9 @@
 #include <ecc/curves/bn254/scalar_multiplication/scalar_multiplication.hpp>
 #include <polynomials/iterate_over_domain.hpp>
 #include <polynomials/polynomial_arithmetic.hpp>
+#include <iostream>
+
+using namespace std;
 
 namespace waffle {
 class work_queue {
@@ -220,7 +223,7 @@ class work_queue {
 #endif
     }
 
-    void process_queue()
+    virtual void process_queue()
     {
         for (const auto& item : work_item_queue) {
             switch (item.work_type) {
@@ -301,7 +304,7 @@ class work_queue {
 
     std::vector<work_item> get_queue() const { return work_item_queue; }
 
-  private:
+  public:
     proving_key* key;
     program_witness* witness;
     transcript::StandardTranscript* transcript;

@@ -42,7 +42,7 @@ class ProverPlookupWidget : public ProverRandomWidget {
 
     inline void compute_round_commitments(transcript::StandardTranscript& transcript,
                                           const size_t round_number,
-                                          work_queue& queue) override;
+                                          std::unique_ptr<work_queue>& queue) override;
 
     inline barretenberg::fr compute_quotient_contribution(const barretenberg::fr& alpha_base,
                                                           const transcript::StandardTranscript& transcript) override;
