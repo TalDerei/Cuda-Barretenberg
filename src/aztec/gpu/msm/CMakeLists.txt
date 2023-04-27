@@ -21,6 +21,8 @@ target_link_libraries(
     field_library
     fixnum_library
     reference_string_library
+    stdlib_primitives
+    env
 )
 
 add_custom_target(
