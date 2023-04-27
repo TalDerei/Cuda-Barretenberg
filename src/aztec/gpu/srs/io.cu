@@ -35,8 +35,8 @@ void read_manifest(std::string const& filename, Manifest& manifest) {
     manifest.start_from = ntohl(manifest.start_from);
 }
 
-void byteswap(g1::affine_element* elements, size_t elements_size) {
-    constexpr size_t bytes_per_element = sizeof(g1::affine_element);
+void byteswap(g1_gpu::affine_element* elements, size_t elements_size) {
+    constexpr size_t bytes_per_element = sizeof(g1_gpu::affine_element);
     size_t num_elements = elements_size / bytes_per_element;
 
     if (is_little_endian()) {
@@ -86,7 +86,7 @@ bool is_file_exist(std::string const& fileName) {
     return infile.good();
 }
 
-void read_transcript_g1(g1::affine_element* monomials, size_t degree, std::string const& dir) {
+void read_transcript_g1(g1_gpu::affine_element* monomials, size_t degree, std::string const& dir) {
     // g1 basic generator
     monomials[0] = {
         {0xd35d438dc58f0d9dUL, 0xa78eb28f5c70b3dUL, 0x666ea36f7879462cUL, 0xe0a77c19a07df2fUL} , 
@@ -103,7 +103,7 @@ void read_transcript_g1(g1::affine_element* monomials, size_t degree, std::strin
 
         auto offset = sizeof(Manifest);
         const size_t num_to_read = std::min((size_t)manifest.num_g1_points, degree - num_read);
-        const size_t g1_buffer_size = sizeof(g1::affine_element) * 2 * num_to_read;
+        const size_t g1_buffer_size = sizeof(g1_gpu::affine_element) * 2 * num_to_read;
 
         char* buffer = (char*)&monomials[num_read];
         size_t size = 0;

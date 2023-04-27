@@ -139,7 +139,7 @@ uint64_t *a, uint64_t *b, uint64_t *c, uint64_t *d, uint64_t *expect_x, uint64_t
  * nP = P + P ... + P 
  */ 
 __global__ void naive_double_and_add_curve(uint64_t *a, uint64_t *b, uint64_t *c, uint64_t *d, var *res_x, var *res_y, var *res_z) {
-    g1::element ec;
+    g1_gpu::element ec;
     
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
     if (tid < LIMBS) {
@@ -148,7 +148,7 @@ __global__ void naive_double_and_add_curve(uint64_t *a, uint64_t *b, uint64_t *c
         fq_gpu::to_monty(c[tid], ec.z.data[tid]);
 
         // Jacobian addition
-        g1::add(
+        g1_gpu::add(
             ec.x.data[tid], ec.y.data[tid], ec.z.data[tid], 
             ec.x.data[tid], ec.y.data[tid], ec.z.data[tid], 
             res_x[tid], res_y[tid], res_z[tid]
@@ -156,56 +156,56 @@ __global__ void naive_double_and_add_curve(uint64_t *a, uint64_t *b, uint64_t *c
 
         // ec + ec = 2ec
         if (fq_gpu::is_zero(res_x[tid]) && fq_gpu::is_zero(res_y[tid]) && fq_gpu::is_zero(res_z[tid])) {
-            g1::doubling(
+            g1_gpu::doubling(
                 ec.x.data[tid], ec.y.data[tid], ec.z.data[tid], 
                 res_x[tid], res_y[tid], res_z[tid]
             );
         }
 
         // 2ec + ec = 3ec
-        g1::add(
+        g1_gpu::add(
             res_x[tid], res_y[tid], res_z[tid], 
             ec.x.data[tid], ec.y.data[tid], ec.z.data[tid], 
             res_x[tid], res_y[tid], res_z[tid]
         );
 
         // 3ec + ec = 4ec
-        g1::add(
+        g1_gpu::add(
             res_x[tid], res_y[tid], res_z[tid], 
             ec.x.data[tid], ec.y.data[tid], ec.z.data[tid], 
             res_x[tid], res_y[tid], res_z[tid]
         );
 
         // 4ec + ec = 5ec
-        g1::add(
+        g1_gpu::add(
             res_x[tid], res_y[tid], res_z[tid], 
             ec.x.data[tid], ec.y.data[tid], ec.z.data[tid], 
             res_x[tid], res_y[tid], res_z[tid]
         );
 
         // 5ec + ec = 6ec
-        g1::add(
+        g1_gpu::add(
             res_x[tid], res_y[tid], res_z[tid], 
             ec.x.data[tid], ec.y.data[tid], ec.z.data[tid], 
             res_x[tid], res_y[tid], res_z[tid]
         );
 
         // 6ec + ec = 7ec
-        g1::add(
+        g1_gpu::add(
             res_x[tid], res_y[tid], res_z[tid], 
             ec.x.data[tid], ec.y.data[tid], ec.z.data[tid], 
             res_x[tid], res_y[tid], res_z[tid]
         );
 
         // 7ec + ec = 8ec
-        g1::add(
+        g1_gpu::add(
             res_x[tid], res_y[tid], res_z[tid], 
             ec.x.data[tid], ec.y.data[tid], ec.z.data[tid], 
             res_x[tid], res_y[tid], res_z[tid]
         );
 
         // 8ec + ec = 9ec
-        g1::add(
+        g1_gpu::add(
             res_x[tid], res_y[tid], res_z[tid], 
             ec.x.data[tid], ec.y.data[tid], ec.z.data[tid], 
             res_x[tid], res_y[tid], res_z[tid]
@@ -221,7 +221,7 @@ __global__ void naive_double_and_add_curve(uint64_t *a, uint64_t *b, uint64_t *c
  * Native approach for computing scalar mutliplication for curve elements with time complexity: O(2^k / 2)
  */ 
 __global__ void double_and_add_half_curve(uint64_t *a, uint64_t *b, uint64_t *c, uint64_t *d, var *res_x, var *res_y, var *res_z) {
-    g1::element ec;
+    g1_gpu::element ec;
     
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
     if (tid < LIMBS) {
@@ -230,7 +230,7 @@ __global__ void double_and_add_half_curve(uint64_t *a, uint64_t *b, uint64_t *c,
         fq_gpu::to_monty(c[tid], ec.z.data[tid]);
 
         // Jacobian addition
-        g1::add(
+        g1_gpu::add(
             ec.x.data[tid], ec.y.data[tid], ec.z.data[tid], 
             ec.x.data[tid], ec.y.data[tid], ec.z.data[tid], 
             res_x[tid], res_y[tid], res_z[tid]
@@ -238,26 +238,26 @@ __global__ void double_and_add_half_curve(uint64_t *a, uint64_t *b, uint64_t *c,
 
         // ec + ec = 2ec
         if (fq_gpu::is_zero(res_x[tid]) && fq_gpu::is_zero(res_y[tid]) && fq_gpu::is_zero(res_z[tid])) {
-            g1::doubling(
+            g1_gpu::doubling(
                 ec.x.data[tid], ec.y.data[tid], ec.z.data[tid], 
                 res_x[tid], res_y[tid], res_z[tid]
             );
         }
 
         // 2ec + 2ec = 4ec
-        g1::doubling(
+        g1_gpu::doubling(
             res_x[tid], res_y[tid], res_z[tid], 
             res_x[tid], res_y[tid], res_z[tid]
         );
 
         // 4ec + 4ec = 8ec
-        g1::doubling(
+        g1_gpu::doubling(
             res_x[tid], res_y[tid], res_z[tid], 
             res_x[tid], res_y[tid], res_z[tid]
         );
 
         // 8ec + ec = 9ec
-        g1::add(
+        g1_gpu::add(
             res_x[tid], res_y[tid], res_z[tid], 
             ec.x.data[tid], ec.y.data[tid], ec.z.data[tid], 
             res_x[tid], res_y[tid], res_z[tid]
@@ -274,8 +274,8 @@ __global__ void double_and_add_half_curve(uint64_t *a, uint64_t *b, uint64_t *c,
  */ 
 __global__ void double_and_add_curve(
 uint64_t *point_x, uint64_t *point_y, uint64_t *point_z, uint64_t *scalar, var *res_x, var *res_y, var *res_z) {
-    g1::element R;
-    g1::element Q;
+    g1_gpu::element R;
+    g1_gpu::element Q;
 
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
     if (tid < LIMBS) {
@@ -296,13 +296,13 @@ uint64_t *point_x, uint64_t *point_y, uint64_t *point_z, uint64_t *scalar, var *
             // Performs bit-decompositon by traversing the bits of the scalar from MSB to LSB
             // and extracting the i-th bit of scalar in limb.
             if (((scalar[0] >> i) & 1) ? 1 : 0)
-                g1::add(
+                g1_gpu::add(
                     R.x.data[tid], R.y.data[tid], R.z.data[tid], 
                     Q.x.data[tid], Q.y.data[tid], Q.z.data[tid], 
                     R.x.data[tid], R.y.data[tid], R.z.data[tid]
                 );
             if (i != 0) 
-                g1::doubling(
+                g1_gpu::doubling(
                     R.x.data[tid], R.y.data[tid], R.z.data[tid], 
                     R.x.data[tid], R.y.data[tid], R.z.data[tid]
                 );
@@ -325,9 +325,9 @@ uint64_t *point_x, uint64_t *point_y, uint64_t *point_z, uint64_t *scalar, var *
 __global__ void naive_multiplication_single(uint64_t *a, uint64_t *b, uint64_t *c, uint64_t *d, var *res_x, var *res_y, var *res_z) {
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
 
-    g1::element one; 
-    g1::element R;
-    g1::element Q;
+    g1_gpu::element one; 
+    g1_gpu::element R;
+    g1_gpu::element Q;
 
     fr_gpu exponent{ 0xb67299b792199cf0, 0xc1da7df1e7e12768, 0x692e427911532edf, 0x13dd85e87dc89978 };
 
@@ -352,13 +352,13 @@ __global__ void naive_multiplication_single(uint64_t *a, uint64_t *b, uint64_t *
                 // Performs bit-decompositon by traversing the bits of the scalar from MSB to LSB
                 // and extracting the i-th bit of scalar in limb.
                 if (((exponent.data[j] >> i) & 1) ? 1 : 0)
-                    g1::add(
+                    g1_gpu::add(
                         R.x.data[tid], R.y.data[tid], R.z.data[tid], 
                         Q.x.data[tid], Q.y.data[tid], Q.z.data[tid], 
                         R.x.data[tid], R.y.data[tid], R.z.data[tid]
                     );
                 if (i != 0) 
-                    g1::doubling(
+                    g1_gpu::doubling(
                         R.x.data[tid], R.y.data[tid], R.z.data[tid], 
                         R.x.data[tid], R.y.data[tid], R.z.data[tid]
                     );
@@ -375,11 +375,11 @@ __global__ void naive_multiplication_single(uint64_t *a, uint64_t *b, uint64_t *
 /**
  * Double and add implementation for multiple points and scalars using bit-decomposition with time complexity: O(k)
  */ 
-__global__ void naive_multiplication_multiple(fr_gpu *test_scalars, g1::element *test_points, g1::element *final_result) {
+__global__ void naive_multiplication_multiple(fr_gpu *test_scalars, g1_gpu::element *test_points, g1_gpu::element *final_result) {
 int tid = blockIdx.x * blockDim.x + threadIdx.x;
 
-    g1::element R;
-    g1::element Q;
+    g1_gpu::element R;
+    g1_gpu::element Q;
 
     // Initialize points and scalars
     fr_gpu scalar0 { 0xE49C36330BB35C4E, 0x22A5041C3B1B0B19, 0x37EDFE43AB6771EF, 0xCDA9012E9BF4459 };
@@ -429,19 +429,19 @@ int tid = blockIdx.x * blockDim.x + threadIdx.x;
                     // Performs bit-decompositon by traversing the bits of the scalar from MSB to LSB
                     // and extracting the i-th bit of scalar in limb.
                     if (((test_scalars[z].data[j] >> i) & 1) ? 1 : 0)
-                        g1::add(
+                        g1_gpu::add(
                             Q.x.data[tid % 4], Q.y.data[tid % 4], Q.z.data[tid % 4], 
                             R.x.data[tid % 4], R.y.data[tid % 4], R.z.data[tid % 4], 
                             R.x.data[tid % 4], R.y.data[tid % 4], R.z.data[tid % 4]
                         );
                     if (i != 0) 
-                        g1::doubling(
+                        g1_gpu::doubling(
                             R.x.data[tid % 4], R.y.data[tid % 4], R.z.data[tid % 4], 
                             R.x.data[tid % 4], R.y.data[tid % 4], R.z.data[tid % 4]
                         );
                 }
             }
-            g1::add(
+            g1_gpu::add(
                 R.x.data[tid % 4], 
                 R.y.data[tid % 4], 
                 R.z.data[tid % 4],
@@ -468,7 +468,7 @@ __global__ void convert_field(fq_gpu *point, uint64_t *result) {
     }
 }
 
-__global__ void convert_curve(g1::element *point, uint64_t *res_x, uint64_t *res_y, uint64_t *res_z) {
+__global__ void convert_curve(g1_gpu::element *point, uint64_t *res_x, uint64_t *res_y, uint64_t *res_z) {
     int tid = (blockDim.x * blockIdx.x) + threadIdx.x;
     if (tid < LIMBS) {
         fq_gpu::from_monty(point[0].x.data[tid], res_x[tid]);
@@ -514,10 +514,10 @@ __global__ void naive_double_and_add_field_vector(fq_gpu *point, fq_gpu *result_
 /**
  * Naive double and add using sequential implementation
  */ 
-__global__ void naive_double_and_add_curve_vector_simple(g1::element *point, g1::element *result_vec, uint64_t *res_x, uint64_t *res_y,  uint64_t *res_z) { 
+__global__ void naive_double_and_add_curve_vector_simple(g1_gpu::element *point, g1_gpu::element *result_vec, uint64_t *res_x, uint64_t *res_y,  uint64_t *res_z) { 
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
     
-    g1::element res;
+    g1_gpu::element res;
     fq_gpu res_x_temp{ 0, 0, 0, 0 };
     fq_gpu res_y_temp{ 0, 0, 0, 0 };
     fq_gpu res_z_temp{ 0, 0, 0, 0 };
@@ -531,7 +531,7 @@ __global__ void naive_double_and_add_curve_vector_simple(g1::element *point, g1:
     fq_gpu::to_monty(res.x.data[tid], res.z.data[tid]);
 
     for (int i = 0; i < 1024; i++) {        
-        g1::add(
+        g1_gpu::add(
             res.x.data[tid], res.y.data[tid], res.z.data[tid], 
             point[i].x.data[tid], point[i].y.data[tid], point[i].z.data[tid], 
             res.x.data[tid], res.y.data[tid], res.z.data[tid]
@@ -554,8 +554,8 @@ __global__ void naive_double_and_add_curve_vector_simple(g1::element *point, g1:
 /**
  * Naive double and add using multiple kernel invocations with block-level grandularity
  */ 
-__global__ void naive_double_and_add_curve_vector(g1::element *point, g1::element *result_vec, uint64_t *res_x,  uint64_t *res_y,  uint64_t *res_z) {     
-    g1::add(
+__global__ void naive_double_and_add_curve_vector(g1_gpu::element *point, g1_gpu::element *result_vec, uint64_t *res_x,  uint64_t *res_y,  uint64_t *res_z) {     
+    g1_gpu::add(
         point[blockIdx.x * 2].x.data[threadIdx.x], point[blockIdx.x * 2].y.data[threadIdx.x], point[blockIdx.x * 2].z.data[threadIdx.x],
         point[(blockIdx.x * 2) + 1].x.data[threadIdx.x], point[(blockIdx.x * 2) + 1].y.data[threadIdx.x], point[(blockIdx.x * 2) + 1].z.data[threadIdx.x],
         result_vec[blockIdx.x].x.data[threadIdx.x], result_vec[blockIdx.x].y.data[threadIdx.x], result_vec[blockIdx.x].z.data[threadIdx.x]
@@ -638,11 +638,11 @@ __global__ void double_and_add_field_vector_with_scalars(fq_gpu *point, fr_gpu *
  * Naive double and add of vector of curve elements and scalars using sequential implementation
  */
 __global__ void naive_double_and_add_curve_with_scalars(
-g1::element *point, fr_gpu *scalar, g1::element *result_vec, uint64_t *res_x, uint64_t *res_y, uint64_t *res_z) { 
+g1_gpu::element *point, fr_gpu *scalar, g1_gpu::element *result_vec, uint64_t *res_x, uint64_t *res_y, uint64_t *res_z) { 
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
 
-    g1::element temp;
-    g1::element temp_accumulator;
+    g1_gpu::element temp;
+    g1_gpu::element temp_accumulator;
     fq_gpu res_x_temp{ 0, 0, 0, 0 };
     fq_gpu res_y_temp{ 0, 0, 0, 0 };
     fq_gpu res_z_temp{ 0, 0, 0, 0 };
@@ -701,7 +701,7 @@ B* read_field_points() {
  */ 
 template <class B>
 B* read_curve_points() {
-    g1::element *points = new g1::element[3 * LIMBS * POINTS * sizeof(var)];
+    g1_gpu::element *points = new g1_gpu::element[3 * LIMBS * POINTS * sizeof(var)];
     std::ifstream myfile ("../src/aztec/gpu/benchmark/tests/msm/points/curve_points.txt"); 
 
     if ( myfile.is_open() ) {   
@@ -748,7 +748,7 @@ B* read_scalars() {
 /**
  * Compare two elliptic curve elements
  */ 
-__global__ void comparator_kernel(g1::element *point, g1::element *point_2, uint64_t *result) {     
+__global__ void comparator_kernel(g1_gpu::element *point, g1_gpu::element *point_2, uint64_t *result) {     
     fq_gpu lhs_zz;
     fq_gpu lhs_zzz;
     fq_gpu rhs_zz;
@@ -923,10 +923,10 @@ var *a, var *b, var *c, var *d, var *result, var *res_x, var *res_y, var *res_z,
 void execute_kernels_curve_vector(
 var *a, var *b, var *c, var *d, var *result, var *res_x, var *res_y, var *res_z, var *expect_x, var *expect_y, var *expect_z) {    
     // Read curve points
-    g1::element *points = read_curve_points<g1::element>();
+    g1_gpu::element *points = read_curve_points<g1_gpu::element>();
 
-    // Define pointers to g1::element type
-    g1::element *points_alloc, *result_vec_1, *result_vec_2;
+    // Define pointers to g1_gpu::element type
+    g1_gpu::element *points_alloc, *result_vec_1, *result_vec_2;
 
     // Allocate unified memory accessible by host and device
     cudaMallocManaged(&points_alloc, 3 * LIMBS * POINTS * sizeof(var));
@@ -1036,13 +1036,13 @@ void execute_kernels_curve_vector_with_scalars(
 var *a, var *b, var *c, var *d, var *result, var *res_x, var *res_y, var *res_z, var *expect_x, var *expect_y, var *expect_z) {    
     // Read curve points and scalars
     fr_gpu *scalars = read_scalars<fr_gpu>();
-    g1::element *points = read_curve_points<g1::element>();
+    g1_gpu::element *points = read_curve_points<g1_gpu::element>();
 
     // auto reference_string = std::make_shared<gpu_waffle::FileReferenceString>(POINTS, "../srs_db");
-    // g1::affine_element* points = reference_string->get_monomials();
+    // g1_gpu::affine_element* points = reference_string->get_monomials();
 
     // Define pointers to uint64_t type
-    g1::element *points_alloc, *result_vec;
+    g1_gpu::element *points_alloc, *result_vec;
     fr_gpu *scalars_alloc;
 
     // Allocate unified memory accessible by host and device
@@ -1101,9 +1101,9 @@ var *a, var *b, var *c, var *d, var *result, var *res_x, var *res_y, var *res_z,
     cudaDeviceSynchronize();
     print_curve_tests(res_x, res_y, res_z);
 
-    g1::element *final_res;
-    g1::element *expected_1;
-    g1::element *expected_2;
+    g1_gpu::element *final_res;
+    g1_gpu::element *expected_1;
+    g1_gpu::element *expected_2;
     var *result_1;
     var *result_2;
     cudaMallocManaged(&final_res, 3 * LIMBS * 1 * sizeof(var));
@@ -1166,10 +1166,10 @@ void execute_double_and_add_multiple(
 var *a, var *b, var *c, var *d, var *result, var *res_x, var *res_y, var *res_z, var *expect_x, var *expect_y, var *expect_z) {    
     // Allocate unified memory accessible by host and device
     fr_gpu *scalars;
-    g1::element *points;
-    g1::element *final_result;
-    g1::element *expected_1;
-    g1::element *expected_2;
+    g1_gpu::element *points;
+    g1_gpu::element *final_result;
+    g1_gpu::element *expected_1;
+    g1_gpu::element *expected_2;
     var *result_1;
     var *result_2;
     cudaMallocManaged(&scalars, 2 * LIMBS * sizeof(var));

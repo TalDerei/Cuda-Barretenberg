@@ -91,7 +91,7 @@ void msm_t<A, S, J>::pippenger_execute(Context<bucket_t, point_t, scalar_t, affi
 }
 
 template <class A, class S, class J>
-g1::element* msm_t<A, S, J>::naive_double_and_add(Context<bucket_t, point_t, scalar_t, affine_t> *context, size_t npoints, A *points) {
+g1_gpu::element* msm_t<A, S, J>::naive_double_and_add(Context<bucket_t, point_t, scalar_t, affine_t> *context, size_t npoints, A *points) {
     // Allocate cuda unified memory 
     fr_gpu *d_scalars;
     J *j_points;
@@ -116,7 +116,7 @@ g1::element* msm_t<A, S, J>::naive_double_and_add(Context<bucket_t, point_t, sca
  * Perform MSM Bucket Method
  */ 
 template <class A, class S, class J>
-g1::element* msm_t<A, S, J>::msm_bucket_method(Context<bucket_t, point_t, scalar_t, affine_t> *context, size_t npoints, A *points) {
+g1_gpu::element* msm_t<A, S, J>::msm_bucket_method(Context<bucket_t, point_t, scalar_t, affine_t> *context, size_t npoints, A *points) {
     // Allocate unified memory
     J *j_points;
     S *d_scalars;
@@ -137,7 +137,7 @@ g1::element* msm_t<A, S, J>::msm_bucket_method(Context<bucket_t, point_t, scalar
     using namespace std::chrono;
     high_resolution_clock::time_point t1 = high_resolution_clock::now();
 
-    g1::element *res = context->pipp.execute_bucket_method(d_scalars, j_points, bitsize, c, npoints);
+    g1_gpu::element *res = context->pipp.execute_bucket_method(d_scalars, j_points, bitsize, c, npoints);
     
     // End timer
     high_resolution_clock::time_point t2 = high_resolution_clock::now();

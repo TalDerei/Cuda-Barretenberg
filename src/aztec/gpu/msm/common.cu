@@ -193,7 +193,7 @@ pippenger_t &config, size_t d_bases_idx, size_t d_scalar_idx, size_t d_buckets_i
     cout << "config.N is: " << config.N << endl;
     cout << "config.n is: " << config.n << endl;
 
-    g1::element *final_result;
+    g1_gpu::element *final_result;
     cudaMallocManaged(&final_result, NUM_POINTS * LIMBS * sizeof(uint64_t));    
 
     launch_coop(
@@ -219,7 +219,7 @@ pippenger_t &config, size_t d_bases_idx, size_t d_scalar_idx, size_t d_buckets_i
 template <class bucket_t, class point_t, class scalar_t, class affine_t>
 affine_t* pippenger_t<bucket_t, point_t, scalar_t, affine_t>::read_affine_curve_points() {
     auto reference_string = std::make_shared<gpu_waffle::FileReferenceString>(NUM_POINTS, "../srs_db");
-    g1::affine_element* points = reference_string->get_monomials();
+    g1_gpu::affine_element* points = reference_string->get_monomials();
 
     return points;
 }
@@ -297,8 +297,8 @@ template <class bucket_t, class point_t, class scalar_t, class affine_t>
 point_t* pippenger_t<bucket_t, point_t, scalar_t, affine_t>::execute_bucket_method(
 scalar_t *scalars, point_t *points, unsigned bitsize, unsigned c, size_t npoints) {
     // Scalars are 10-bits, so between 0-1024. There are 26 windows (or bucket modules).
-    // Group elements with the same scalars go into the same buckets, i.e. 6 * G1 means
-    // G1 goes into bucket 6. And you have 2^c total buckets per window.
+    // Group elements with the same scalars go into the same buckets, i.e. 6 * g1_gpu means
+    // g1_gpu goes into bucket 6. And you have 2^c total buckets per window.
 
     // Calculate the number of windows 
     unsigned num_bucket_modules = bitsize / c; 

@@ -12,7 +12,7 @@ static constexpr size_t POINTS = 1 << 10;
 /* -------------------------- Addition Test ---------------------------------------------- */
 
 __global__ void initialize_add_check_against_constants
-(var *a, var *b, var *c, var *x, var *y, var *z, var *expected_x, var *expected_y, var *expected_z, g1::element *t1, g1::element *t2, g1::element *expected) {
+(var *a, var *b, var *c, var *x, var *y, var *z, var *expected_x, var *expected_y, var *expected_z, g1_gpu::element *t1, g1_gpu::element *t2, g1_gpu::element *expected) {
     int tid = (blockDim.x * blockIdx.x) + threadIdx.x;
 
     fq_gpu::load(0x0, a[tid]);
@@ -24,7 +24,7 @@ __global__ void initialize_add_check_against_constants
     fq_gpu::load(c[tid], t1[0].z.data[tid]); 
 }
 
-__global__ void initialize_affine(g1::affine_element *aff) {
+__global__ void initialize_affine(g1_gpu::affine_element *aff) {
     int tid = (blockDim.x * blockIdx.x) + threadIdx.x;
 
     fq_gpu a_x{ 0x01, 0x0, 0x0, 0x0 };
@@ -34,7 +34,7 @@ __global__ void initialize_affine(g1::affine_element *aff) {
     fq_gpu::load(a_y.data[tid], aff[0].y.data[tid]); 
 }
 
-__global__ void initialize_jacobian(g1::element *jac) {
+__global__ void initialize_jacobian(g1_gpu::element *jac) {
     int tid = (blockDim.x * blockIdx.x) + threadIdx.x;
     
     fq_gpu a_x{ 0x1, 0x0, 0x0, 0x0 };
@@ -46,7 +46,7 @@ __global__ void initialize_jacobian(g1::element *jac) {
     fq_gpu::load(a_z.data[tid], jac[0].z.data[tid]); 
 }
 
-__global__ void initialize_projective(g1::projective_element *proj) {
+__global__ void initialize_projective(g1_gpu::projective_element *proj) {
     int tid = (blockDim.x * blockIdx.x) + threadIdx.x;
 
     fq_gpu a_x{ 0x1, 0x0, 0x0, 0x0 };
@@ -60,9 +60,9 @@ __global__ void initialize_projective(g1::projective_element *proj) {
 
 
 __global__ void add_check_against_constants
-(var *a, var *b, var *c, var *x, var *y, var *z, var *res_x, var *res_y, var *res_z, g1::element *t1, g1::projective_element *t2, g1::projective_element *t3) {
-    g1::projective_element lhs;
-    g1::projective_element rhs;
+(var *a, var *b, var *c, var *x, var *y, var *z, var *res_x, var *res_y, var *res_z, g1_gpu::element *t1, g1_gpu::projective_element *t2, g1_gpu::projective_element *t3) {
+    g1_gpu::projective_element lhs;
+    g1_gpu::projective_element rhs;
 
     // Calculate global thread ID, and boundry check
     int tid = (blockDim.x * blockIdx.x) + threadIdx.x;
@@ -75,7 +75,7 @@ __global__ void add_check_against_constants
         fq_gpu::to_monty(t2[0].z.data[tid], rhs.z.data[tid]);
 
         // lhs + rhs (projective element + projective element)
-        g1::add_projective(
+        g1_gpu::add_projective(
             lhs.x.data[tid], lhs.y.data[tid], lhs.z.data[tid], 
             rhs.x.data[tid], rhs.y.data[tid], rhs.z.data[tid], 
             res_x[tid], res_y[tid], res_z[tid]
@@ -93,7 +93,7 @@ __global__ void add_check_against_constants
 }
 
 // Compare two elliptic curve elements
-__global__ void comparator_kernel(g1::element *point, g1::projective_element *point_2, uint64_t *result) {     
+__global__ void comparator_kernel(g1_gpu::element *point, g1_gpu::projective_element *point_2, uint64_t *result) {     
     fq_gpu lhs_zz;
     fq_gpu lhs_zzz;
     fq_gpu rhs_zz;
@@ -116,7 +116,7 @@ __global__ void comparator_kernel(g1::element *point, g1::projective_element *po
     result[tid] = ((lhs_x.data[tid] == rhs_x.data[tid]) && (lhs_y.data[tid] == rhs_y.data[tid]));
 }
 
-__global__ void affine_to_projective(g1::affine_element *point, g1::projective_element *point_2) {     
+__global__ void affine_to_projective(g1_gpu::affine_element *point, g1_gpu::projective_element *point_2) {     
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
     
     fq_gpu::load(point[0].x.data[tid], point_2[0].x.data[tid]);
@@ -124,7 +124,7 @@ __global__ void affine_to_projective(g1::affine_element *point, g1::projective_e
     fq_gpu::load(field_gpu<fq_gpu>::one().data[tid], point_2[0].z.data[tid]);
 }
 
-__global__ void jacobian_to_projective(g1::element *point, g1::projective_element *point_2) {     
+__global__ void jacobian_to_projective(g1_gpu::element *point, g1_gpu::projective_element *point_2) {     
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
     fq_gpu t1; 
 
@@ -134,7 +134,7 @@ __global__ void jacobian_to_projective(g1::element *point, g1::projective_elemen
     fq_gpu::mul(t1.data[tid], point[0].z.data[tid], point_2[0].z.data[tid]);
 }
 
-__global__ void projective_to_jacobian(g1::projective_element *point, g1::element *point_2) {     
+__global__ void projective_to_jacobian(g1_gpu::projective_element *point, g1_gpu::element *point_2) {     
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
     fq_gpu t1; 
 
@@ -168,7 +168,7 @@ void assert_checks(var *expected, var *result) {
     printf("result[3] is: %zu\n\n", result[3]);
 }
 
-void print_affine(g1::affine_element *aff) {
+void print_affine(g1_gpu::affine_element *aff) {
     // Explicit synchronization barrier
     cudaDeviceSynchronize();
 
@@ -184,7 +184,7 @@ void print_affine(g1::affine_element *aff) {
     printf("expected[0] is: %zu\n\n", aff[0].y.data[3]);
 }
 
-void print_projective(g1::projective_element *proj) {
+void print_projective(g1_gpu::projective_element *proj) {
     // Explicit synchronization barrier
     cudaDeviceSynchronize();
 
@@ -205,7 +205,7 @@ void print_projective(g1::projective_element *proj) {
     printf("expected[0] is: %zu\n\n", proj[0].z.data[3]);
 }
 
-void print_jacobian(g1::element *jac) {
+void print_jacobian(g1_gpu::element *jac) {
     // Explicit synchronization barrier
     cudaDeviceSynchronize();
 
@@ -240,13 +240,13 @@ void print_field(var *result) {
 void execute_kernels
 (var *a, var *b, var *c, var *x, var *y, var *z, var *expected_x, var *expected_y, var *expected_z, var *result, var *res_x, var *res_y, var *res_z) {
     // Allocate unified memory accessible by host and device
-    g1::element *t1;
-    g1::element *t2;
-    g1::projective_element *t3;
-    g1::element *jac;
-    g1::affine_element *aff;
-    g1::projective_element *proj;
-    g1::element *expected;
+    g1_gpu::element *t1;
+    g1_gpu::element *t2;
+    g1_gpu::projective_element *t3;
+    g1_gpu::element *jac;
+    g1_gpu::affine_element *aff;
+    g1_gpu::projective_element *proj;
+    g1_gpu::element *expected;
 
     cudaMallocManaged(&t1, 3 * 2 * LIMBS * sizeof(uint64_t));
     cudaMallocManaged(&t2, 3 * 2 * LIMBS * sizeof(uint64_t));
@@ -302,7 +302,7 @@ int main(int, char**) {
     execute_kernels(a, b, c, x, y, z, expected_x, expected_y, expected_z, result, res_x, res_y, res_z);
 
     // Successfull execution of unit tests
-    cout << "******* All 'G1 BN-254 Curve' unit tests passed! **********" << endl;
+    cout << "******* All 'g1_gpu BN-254 Curve' unit tests passed! **********" << endl;
 
     // End timer
     auto stop = high_resolution_clock::now();

@@ -13,7 +13,7 @@ namespace pippenger_common {
  */
 __global__ void pippenger(
 affine_t *points, size_t npoints, const scalar_t *scalars_, bucket_t(* buckets)[NWINS][1<<WBITS], 
-bucket_t(* ret)[NWINS][NTHREADS][2], g1::element *final_result) {
+bucket_t(* ret)[NWINS][NTHREADS][2], g1_gpu::element *final_result) {
 
 }
 
@@ -22,7 +22,7 @@ bucket_t(* ret)[NWINS][NTHREADS][2], g1::element *final_result) {
 /**
  * Naive multiplications before calling sum reduction kernel
  */
-__global__ void multiplication_kernel(g1::element *point, fr_gpu *scalar, g1::element *result_vec, size_t npoints) { 
+__global__ void multiplication_kernel(g1_gpu::element *point, fr_gpu *scalar, g1_gpu::element *result_vec, size_t npoints) { 
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
     
     // Parameters for coperative groups
@@ -45,13 +45,13 @@ __global__ void multiplication_kernel(g1::element *point, fr_gpu *scalar, g1::el
 /**
  * Sum reduction with shared memory 
  */
-__global__ void sum_reduction_kernel(g1::element *points, g1::element *result) {     
+__global__ void sum_reduction_kernel(g1_gpu::element *points, g1_gpu::element *result) {     
     // Global thread ID
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
 
     // Perform reduction in shared memory
     // is this shared across grid blocks?
-    __shared__ g1::element partial_sum[128]; // change size of shared memory -- allocate less for fewer points (128)
+    __shared__ g1_gpu::element partial_sum[128]; // change size of shared memory -- allocate less for fewer points (128)
 
     // Parameters for coperative groups
     auto grp = fixnum::layout();
@@ -95,7 +95,7 @@ __global__ void sum_reduction_kernel(g1::element *points, g1::element *result) {
     // the bucket segmentation problem
     for (int s = 0; s < log2f(blockDim.x) - 1; s++) {
         if (threadIdx.x < t) {
-            g1::add(
+            g1_gpu::add(
                 // This indexing is not correct!
                 partial_sum[subgroup * 2].x.data[tid % 4], 
                 partial_sum[subgroup * 2].y.data[tid % 4], 
@@ -128,11 +128,11 @@ __global__ void sum_reduction_kernel(g1::element *points, g1::element *result) {
 /**
  * Double and add implementation for multiple points and scalars using bit-decomposition with time complexity: O(k)
  */ 
-__global__ void double_and_add_kernel(fr_gpu *test_scalars, g1::element *test_points, g1::element *final_result) {
+__global__ void double_and_add_kernel(fr_gpu *test_scalars, g1_gpu::element *test_points, g1_gpu::element *final_result) {
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
 
-    g1::element R;
-    g1::element Q;
+    g1_gpu::element R;
+    g1_gpu::element Q;
 
     if (tid < LIMBS) {
         // Initialize result as 0
@@ -162,19 +162,19 @@ __global__ void double_and_add_kernel(fr_gpu *test_scalars, g1::element *test_po
                     // Performs bit-decompositon by traversing the bits of the scalar from MSB to LSB
                     // and extracting the i-th bit of scalar in limb.
                     if (((test_scalars[z].data[j] >> i) & 1) ? 1 : 0)
-                        g1::add(
+                        g1_gpu::add(
                             Q.x.data[tid % 4], Q.y.data[tid % 4], Q.z.data[tid % 4], 
                             R.x.data[tid % 4], R.y.data[tid % 4], R.z.data[tid % 4], 
                             R.x.data[tid % 4], R.y.data[tid % 4], R.z.data[tid % 4]
                         );
                     if (i != 0) 
-                        g1::doubling(
+                        g1_gpu::doubling(
                             R.x.data[tid % 4], R.y.data[tid % 4], R.z.data[tid % 4], 
                             R.x.data[tid % 4], R.y.data[tid % 4], R.z.data[tid % 4]
                         );
                 }
             }
-            g1::add(
+            g1_gpu::add(
                 R.x.data[tid % 4], 
                 R.y.data[tid % 4], 
                 R.z.data[tid % 4],
@@ -194,7 +194,7 @@ __global__ void double_and_add_kernel(fr_gpu *test_scalars, g1::element *test_po
 /**
  * Initialize buckets kernel for large MSM
  */
-__global__ void initialize_buckets_kernel(g1::element *bucket) {     
+__global__ void initialize_buckets_kernel(g1_gpu::element *bucket) {     
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
     
     // Parameters for coperative groups
@@ -253,8 +253,8 @@ __global__ void split_scalars_kernel
  * Accumulation kernel adds up points in each bucket
  */
 __global__ void accumulate_buckets_kernel
-(g1::element *buckets, unsigned *bucket_offsets, unsigned *bucket_sizes, unsigned *single_bucket_indices, 
-unsigned *point_indices, g1::element *points, unsigned num_buckets) {
+(g1_gpu::element *buckets, unsigned *bucket_offsets, unsigned *bucket_sizes, unsigned *single_bucket_indices, 
+unsigned *point_indices, g1_gpu::element *points, unsigned num_buckets) {
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
 
     // Parameters for coperative groups
@@ -276,7 +276,7 @@ unsigned *point_indices, g1::element *points, unsigned num_buckets) {
 
     unsigned bucket_offset = bucket_offsets[(subgroup + (subgroup_size * blockIdx.x))];
     for (unsigned i = 0; i < bucket_sizes[(subgroup + (subgroup_size * blockIdx.x))]; i++) { 
-        g1::add(
+        g1_gpu::add(
             buckets[bucket_index].x.data[tid % 4], 
             buckets[bucket_index].y.data[tid % 4], 
             buckets[bucket_index].z.data[tid % 4], 
@@ -293,7 +293,7 @@ unsigned *point_indices, g1::element *points, unsigned num_buckets) {
 /** 
  * Sum reduction kernel that accumulates partial bucket sums using running sum method
  */
-__global__ void bucket_module_sum_reduction_lernel_0(g1::element *buckets, g1::element *final_sum, uint64_t c) {     
+__global__ void bucket_module_sum_reduction_lernel_0(g1_gpu::element *buckets, g1_gpu::element *final_sum, uint64_t c) {     
     // Global thread ID
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -302,7 +302,7 @@ __global__ void bucket_module_sum_reduction_lernel_0(g1::element *buckets, g1::e
     int subgroup = grp.meta_group_rank();
     int subgroup_size = grp.meta_group_size();
 
-    g1::element line_sum;
+    g1_gpu::element line_sum;
 
     // Load intitial points
     fq_gpu::load(buckets[((subgroup + (subgroup_size * blockIdx.x)) + 1) * (1 << c) - 1].x.data[tid % 4], line_sum.x.data[tid % 4]);
@@ -318,7 +318,7 @@ __global__ void bucket_module_sum_reduction_lernel_0(g1::element *buckets, g1::e
 
     // Running sum method
     for (unsigned i = (1 << c) - 1; i > 0; i--) {
-        g1::add(
+        g1_gpu::add(
             buckets[(subgroup + (subgroup_size * blockIdx.x)) * (1 << c) + i].x.data[tid % 4], 
             buckets[(subgroup + (subgroup_size * blockIdx.x)) * (1 << c) + i].y.data[tid % 4], 
             buckets[(subgroup + (subgroup_size * blockIdx.x)) * (1 << c) + i].z.data[tid % 4],
@@ -330,7 +330,7 @@ __global__ void bucket_module_sum_reduction_lernel_0(g1::element *buckets, g1::e
             line_sum.z.data[tid % 4]
         );
 
-        g1::add(
+        g1_gpu::add(
             line_sum.x.data[tid % 4],
             line_sum.y.data[tid % 4],
             line_sum.z.data[tid % 4],
@@ -346,7 +346,7 @@ __global__ void bucket_module_sum_reduction_lernel_0(g1::element *buckets, g1::e
         if (fq_gpu::is_zero(final_sum[(subgroup + (subgroup_size * blockIdx.x))].x.data[tid % 4]) 
             && fq_gpu::is_zero(final_sum[(subgroup + (subgroup_size * blockIdx.x))].y.data[tid % 4]) 
             && fq_gpu::is_zero(final_sum[(subgroup + (subgroup_size * blockIdx.x))].z.data[tid % 4])) {
-            g1::doubling(
+            g1_gpu::doubling(
                 line_sum.x.data[tid % 4],
                 line_sum.y.data[tid % 4],
                 line_sum.z.data[tid % 4],
@@ -362,7 +362,7 @@ __global__ void bucket_module_sum_reduction_lernel_0(g1::element *buckets, g1::e
  * Sum reduction kernel that accumulates partial bucket sums
  * References PipeMSM (Algorithm 2) -- https://eprint.iacr.org/2022/999.pdf
  */
-__global__ void bucket_module_sum_reduction_kernel_1(g1::element *buckets, g1::element *S_, g1::element *G_, unsigned M, unsigned U) {     
+__global__ void bucket_module_sum_reduction_kernel_1(g1_gpu::element *buckets, g1_gpu::element *S_, g1_gpu::element *G_, unsigned M, unsigned U) {     
     // Global thread ID
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -372,8 +372,8 @@ __global__ void bucket_module_sum_reduction_kernel_1(g1::element *buckets, g1::e
     int subgroup_size = grp.meta_group_size();
 
     // Define variables
-    g1::element G;
-    g1::element S;
+    g1_gpu::element G;
+    g1_gpu::element S;
 
     // Initialize G and S with 0
     fq_gpu::load(0x0, G.x.data[tid % 4]);
@@ -397,7 +397,7 @@ __global__ void bucket_module_sum_reduction_kernel_1(g1::element *buckets, g1::e
     // 2.0
     for (unsigned u = U - 1; u < U; u--) { 
         // printf("%d\n", u);
-        g1::add(
+        g1_gpu::add(
             S.x.data[tid % 4],
             S.y.data[tid % 4],
             S.z.data[tid % 4], 
@@ -412,7 +412,7 @@ __global__ void bucket_module_sum_reduction_kernel_1(g1::element *buckets, g1::e
         // // comment out conditional code
         // if (fq_gpu::is_zero(G.x.data[tid % 4]) && fq_gpu::is_zero(G.y.data[tid % 4]) && fq_gpu::is_zero(G.z.data[tid % 4])) {
         //     // printf("?????????\n");
-        //     g1::doubling(
+        //     g1_gpu::doubling(
         //         S.x.data[tid % 4],
         //         S.y.data[tid % 4],
         //         S.z.data[tid % 4], 
@@ -428,7 +428,7 @@ __global__ void bucket_module_sum_reduction_kernel_1(g1::element *buckets, g1::e
         // (0 + (1 * 1)) * (128) + 127 = 255
         // 0 + (1 * 1)) * (128) + 126 = 254
         // .... 0 + (1 * 1)) * (128) + 0 = 128
-        g1::add(
+        g1_gpu::add(
             S.x.data[tid % 4],
             S.y.data[tid % 4],
             S.z.data[tid % 4], 
@@ -450,7 +450,7 @@ __global__ void bucket_module_sum_reduction_kernel_1(g1::element *buckets, g1::e
     fq_gpu::load(G.z.data[tid % 4], G_[blockIdx.x].z.data[tid % 4]);
 }
 
-__global__ void bucket_module_sum_reduction_kernel_2(g1::element *result, g1::element *S_, g1::element *G_, unsigned M, unsigned U) {     
+__global__ void bucket_module_sum_reduction_kernel_2(g1_gpu::element *result, g1_gpu::element *S_, g1_gpu::element *G_, unsigned M, unsigned U) {     
     // Global thread ID
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -460,8 +460,8 @@ __global__ void bucket_module_sum_reduction_kernel_2(g1::element *result, g1::el
     int subgroup_size = grp.meta_group_size();
 
     // Define variables
-    g1::element S;
-    g1::element S_k;
+    g1_gpu::element S;
+    g1_gpu::element S_k;
 
     // Initialize S_k and S with 0
     fq_gpu::load(0x0, S.x.data[tid % 4]);
@@ -479,7 +479,7 @@ __global__ void bucket_module_sum_reduction_kernel_2(g1::element *result, g1::el
     // change indexing and variable names
     // 2.1
     for (unsigned m = 0; m < M - 1; m++) {  
-        g1::add(
+        g1_gpu::add(
             S_[(subgroup + (subgroup_size * blockIdx.x)) * (M - 1) + m].x.data[tid % 4],
             S_[(subgroup + (subgroup_size * blockIdx.x)) * (M - 1) + m].y.data[tid % 4],
             S_[(subgroup + (subgroup_size * blockIdx.x)) * (M - 1) + m].z.data[tid % 4],
@@ -491,7 +491,7 @@ __global__ void bucket_module_sum_reduction_kernel_2(g1::element *result, g1::el
             S.z.data[tid % 4]
         );
 
-        g1::add(
+        g1_gpu::add(
             S_k.x.data[tid % 4],
             S_k.y.data[tid % 4],
             S_k.z.data[tid % 4], 
@@ -505,7 +505,7 @@ __global__ void bucket_module_sum_reduction_kernel_2(g1::element *result, g1::el
         // comment out conditional code
         if (fq_gpu::is_zero(S_k.x.data[tid % 4]) && fq_gpu::is_zero(S_k.y.data[tid % 4]) && fq_gpu::is_zero(S_k.z.data[tid % 4])) {
             // printf("?????????\n");
-            g1::doubling(
+            g1_gpu::doubling(
                 S.x.data[tid % 4],
                 S.y.data[tid % 4],
                 S.z.data[tid % 4], 
@@ -521,7 +521,7 @@ __global__ void bucket_module_sum_reduction_kernel_2(g1::element *result, g1::el
     // 2.2
     unsigned v = log2f(U);
     for (unsigned m = 0; m < v; m++) {  
-        g1::doubling(
+        g1_gpu::doubling(
             S_k.x.data[tid % 4],
             S_k.y.data[tid % 4],
             S_k.z.data[tid % 4], 
@@ -533,7 +533,7 @@ __global__ void bucket_module_sum_reduction_kernel_2(g1::element *result, g1::el
 
     __syncthreads();
   
-    g1::element G_k;
+    g1_gpu::element G_k;
 
     // Initialize G and S with 0
     fq_gpu::load(0x0, G_k.x.data[tid % 4]);
@@ -543,7 +543,7 @@ __global__ void bucket_module_sum_reduction_kernel_2(g1::element *result, g1::el
     // 2.3
     // need to fix the indexing here
     for (unsigned m = 0; m < M; m++) {  
-        g1::add(
+        g1_gpu::add(
             G_k.x.data[tid % 4],
             G_k.y.data[tid % 4],
             G_k.z.data[tid % 4],
@@ -559,7 +559,7 @@ __global__ void bucket_module_sum_reduction_kernel_2(g1::element *result, g1::el
     __syncthreads();
 
     // 2.4
-    g1::add(
+    g1_gpu::add(
         S_k.x.data[tid % 4],
         S_k.y.data[tid % 4],
         S_k.z.data[tid % 4],
@@ -582,11 +582,11 @@ __global__ void bucket_module_sum_reduction_kernel_2(g1::element *result, g1::el
 /**
  * Final bucket accumulation to produce single group element
  */
-__global__ void final_accumulation_kernel(g1::element *final_sum, g1::element *final_result, size_t num_bucket_modules, unsigned c) {
+__global__ void final_accumulation_kernel(g1_gpu::element *final_sum, g1_gpu::element *final_result, size_t num_bucket_modules, unsigned c) {
 int tid = blockIdx.x * blockDim.x + threadIdx.x;
 
-    g1::element R;
-    g1::element Q;
+    g1_gpu::element R;
+    g1_gpu::element Q;
 
     // may convert to monty?
     // need to change to general 'c' instead of a specific scalar value
@@ -621,19 +621,19 @@ int tid = blockIdx.x * blockDim.x + threadIdx.x;
                     // Performs bit-decompositon by traversing the bits of the scalar from MSB to LSB
                     // and extracting the i-th bit of scalar in limb.
                     if (((exponent.data[j] >> i) & 1) ? 1 : 0)
-                        g1::add(
+                        g1_gpu::add(
                             Q.x.data[tid % 4], Q.y.data[tid % 4], Q.z.data[tid % 4], 
                             R.x.data[tid % 4], R.y.data[tid % 4], R.z.data[tid % 4], 
                             R.x.data[tid % 4], R.y.data[tid % 4], R.z.data[tid % 4]
                         );
                     if (i != 0) 
-                        g1::doubling(
+                        g1_gpu::doubling(
                             R.x.data[tid % 4], R.y.data[tid % 4], R.z.data[tid % 4], 
                             R.x.data[tid % 4], R.y.data[tid % 4], R.z.data[tid % 4]
                         );
                 }
             }
-            g1::add(
+            g1_gpu::add(
                 R.x.data[tid % 4], 
                 R.y.data[tid % 4], 
                 R.z.data[tid % 4],
@@ -649,7 +649,7 @@ int tid = blockIdx.x * blockDim.x + threadIdx.x;
                 && fq_gpu::is_zero(final_result[0].y.data[tid % 4]) 
                 && fq_gpu::is_zero(final_result[0].z.data[tid % 4])) {
                 // printf("?????????\n");
-                g1::doubling(
+                g1_gpu::doubling(
                     R.x.data[tid % 4],
                     R.y.data[tid % 4],
                     R.z.data[tid % 4], 
@@ -667,7 +667,7 @@ int tid = blockIdx.x * blockDim.x + threadIdx.x;
 /**
  * Convert affine to jacobian or projective coordinates 
  */
-__global__ void affine_to_jacobian(g1::affine_element *a_point, g1::element *j_point, size_t npoints) {     
+__global__ void affine_to_jacobian(g1_gpu::affine_element *a_point, g1_gpu::element *j_point, size_t npoints) {     
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
 
     for (size_t i = 0; i < npoints; i++) {
@@ -680,7 +680,7 @@ __global__ void affine_to_jacobian(g1::affine_element *a_point, g1::element *j_p
 /**
  * Compare group elements kernel
  */
-__global__ void comparator_kernel(g1::element *point, g1::element *point_2, uint64_t *result) {     
+__global__ void comparator_kernel(g1_gpu::element *point, g1_gpu::element *point_2, uint64_t *result) {     
     fq_gpu lhs_zz;
     fq_gpu lhs_zzz;
     fq_gpu rhs_zz;

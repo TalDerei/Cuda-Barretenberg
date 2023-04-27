@@ -20,9 +20,9 @@ class msm_t {
         
         void naive_sum_reduction(Context<bucket_t, point_t, scalar_t, affine_t> *context, size_t npoints, A* points);
 
-        g1::element* naive_double_and_add(Context<bucket_t, point_t, scalar_t, affine_t> *context, size_t npoints, A* points);
+        g1_gpu::element* naive_double_and_add(Context<bucket_t, point_t, scalar_t, affine_t> *context, size_t npoints, A* points);
 
-        g1::element* msm_bucket_method(Context<bucket_t, point_t, scalar_t, affine_t> *context, size_t npoints, A* points);
+        g1_gpu::element* msm_bucket_method(Context<bucket_t, point_t, scalar_t, affine_t> *context, size_t npoints, A* points);
         
         void verify_result(J *result_1, J *result_2);
 };
