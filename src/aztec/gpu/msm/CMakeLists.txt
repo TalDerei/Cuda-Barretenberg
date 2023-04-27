@@ -29,3 +29,15 @@ add_custom_target(
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
 )
 
+add_library(msm_library STATIC 
+    ./pippenger.cu
+)
+
+target_link_libraries(
+    msm_library
+    PUBLIC
+    fixnum_library
+    field_library
+    curve_library
+    reference_string_library
+)
