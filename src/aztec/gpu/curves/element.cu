@@ -2,7 +2,7 @@
 
 using namespace std;
 using namespace gpu_barretenberg;
-using namespace group_elements;
+using namespace gpu_group_elements;
 
 /* -------------------------- Jacobian Elements ---------------------------------------------- */
 

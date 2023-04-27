@@ -86,9 +86,9 @@ namespace grumpkin {
 template < typename fq_gpu, typename fr_gpu > 
 class group_gpu {
     public:    
-        typedef group_elements::element<fq_gpu, fr_gpu> element;
-        typedef group_elements::affine_element<fq_gpu, fr_gpu> affine_element;
-        typedef group_elements::projective_element<fq_gpu, fr_gpu> projective_element;
+        typedef gpu_group_elements::element<fq_gpu, fr_gpu> element;
+        typedef gpu_group_elements::affine_element<fq_gpu, fr_gpu> affine_element;
+        typedef gpu_group_elements::projective_element<fq_gpu, fr_gpu> projective_element;
 
         /* -------------------------- Affine and Jacobian Coordinate Operations ---------------------------------------------- */
         
@@ -110,6 +110,6 @@ class group_gpu {
         
         __device__ static void add_projective(var X1, var Y1, var Z1, var X2, var Y2, var Z2, var &res_x, var &res_y, var &res_z);
 };
-typedef group_gpu<fq_gpu, fr_gpu> g1;
+typedef group_gpu<fq_gpu, fr_gpu> g1_gpu;
 
 }

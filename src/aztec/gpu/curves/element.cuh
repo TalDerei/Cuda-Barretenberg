@@ -7,7 +7,7 @@
 using namespace std;
 
 namespace gpu_barretenberg {
-namespace group_elements { 
+namespace gpu_group_elements { 
     
 /* -------------------------- Jacobian Representation ---------------------------------------------- */
 
