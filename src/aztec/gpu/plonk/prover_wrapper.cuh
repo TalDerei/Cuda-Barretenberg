@@ -1,9 +1,7 @@
-// #include "kzg_wrapper.cu"
 #include "queue_wrapper.cu"
 
 using namespace std;
 using namespace waffle;
-// using namespace kzg_gpu_wrapper;
 
 namespace prover_gpu_wrapper {
 
