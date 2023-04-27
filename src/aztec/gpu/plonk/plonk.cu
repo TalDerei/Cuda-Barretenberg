@@ -7,9 +7,12 @@
 #include <iostream>
 
 #include "composer_wrapper.cuh"
+#include "../msm/pippenger.cu"
 
 using namespace std;
 using namespace waffle;
+using namespace pippenger_common;
+
 
 constexpr size_t MAX_GATES = 1 << 10;
 
