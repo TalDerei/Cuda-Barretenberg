@@ -16,7 +16,7 @@ cuda_select_nvcc_arch_flags(CUDA_ARCH_FLAGS ${CUDA_ARCH_LIST})
 string(REPLACE ";" " " CUDA_ARCH_FLAGS_SPACES "${CUDA_ARCH_FLAGS}")
 
 string(APPEND CMAKE_CUDA_FLAGS " ${CUDA_ARCH_FLAGS_SPACES}")
-string(APPEND CMAKE_CUDA_FLAGS " -Xcompiler -Wall,-Wextra")
+string(APPEND CMAKE_CUDA_FLAGS " -Xcompiler -Wall,-Wextra, -Xptxas="-v"")
 set(CMAKE_CUDA_FLAGS_DEBUG "-g -G")
 
 add_subdirectory(arithmetic)
