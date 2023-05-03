@@ -265,6 +265,8 @@ unsigned *point_indices, g1_gpu::element *points, unsigned num_buckets) {
     unsigned bucket_index = single_bucket_indices[(subgroup + (subgroup_size * blockIdx.x))];
     unsigned bucket_size = bucket_sizes[(subgroup + (subgroup_size * blockIdx.x))];
 
+    // printf("bucket size is: %d", bucket_size);
+
     // Sync loads
     grp.sync();
 
@@ -290,7 +292,7 @@ unsigned *point_indices, g1_gpu::element *points, unsigned num_buckets) {
         if (fq_gpu::is_zero(buckets[bucket_index].x.data[tid % 4]) 
             && fq_gpu::is_zero(buckets[bucket_index].y.data[tid % 4]) 
             && fq_gpu::is_zero(buckets[bucket_index].z.data[tid % 4])) {
-            // printf("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+            printf("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
             g1_gpu::doubling(
                 points[point_indices[bucket_offset + i]].x.data[tid % 4], 
                 points[point_indices[bucket_offset + i]].y.data[tid % 4], 
@@ -330,7 +332,7 @@ __global__ void bucket_module_sum_reduction_lernel_0(g1_gpu::element *buckets, g
     __syncthreads();
 
     // Running sum method
-    for (unsigned i = (1 << c) - 1; i > 0; i--) {
+    for (unsigned i = (1 << c) - 2; i > 0; i--) {
         g1_gpu::add(
             buckets[(subgroup + (subgroup_size * blockIdx.x)) * (1 << c) + i].x.data[tid % 4], 
             buckets[(subgroup + (subgroup_size * blockIdx.x)) * (1 << c) + i].y.data[tid % 4], 
@@ -356,19 +358,19 @@ __global__ void bucket_module_sum_reduction_lernel_0(g1_gpu::element *buckets, g
         );
 
         // comment out conditional code
-        // if (fq_gpu::is_zero(final_sum[(subgroup + (subgroup_size * blockIdx.x))].x.data[tid % 4]) 
-        //     && fq_gpu::is_zero(final_sum[(subgroup + (subgroup_size * blockIdx.x))].y.data[tid % 4]) 
-        //     && fq_gpu::is_zero(final_sum[(subgroup + (subgroup_size * blockIdx.x))].z.data[tid % 4])) {
-        //     g1_gpu::doubling(
-        //         line_sum.x.data[tid % 4],
-        //         line_sum.y.data[tid % 4],
-        //         line_sum.z.data[tid % 4],
-        //         final_sum[(subgroup + (subgroup_size * blockIdx.x))].x.data[tid % 4],
-        //         final_sum[(subgroup + (subgroup_size * blockIdx.x))].y.data[tid % 4],
-        //         final_sum[(subgroup + (subgroup_size * blockIdx.x))].z.data[tid % 4]
-        //     );
-        //     // printf("?????????????????????????????????????????????????????????????????");
-        // }
+        if (fq_gpu::is_zero(final_sum[(subgroup + (subgroup_size * blockIdx.x))].x.data[tid % 4]) 
+            && fq_gpu::is_zero(final_sum[(subgroup + (subgroup_size * blockIdx.x))].y.data[tid % 4]) 
+            && fq_gpu::is_zero(final_sum[(subgroup + (subgroup_size * blockIdx.x))].z.data[tid % 4])) {
+            // printf("????????????????????????????????????????????????????????????????\n");
+            g1_gpu::doubling(
+                line_sum.x.data[tid % 4],
+                line_sum.y.data[tid % 4],
+                line_sum.z.data[tid % 4],
+                final_sum[(subgroup + (subgroup_size * blockIdx.x))].x.data[tid % 4],
+                final_sum[(subgroup + (subgroup_size * blockIdx.x))].y.data[tid % 4],
+                final_sum[(subgroup + (subgroup_size * blockIdx.x))].z.data[tid % 4]
+            );
+        }
     }
 }
 
@@ -659,19 +661,19 @@ int tid = blockIdx.x * blockDim.x + threadIdx.x;
                 final_result[0].z.data[tid % 4]
             );
 
-            if (fq_gpu::is_zero(final_result[0].x.data[tid % 4]) 
-                && fq_gpu::is_zero(final_result[0].y.data[tid % 4]) 
-                && fq_gpu::is_zero(final_result[0].z.data[tid % 4])) {
-                // printf("?????????\n");
-                g1_gpu::doubling(
-                    R.x.data[tid % 4],
-                    R.y.data[tid % 4],
-                    R.z.data[tid % 4], 
-                    final_result[0].x.data[tid % 4],
-                    final_result[0].y.data[tid % 4],
-                    final_result[0].z.data[tid % 4]
-                );
-            }
+            // if (fq_gpu::is_zero(final_result[0].x.data[tid % 4]) 
+            //     && fq_gpu::is_zero(final_result[0].y.data[tid % 4]) 
+            //     && fq_gpu::is_zero(final_result[0].z.data[tid % 4])) {
+            //     // printf("?????????\n");
+            //     g1_gpu::doubling(
+            //         R.x.data[tid % 4],
+            //         R.y.data[tid % 4],
+            //         R.z.data[tid % 4], 
+            //         final_result[0].x.data[tid % 4],
+            //         final_result[0].y.data[tid % 4],
+            //         final_result[0].z.data[tid % 4]
+            //     );
+            // }
         }
     }
 }

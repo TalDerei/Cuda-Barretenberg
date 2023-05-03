@@ -79,10 +79,10 @@ Context<bucket_t, point_t, scalar_t, affine_t> *context, size_t npoints, g1::aff
     J *j_points;
     J *result;
     
-    // Allocat memory
-    cudaMalloc(&d_scalars, NUM_POINTS * LIMBS * sizeof(uint64_t));
-    cudaMalloc(&j_points, 3 * NUM_POINTS * LIMBS * sizeof(uint64_t));
-    cudaMalloc(&a_points, 3 * NUM_POINTS * LIMBS * sizeof(uint64_t));
+    // Allocate memory
+    cudaMallocManaged(&d_scalars, NUM_POINTS * LIMBS * sizeof(uint64_t));
+    cudaMallocManaged(&j_points, 3 * NUM_POINTS * LIMBS * sizeof(uint64_t));
+    cudaMallocManaged(&a_points, 3 * NUM_POINTS * LIMBS * sizeof(uint64_t));
     cudaMallocManaged(&result, 3 * NUM_POINTS * LIMBS * sizeof(uint64_t));
     
     // Copy points and scalars to device
@@ -111,9 +111,9 @@ Context<bucket_t, point_t, scalar_t, affine_t> *context, size_t npoints, g1::aff
     J *result;
     
      // Allocat memory
-    cudaMalloc(&d_scalars, NUM_POINTS * LIMBS * sizeof(uint64_t));
-    cudaMalloc(&j_points, 3 * NUM_POINTS * LIMBS * sizeof(uint64_t));
-    cudaMalloc(&a_points, 3 * NUM_POINTS * LIMBS * sizeof(uint64_t));
+    cudaMallocManaged(&d_scalars, NUM_POINTS * LIMBS * sizeof(uint64_t));
+    cudaMallocManaged(&j_points, 3 * NUM_POINTS * LIMBS * sizeof(uint64_t));
+    cudaMallocManaged(&a_points, 3 * NUM_POINTS * LIMBS * sizeof(uint64_t));
     cudaMallocManaged(&result, 3 * NUM_POINTS * LIMBS * sizeof(uint64_t));
 
     // Copy points and scalars to device

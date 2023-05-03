@@ -5,7 +5,7 @@ using namespace std::chrono;
 using namespace gpu_barretenberg;
 
 // Maximum 2^31 - 1 blocks in the x-dimension
-constexpr size_t POINTS = 1 << 16;
+constexpr size_t POINTS = 1 << 11;
 // Number of limbs 
 static constexpr size_t LIMBS_NUM = 4;
 
@@ -59,6 +59,15 @@ __global__ void curve_addition(var *a, var *b, var *c, var *x, var *y, var *z, v
     g1_gpu::element result;
     g1_gpu::element expected;
 
+
+    // Parameters for coperative groups
+    auto grp = fixnum::layout();
+    int subgroup = grp.meta_group_rank();
+    int subgroup_size = grp.meta_group_size();
+
+    // Sync loads
+    grp.sync();
+
     // Calculate global thread ID, and boundry check
     int tid = (blockDim.x * blockIdx.x) + threadIdx.x;
     if (tid < LIMBS) {
@@ -69,7 +78,7 @@ __global__ void curve_addition(var *a, var *b, var *c, var *x, var *y, var *z, v
         fq_gpu::load(y[tid], rhs.y.data[tid]);
         fq_gpu::load(z[tid], rhs.z.data[tid]);
 
-        for (int i = 0; i < POINTS; i++) {
+        for (int i = 0; i < 2048; i++) {
             // lhs + rhs
             g1_gpu::add(
                 lhs.x.data[tid], lhs.y.data[tid], lhs.z.data[tid], 
@@ -128,7 +137,7 @@ int main(int, char**) {
     cudaEventRecord(stop);
     
     // Synchronization barrier that blocks CPU execution until the specified event is recorded
-    cudaEventSynchronize(stop);
+    cudaDeviceSynchronize();
 
     // Print results
     // printf("result[0] is: %zu\n", res[0]);

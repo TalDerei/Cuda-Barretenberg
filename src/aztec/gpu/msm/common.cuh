@@ -18,7 +18,7 @@ namespace pippenger_common {
 #define NWINS ((NBITS + WBITS - 1) / WBITS)   // Windowing size 
 
 // change NUM_POINTS
-size_t NUM_POINTS = 1 << 11;
+size_t NUM_POINTS = 1 << 10;
 static const size_t NUM_BATCH_THREADS = 1;
 static thread_pool_t batch_pool(NUM_BATCH_THREADS);
 

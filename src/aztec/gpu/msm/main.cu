@@ -116,3 +116,10 @@ int main(int, char**) {
  * I'm curious if since the maximum registers per thread are the same, will the performance be similiar between A10 and P100
  * if the bottleneck is the number of registers?
 */
+
+
+/**
+ * Timers:
+ * 
+ * Need to figure out the proper way to time as well. There's a huge dosparity between using chrono timer vs. Cuda events. 
+*/
