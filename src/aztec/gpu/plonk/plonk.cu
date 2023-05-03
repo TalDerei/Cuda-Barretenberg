@@ -7,14 +7,11 @@
 #include <iostream>
 
 #include "composer_wrapper.cuh"
-#include "../msm/pippenger.cu"
 
 using namespace std;
 using namespace waffle;
-using namespace pippenger_common;
 
-
-constexpr size_t MAX_GATES = 1 << 10;
+constexpr size_t MAX_GATES = 1 << 5;
 
 void generate_test_plonk_circuit(StandardComposer& composer, size_t num_gates) {
     plonk::stdlib::field_t a(plonk::stdlib::witness_t(&composer, barretenberg::fr::random_element()));

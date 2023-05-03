@@ -15,6 +15,7 @@ pippenger_t<bucket_t, point_t, scalar_t, affine_t>
 pippenger_t<bucket_t, point_t, scalar_t, affine_t>::initialize_msm(pippenger_t &config, size_t npoints) {
     CUDA_WRAPPER(cudaSetDevice(config.device));
 
+    // change name to initialize_msm_parameters
     cudaDeviceProp prop;
     CUDA_WRAPPER(cudaGetDeviceProperties(&prop, 0));
 
@@ -22,6 +23,8 @@ pippenger_t<bucket_t, point_t, scalar_t, affine_t>::initialize_msm(pippenger_t &
     sm_count = prop.multiProcessorCount;
     
     config.npoints = npoints;
+
+    // Don't think we quite need these parameters
     config.n = (npoints + WARP - 1) & ((size_t)0 - WARP);
     config.N = (sm_count * 256) / (NTHREADS * NWINS);
 
@@ -110,6 +113,7 @@ pippenger_t &config, size_t d_points_idx, const affine_t points[]) {
     // Set cuda device and default stream
     CUDA_WRAPPER(cudaSetDevice(config.device));
 
+    // Why are the bases and scalars in different streams?
     cudaStream_t stream = config.default_stream;
 
     // change to affine_t, along with device_base_ptrs
@@ -214,64 +218,6 @@ pippenger_t &config, size_t d_bases_idx, size_t d_scalar_idx, size_t d_buckets_i
 }
 
 /**
- * Read affine elliptic curve points from SRS
- */
-template <class bucket_t, class point_t, class scalar_t, class affine_t>
-affine_t* pippenger_t<bucket_t, point_t, scalar_t, affine_t>::read_affine_curve_points() {
-    auto reference_string = std::make_shared<gpu_waffle::FileReferenceString>(NUM_POINTS, "../srs_db");
-    g1_gpu::affine_element* points = reference_string->get_monomials();
-
-    return points;
-}
-
-/**
- * Read jacobian elliptic curve points from file
- */
-template <class bucket_t, class point_t, class scalar_t, class affine_t>
-point_t* pippenger_t<bucket_t, point_t, scalar_t, affine_t>::read_jacobian_curve_points(point_t *points) {
-    // std::ifstream myfile ("../src/aztec/gpu/msm/points/points_copy.txt"); 
-    std::ifstream myfile ("../src/aztec/gpu/msm/points/points.txt"); 
-
-    if ( myfile.is_open() ) {   
-        for (size_t i = 0; i < NUM_POINTS; i++) {
-            for (size_t j = 0; j < 4; j++) {
-                myfile >> points[i].x.data[j];
-            }
-            for (size_t y = 0; y < 4; y++) {
-                myfile >> points[i].y.data[y];
-            }
-            for (size_t z = 0; z < 4; z++) {
-                myfile >> points[i].z.data[z];
-            }
-        }   
-    }
-    myfile.close();
-    
-    return points;
-} 
-
-/**
- * Read scalars from scalar field
- */
-template <class bucket_t, class point_t, class scalar_t, class affine_t>
-scalar_t* pippenger_t<bucket_t, point_t, scalar_t, affine_t>::read_scalars(scalar_t *scalars) {
-    ifstream stream;
-    // stream.open("../src/aztec/gpu/msm/points/scalars_copy.txt", ios::in);
-    stream.open("../src/aztec/gpu/msm/points/scalars.txt", ios::in);
-
-    if ( stream.is_open() ) {   
-        for (size_t i = 0; i < NUM_POINTS; i++) {
-            for (size_t j = 0; j < 4; j++) {
-                stream >> scalars[i].data[j];
-            }
-        }   
-    }
-    stream.close();
-        
-    return scalars;
-}
-
-/**
  * Print results
  */
 template <class bucket_t, class point_t, class scalar_t, class affine_t>
@@ -300,6 +246,9 @@ scalar_t *scalars, point_t *points, unsigned bitsize, unsigned c, size_t npoints
     // Group elements with the same scalars go into the same buckets, i.e. 6 * g1_gpu means
     // g1_gpu goes into bucket 6. And you have 2^c total buckets per window.
 
+    using namespace std::chrono;
+    high_resolution_clock::time_point t1 = high_resolution_clock::now();
+
     // Calculate the number of windows 
     unsigned num_bucket_modules = bitsize / c; 
     if (bitsize % c) {  
@@ -309,7 +258,7 @@ scalar_t *scalars, point_t *points, unsigned bitsize, unsigned c, size_t npoints
     point_t *buckets;
     size_t num_buckets = num_bucket_modules << c; // 1024 * 26 or 65536 * 16 = 1M buckets
     // change memory size?
-    cudaMallocManaged(&buckets, num_buckets * 3 * 4 * sizeof(uint64_t));
+    cudaMalloc(&buckets, num_buckets * 3 * 4 * sizeof(uint64_t));
 
     // Launch bucket initialization kernel
     unsigned NUM_THREADS = 1 << 10; // max number of threads
@@ -326,7 +275,11 @@ scalar_t *scalars, point_t *points, unsigned bitsize, unsigned c, size_t npoints
     // It will need to support # scalars * 16, which may exceed the bucket count. Therefore the total number of buckets will
     // stay the same, but the indexing will change...2D instead.
     initialize_buckets_kernel<<<NUM_BLOCKS * 4, NUM_THREADS>>>(buckets); 
-    cudaDeviceSynchronize();
+    // cudaDeviceSynchronize();
+
+    // cudaMallocManaged(&buckets, num_buckets * 3 * 4 * sizeof(uint64_t));
+    // // convert affine to jacobian coordinates
+    // af<<<NUM_BLOCKS * 4, NUM_THREADS>>>(points, points); 
 
     cout << "b-bit scalar is: " << bitsize << endl;
     cout << "c-bit scalar is: " << c << endl;
@@ -357,8 +310,8 @@ scalar_t *scalars, point_t *points, unsigned bitsize, unsigned c, size_t npoints
     // need to understand these launch parameters
     unsigned *bucket_indices;
     unsigned *point_indices;
-    cudaMallocManaged(&bucket_indices, sizeof(unsigned) * npoints * (num_bucket_modules + 1));
-    cudaMallocManaged(&point_indices, sizeof(unsigned) * npoints * (num_bucket_modules + 1));
+    cudaMalloc(&bucket_indices, sizeof(unsigned) * npoints * (num_bucket_modules + 1));
+    cudaMalloc(&point_indices, sizeof(unsigned) * npoints * (num_bucket_modules + 1));
 
     // Split scalars into digits
     // NUM_THREADS * NUM_BLOCKS = NUM_BUCKETS --> each thread splits a single scalar into num_modules digits, each of size c. 
@@ -390,8 +343,9 @@ scalar_t *scalars, point_t *points, unsigned bitsize, unsigned c, size_t npoints
     
     // Each thread will handle splitting it's own scalar into sub-scalars, and placing them into buckets. 
     // split_scalars_kernel<<<NUM_BLOCKS_2, NUM_THREADS>>>(bucket_indices + npoints, point_indices + npoints, scalars, npoints, num_bucket_modules, c);
-    split_scalars_kernel<<<1, 2>>>(bucket_indices + npoints, point_indices + npoints, scalars, npoints, num_bucket_modules, c);
-    cudaDeviceSynchronize();
+    // ********* This scalar value for launch parameters will also need to be changed instead of being hardcoded! ******************
+    split_scalars_kernel<<<1, npoints>>>(bucket_indices + npoints, point_indices + npoints, scalars, npoints, num_bucket_modules, c);
+    // cudaDeviceSynchronize();
 
     // integrating CUB routines for things like offset calculations
     // sort indices from smallest to largest in order to group points that belong to same bucket
@@ -404,7 +358,7 @@ scalar_t *scalars, point_t *points, unsigned bitsize, unsigned c, size_t npoints
 
     // cout << "sort_indices_temp_storage_bytes is: " << sort_indices_temp_storage_bytes << endl;
 
-    cudaMallocManaged(&sort_indices_temp_storage, sort_indices_temp_storage_bytes);
+    cudaMalloc(&sort_indices_temp_storage, sort_indices_temp_storage_bytes);
 
     // perform the radix sort operation -- total number of sorts is num_bucket_modules. sorting arrays of bucket_indices and point_indices
     for (unsigned i = 0; i < num_bucket_modules; i++) {
@@ -430,9 +384,9 @@ scalar_t *scalars, point_t *points, unsigned bitsize, unsigned c, size_t npoints
     unsigned *bucket_sizes;
     unsigned *nof_buckets_to_compute;
     // change this from unifiedc memory to cudaMalloc
-    cudaMallocManaged(&single_bucket_indices, sizeof(unsigned) * num_buckets);
-    cudaMallocManaged(&bucket_sizes, sizeof(unsigned) * num_buckets);
-    cudaMallocManaged(&nof_buckets_to_compute, sizeof(unsigned));
+    cudaMalloc(&single_bucket_indices, sizeof(unsigned) * num_buckets);
+    cudaMalloc(&bucket_sizes, sizeof(unsigned) * num_buckets);
+    cudaMalloc(&nof_buckets_to_compute, sizeof(unsigned));
    
     void *encode_temp_storage = NULL;
     size_t encode_temp_storage_bytes = 0;
@@ -441,27 +395,27 @@ scalar_t *scalars, point_t *points, unsigned bitsize, unsigned c, size_t npoints
     // this returns the unique bucket #, number of buckets in each, and the total number of unique buckets
     cub::DeviceRunLengthEncode::Encode(encode_temp_storage, encode_temp_storage_bytes, bucket_indices, single_bucket_indices, bucket_sizes,
                                             nof_buckets_to_compute, num_bucket_modules * npoints);
-    cudaMallocManaged(&encode_temp_storage, encode_temp_storage_bytes);
+    cudaMalloc(&encode_temp_storage, encode_temp_storage_bytes);
     cub::DeviceRunLengthEncode::Encode(encode_temp_storage, encode_temp_storage_bytes, bucket_indices, single_bucket_indices, bucket_sizes,
                                             nof_buckets_to_compute, num_bucket_modules * npoints);
     cudaFree(encode_temp_storage);
 
 
-    cout << "nof_buckets_to_compute is: " << nof_buckets_to_compute[0] << endl;
+    // cout << "nof_buckets_to_compute is: " << nof_buckets_to_compute[0] << endl;
 
-    int sum = 0;
-    for (int i = 0; i < nof_buckets_to_compute[0]; i++) {
-        sum = sum + bucket_sizes[i];
-    }
+    // int sum = 0;
+    // for (int i = 0; i < nof_buckets_to_compute[0]; i++) {
+    //     sum = sum + bucket_sizes[i];
+    // }
 
-    cout << "sum is: " << sum << endl;
+    // cout << "sum is: " << sum << endl;
 
-    int temp = 0;
-    for (int i = 0; i < nof_buckets_to_compute[0]; i++) {
-        cout << "count is: " << temp << endl;
-        cout << "single_bucket_indices: " << single_bucket_indices[i] << endl;
-        temp++;
-    }
+    // int temp = 0;
+    // for (int i = 0; i < nof_buckets_to_compute[0]; i++) {
+    //     cout << "count is: " << temp << endl;
+    //     cout << "single_bucket_indices: " << single_bucket_indices[i] << endl;
+    //     temp++;
+    // }
 
     // int temp = 0;
     // for (int i = 0; i < num_buckets; i++) {
@@ -471,24 +425,24 @@ scalar_t *scalars, point_t *points, unsigned bitsize, unsigned c, size_t npoints
     // }
     // cout << "temp is: " << temp << endl;
 
-    for (int i = 0; i < num_buckets; i++) {
-        if (bucket_sizes[i] == 2) {
-            cout << "!!!!!!!!!\n" << endl;
-        } 
-    }
+    // for (int i = 0; i < num_buckets; i++) {
+    //     if (bucket_sizes[i] == 2) {
+    //         cout << "!!!!!!!!!\n" << endl;
+    //     } 
+    // }
 
     //get offsets - where does each new bucket begin
     unsigned* bucket_offsets;
-    cudaMallocManaged(&bucket_offsets, sizeof(unsigned) * num_buckets);
+    cudaMalloc(&bucket_offsets, sizeof(unsigned) * num_buckets);
     // unsigned* offsets_temp_storage{};
     void *offsets_temp_storage = NULL;
     size_t offsets_temp_storage_bytes = 0;
     cub::DeviceScan::ExclusiveSum(offsets_temp_storage, offsets_temp_storage_bytes, bucket_sizes, bucket_offsets, num_buckets);
-    cudaMallocManaged(&offsets_temp_storage, offsets_temp_storage_bytes);
+    cudaMalloc(&offsets_temp_storage, offsets_temp_storage_bytes);
     cub::DeviceScan::ExclusiveSum(offsets_temp_storage, offsets_temp_storage_bytes, bucket_sizes, bucket_offsets, num_buckets);
     cudaFree(offsets_temp_storage);
 
-    cout << "num_buckets is: " << num_buckets << endl;
+    // cout << "num_buckets is: " << num_buckets << endl;
 
     // cout << "bucekt size is: " << bucket_sizes[5] << endl;
 
@@ -508,6 +462,14 @@ scalar_t *scalars, point_t *points, unsigned bitsize, unsigned c, size_t npoints
 
     cout << "NUM_THREADS_3 is: " << NUM_THREADS_3 << endl;
     cout << "NUM_BLOCKS_3 is: " << NUM_BLOCKS_3 << endl;
+    
+    // Calculate maximum occupancy
+    // int THREADS;
+    // int BLOCKS;
+    // cudaOccupancyMaxPotentialBlockSize(&BLOCKS, &THREADS, accumulate_buckets_kernel, 0, 0);
+    // cout << "NUM_POINTS is: " << NUM_POINTS << endl;
+    // cout << "max threads is: " << THREADS << endl;
+    // cout << "max blocks is: " << BLOCKS << endl;
 
     // The kernel launch parameters need to be changed!
     // What’s the primary reason why the max occupancy (threads + blocks) of a kernel is much lower than the 
@@ -518,50 +480,59 @@ scalar_t *scalars, point_t *points, unsigned bitsize, unsigned c, size_t npoints
     // single P100 to A10. Update: the issue was an if statement in the kernel, which solved the problem. 
     // accumulate_buckets_kernel<<<NUM_BLOCKS_3, NUM_THREADS_3>>>(buckets, bucket_offsets, bucket_sizes, single_bucket_indices, point_indices, points, num_buckets);
     accumulate_buckets_kernel<<<NUM_BLOCKS_3, NUM_THREADS_3>>>(buckets, bucket_offsets, bucket_sizes, single_bucket_indices, point_indices, points, num_buckets);
+    // cudaDeviceSynchronize();
+
     cudaDeviceSynchronize();
+
+    // End timer
+    high_resolution_clock::time_point t2 = high_resolution_clock::now();
+    duration<double> time_span = duration_cast<duration<double>>(t2 - t1);
+    std::cout << "It took me " << time_span.count() << " seconds." << endl;
+    exit(0);
+
 
     // Need to reconcile the lauch paramerters here............ 
 
-    unsigned *bucket_index;
-    cudaMallocManaged(&bucket_index, num_bucket_modules * sizeof(unsigned));
-    int count = 0;
-    for (int i = 0; i < num_buckets; i++) {
-        if (buckets[i].x.data[0] != 0) {
-            cout << "bucket index is: " << i << endl;
-            bucket_index[count] = i;
-            cout << "bucket_index[count] is; " << bucket_index[count] << endl;
-            cout << "x: " << "{ " << buckets[i].x.data[0] << "," << buckets[i].x.data[1] << "," << buckets[i].x.data[2] << "," << buckets[i].x.data[3] << " }; "  
-            << " y: " << "{ " << buckets[i].y.data[0] << "," << buckets[i].y.data[1] << "," << buckets[i].y.data[2] << "," << buckets[i].y.data[3] << " }; "  
-            << " z: " << "{ " << buckets[i].z.data[0] << "," << buckets[i].z.data[1] << "," << buckets[i].z.data[2] << "," << buckets[i].z.data[3] << " }; " << endl;
-            count++;
-        }
-    }
-    cout << "count is: " << count << endl;
-    cout << "??????????????????????????????????????????????\n" << endl;
+    // unsigned *bucket_index;
+    // cudaMallocManaged(&bucket_index, num_bucket_modules * sizeof(unsigned));
+    // int count = 0;
+    // for (int i = 0; i < num_buckets; i++) {
+    //     if (buckets[i].x.data[0] != 0) {
+    //         cout << "bucket index is: " << i << endl;
+    //         bucket_index[count] = i;
+    //         cout << "bucket_index[count] is; " << bucket_index[count] << endl;
+    //         cout << "x: " << "{ " << buckets[i].x.data[0] << "," << buckets[i].x.data[1] << "," << buckets[i].x.data[2] << "," << buckets[i].x.data[3] << " }; "  
+    //         << " y: " << "{ " << buckets[i].y.data[0] << "," << buckets[i].y.data[1] << "," << buckets[i].y.data[2] << "," << buckets[i].y.data[3] << " }; "  
+    //         << " z: " << "{ " << buckets[i].z.data[0] << "," << buckets[i].z.data[1] << "," << buckets[i].z.data[2] << "," << buckets[i].z.data[3] << " }; " << endl;
+    //         count++;
+    //     }
+    // }
+    // cout << "count is: " << count << endl;
+    // cout << "??????????????????????????????????????????????\n" << endl;
 
-    for (int i = 0; i < num_bucket_modules; i++) {
-        cout << "bucket_index is: " << bucket_index[i] << endl;
-    }
-    cudaDeviceSynchronize();
+    // for (int i = 0; i < num_bucket_modules; i++) {
+    //     cout << "bucket_index is: " << bucket_index[i] << endl;
+    // }
+    // cudaDeviceSynchronize();
 
 
     // At this point we have n buckets and m bucket modules. Need to first sum up the n buckets per bucket module, and then
     // perform a final accumulation of the bucket modules. Launch 4 threads per bucket module.
     
     // Define parameters 
-    unsigned M = 1;
-    unsigned U = (1 << c) / M; // Need to add some offset here and in for loop
+    // unsigned M = 1;
+    // unsigned U = (1 << c) / M; // Need to add some offset here and in for loop
 
-    cout << "U is: " << U << endl;
+    // cout << "U is: " << U << endl;
 
-    point_t *S;
-    point_t *G;
-    point_t *result;
+    // point_t *S;
+    // point_t *G;
+    // point_t *result;
     point_t *final_sum;
-    cudaMallocManaged(&S, num_bucket_modules * M * 3 * 4 * sizeof(uint64_t));
-    cudaMallocManaged(&G, num_bucket_modules * M * 3 * 4 * sizeof(uint64_t));
-    cudaMallocManaged(&result, num_bucket_modules * 3 * 4 * sizeof(uint64_t));
-    cudaMallocManaged(&final_sum, num_bucket_modules * 3 * 4 * sizeof(uint64_t));
+    // cudaMallocManaged(&S, num_bucket_modules * M * 3 * 4 * sizeof(uint64_t));
+    // cudaMallocManaged(&G, num_bucket_modules * M * 3 * 4 * sizeof(uint64_t));
+    // cudaMallocManaged(&result, num_bucket_modules * 3 * 4 * sizeof(uint64_t));
+    cudaMalloc(&final_sum, num_bucket_modules * 3 * 4 * sizeof(uint64_t));
     // or change kernel parameters to num_bucket_modules, 4
     // need to look into replacing this with known sum reduction techniques, since it dominates 90% of the runtime
     // Here we're launching 256 with 8 blocks, where each group of 4 threads handles adding 2 points.
@@ -569,24 +540,24 @@ scalar_t *scalars, point_t *points, unsigned bitsize, unsigned c, size_t npoints
     // kernels in default stream are invoked sequentially
     // These parameters will need to be more generalized below
     bucket_module_sum_reduction_lernel_0<<<26, 4>>>(buckets, final_sum, c);
-    cudaDeviceSynchronize();
+    // cudaDeviceSynchronize();
 
-    cout << "PRINTING bucket_module_sum_reduction_lernel_0: " << endl;
-    for (int i = 0; i < 26; i++) {
-        for (int j = 0; j < LIMBS; j++) {
-            printf("result is: %zu\n", final_sum[i].x.data[j]);
-        }
-        printf("\n");
-        for (int y = 0; y < LIMBS; y++) {
-            printf("result is: %zu\n", final_sum[i].y.data[y]);
-        }
-        printf("\n");
-        for (int z = 0; z < LIMBS; z++) {
-            printf("result is: %zu\n", final_sum[i].z.data[z]);
-        }
-        printf("!!!!!!!!!\n");
-    }
-    printf("\n");
+    // cout << "PRINTING bucket_module_sum_reduction_lernel_0: " << endl;
+    // for (int i = 0; i < 26; i++) {
+    //     for (int j = 0; j < LIMBS; j++) {
+    //         printf("result is: %zu\n", final_sum[i].x.data[j]);
+    //     }
+    //     printf("\n");
+    //     for (int y = 0; y < LIMBS; y++) {
+    //         printf("result is: %zu\n", final_sum[i].y.data[y]);
+    //     }
+    //     printf("\n");
+    //     for (int z = 0; z < LIMBS; z++) {
+    //         printf("result is: %zu\n", final_sum[i].z.data[z]);
+    //     }
+    //     printf("!!!!!!!!!\n");
+    // }
+    // printf("\n");
 
     // cudaSetDevice(0);
     // size_t free_device_mem = 0;
@@ -644,6 +615,7 @@ scalar_t *scalars, point_t *points, unsigned bitsize, unsigned c, size_t npoints
 
     printf("FINAL ACCUMULATION TEST\n");
 
+    // This is still unified memory, which might impact performance when paired with cudaDeviceSynchronize?
     point_t *res;
     cudaMallocManaged(&res, 3 * 4 * sizeof(uint64_t));
     // change points to partial sums
@@ -683,6 +655,7 @@ template <class T>
 size_t device_ptr<T>::allocate(size_t bytes) {
     T* d_ptr;
     CUDA_WRAPPER(cudaMalloc(&d_ptr, bytes));
+    // CUDA_WRAPPER(cudaMallocHost(&context->h_scalars, context->pipp.get_size_scalars(context->pipp)));
 
     d_ptrs.push_back(d_ptr);
     return d_ptrs.size() - 1;

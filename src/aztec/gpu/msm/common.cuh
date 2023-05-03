@@ -2,7 +2,6 @@
 #include "util/thread_pool.hpp"
 #include "error.cuh"
 #include <cuda.h>
-// #include <cub/cub.cuh>
 #include <cub/device/device_radix_sort.cuh>
 #include <cub/device/device_run_length_encode.cuh>
 #include <cub/device/device_scan.cuh>
@@ -19,8 +18,8 @@ namespace pippenger_common {
 #define NWINS ((NBITS + WBITS - 1) / WBITS)   // Windowing size 
 
 // change NUM_POINTS
-size_t NUM_POINTS = 2;
-static const size_t NUM_BATCH_THREADS = 2;
+size_t NUM_POINTS = 1 << 11;
+static const size_t NUM_BATCH_THREADS = 1;
 static thread_pool_t batch_pool(NUM_BATCH_THREADS);
 
 /**
@@ -137,12 +136,6 @@ class pippenger_t {
 
         void synchronize_stream(pippenger_t &config);
 
-        affine_t* read_affine_curve_points();
-
-        point_t* read_jacobian_curve_points(point_t *points);
-
-        scalar_t* read_scalars(scalar_t *scalars);
-
         void print_result(point_t *result);
 
         point_t* execute_bucket_method(scalar_t *scalars, point_t *points, unsigned bitsize, unsigned c, size_t npoints);
@@ -158,9 +151,9 @@ struct Context {
         pipp_t pipp;
 
         // Indices for device_ptr
-        size_t d_points_idx; 
+        size_t d_points_idx;  // or this should change
         size_t d_buckets_idx; 
-        size_t d_scalar_idx[NUM_BATCH_THREADS];  
+        size_t d_scalar_idx; // this should change
         scalar_t *h_scalars;
 
         typename pipp_t::result_container_t result0;

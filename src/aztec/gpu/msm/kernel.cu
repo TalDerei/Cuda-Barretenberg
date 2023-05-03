@@ -128,7 +128,7 @@ __global__ void sum_reduction_kernel(g1_gpu::element *points, g1_gpu::element *r
 /**
  * Double and add implementation for multiple points and scalars using bit-decomposition with time complexity: O(k)
  */ 
-__global__ void double_and_add_kernel(fr_gpu *test_scalars, g1_gpu::element *test_points, g1_gpu::element *final_result) {
+__global__ void double_and_add_kernel(fr_gpu *test_scalars, g1_gpu::element *test_points, g1_gpu::element *final_result, size_t num_points) {
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
 
     g1_gpu::element R;
@@ -140,14 +140,13 @@ __global__ void double_and_add_kernel(fr_gpu *test_scalars, g1_gpu::element *tes
         fq_gpu::load(0, final_result[0].y.data[tid % 4]); 
         fq_gpu::load(0, final_result[0].z.data[tid % 4]); 
         // Loop for each bucket module
-        for (unsigned z = 0; z < 2; z++) {
+        for (unsigned z = 0; z < num_points; z++) {
             // Initialize 'R' to the identity element, Q to the curve point
             fq_gpu::load(0, R.x.data[tid % 4]); 
             fq_gpu::load(0, R.y.data[tid % 4]); 
             fq_gpu::load(0, R.z.data[tid % 4]); 
 
             // Load partial sums
-            // change index to 'z'
             fq_gpu::load(test_points[z].x.data[tid % 4], Q.x.data[tid % 4]);
             fq_gpu::load(test_points[z].y.data[tid % 4], Q.y.data[tid % 4]);
             fq_gpu::load(test_points[z].z.data[tid % 4], Q.z.data[tid % 4]);
@@ -250,7 +249,7 @@ __global__ void split_scalars_kernel
 }
 
 /**
- * Accumulation kernel adds up points in each bucket
+ * Accumulation kernel adds up points in each bucket -- this can be swapped out for efficient sum reduction kernel (tree reduction method)
  */
 __global__ void accumulate_buckets_kernel
 (g1_gpu::element *buckets, unsigned *bucket_offsets, unsigned *bucket_sizes, unsigned *single_bucket_indices, 
@@ -287,6 +286,20 @@ unsigned *point_indices, g1_gpu::element *points, unsigned num_buckets) {
             buckets[bucket_index].y.data[tid % 4], 
             buckets[bucket_index].z.data[tid % 4]
         );
+
+        if (fq_gpu::is_zero(buckets[bucket_index].x.data[tid % 4]) 
+            && fq_gpu::is_zero(buckets[bucket_index].y.data[tid % 4]) 
+            && fq_gpu::is_zero(buckets[bucket_index].z.data[tid % 4])) {
+            // printf("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+            g1_gpu::doubling(
+                points[point_indices[bucket_offset + i]].x.data[tid % 4], 
+                points[point_indices[bucket_offset + i]].y.data[tid % 4], 
+                points[point_indices[bucket_offset + i]].z.data[tid % 4], 
+                buckets[bucket_index].x.data[tid % 4], 
+                buckets[bucket_index].y.data[tid % 4], 
+                buckets[bucket_index].z.data[tid % 4]
+            );
+        }
     }
 }
 
@@ -343,18 +356,19 @@ __global__ void bucket_module_sum_reduction_lernel_0(g1_gpu::element *buckets, g
         );
 
         // comment out conditional code
-        if (fq_gpu::is_zero(final_sum[(subgroup + (subgroup_size * blockIdx.x))].x.data[tid % 4]) 
-            && fq_gpu::is_zero(final_sum[(subgroup + (subgroup_size * blockIdx.x))].y.data[tid % 4]) 
-            && fq_gpu::is_zero(final_sum[(subgroup + (subgroup_size * blockIdx.x))].z.data[tid % 4])) {
-            g1_gpu::doubling(
-                line_sum.x.data[tid % 4],
-                line_sum.y.data[tid % 4],
-                line_sum.z.data[tid % 4],
-                final_sum[(subgroup + (subgroup_size * blockIdx.x))].x.data[tid % 4],
-                final_sum[(subgroup + (subgroup_size * blockIdx.x))].y.data[tid % 4],
-                final_sum[(subgroup + (subgroup_size * blockIdx.x))].z.data[tid % 4]
-            );
-        }
+        // if (fq_gpu::is_zero(final_sum[(subgroup + (subgroup_size * blockIdx.x))].x.data[tid % 4]) 
+        //     && fq_gpu::is_zero(final_sum[(subgroup + (subgroup_size * blockIdx.x))].y.data[tid % 4]) 
+        //     && fq_gpu::is_zero(final_sum[(subgroup + (subgroup_size * blockIdx.x))].z.data[tid % 4])) {
+        //     g1_gpu::doubling(
+        //         line_sum.x.data[tid % 4],
+        //         line_sum.y.data[tid % 4],
+        //         line_sum.z.data[tid % 4],
+        //         final_sum[(subgroup + (subgroup_size * blockIdx.x))].x.data[tid % 4],
+        //         final_sum[(subgroup + (subgroup_size * blockIdx.x))].y.data[tid % 4],
+        //         final_sum[(subgroup + (subgroup_size * blockIdx.x))].z.data[tid % 4]
+        //     );
+        //     // printf("?????????????????????????????????????????????????????????????????");
+        // }
     }
 }
 

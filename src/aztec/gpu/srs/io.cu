@@ -89,10 +89,10 @@ bool is_file_exist(std::string const& fileName) {
 void read_transcript_g1(g1_gpu::affine_element* monomials, size_t degree, std::string const& dir) {
     // g1 basic generator
     monomials[0] = {
-        {0xd35d438dc58f0d9dUL, 0xa78eb28f5c70b3dUL, 0x666ea36f7879462cUL, 0xe0a77c19a07df2fUL} , 
-        {0xa6ba871b8b1e1b3aUL, 0x14f1d651eb8e167bUL, 0xccdd46def0f28c58UL, 0x1c14ef83340fbe5eUL }
+        {0xd35d438dc58f0d9d, 0xa78eb28f5c70b3d, 0x666ea36f7879462c, 0xe0a77c19a07df2f} , 
+        {0xa6ba871b8b1e1b3a, 0x14f1d651eb8e167b, 0xccdd46def0f28c58, 0x1c14ef83340fbe5e}
     };
-
+    
     size_t num = 0;
     size_t num_read = 1;
     std::string path = get_transcript_path(dir, num);

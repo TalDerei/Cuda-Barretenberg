@@ -21,8 +21,6 @@ namespace composer_gpu_wrapper {
  */
 class ComposerWrapper : public StandardComposer {
     public:    
-        // Inline constructor 
-        ComposerWrapper () : StandardComposer() {}
         StandardComposer composer_wrapper;
 };
 }
