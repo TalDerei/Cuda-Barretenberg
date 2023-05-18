@@ -24,7 +24,6 @@ add_subdirectory(fields)
 add_subdirectory(curves)
 add_subdirectory(benchmark)
 add_subdirectory(msm)
-add_subdirectory(ntt)
 add_subdirectory(srs)
 add_subdirectory(plonk)
 
