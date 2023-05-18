@@ -242,11 +242,6 @@ void pippenger_t<bucket_t, point_t, scalar_t, affine_t>::print_result(point_t *r
 template <class bucket_t, class point_t, class scalar_t, class affine_t>
 point_t* pippenger_t<bucket_t, point_t, scalar_t, affine_t>::execute_bucket_method(
 scalar_t *scalars, point_t *points, unsigned bitsize, unsigned c, size_t npoints) {
-    // Scalars are 10-bits, so between 0-1024. There are 26 windows (or bucket modules).
-    // Group elements with the same scalars go into the same buckets, i.e. 6 * g1_gpu means
-    // g1_gpu goes into bucket 6. And you have 2^c total buckets per window.
-
-    // Calculate the number of windows 
     unsigned num_bucket_modules = bitsize / c; 
     if (bitsize % c) {  
         num_bucket_modules++;
@@ -312,8 +307,10 @@ scalar_t *scalars, point_t *points, unsigned bitsize, unsigned c, size_t npoints
 
     // Split scalars into digits
     // NUM_THREADS * NUM_BLOCKS = NUM_BUCKETS --> each thread splits a single scalar into num_modules digits, each of size c. 
-    unsigned NUM_BLOCKS_2 = ((npoints * (num_bucket_modules + 1)) + NUM_THREADS - 1) / NUM_THREADS;
+    // unsigned NUM_BLOCKS_2 = ((npoints * (num_bucket_modules + 1)) + NUM_THREADS - 1) / NUM_THREADS;
     // unsigned NUM_BLOCKS_2 = ((num_buckets + NUM_THREADS - 1) / NUM_THREADS);
+    unsigned NUM_BLOCKS_2 = NUM_POINTS / NUM_THREADS;
+    
 
     cout << "npoints is: " << npoints << endl;
     cout << "NUM_THREADS is: " << NUM_THREADS << endl;
@@ -341,7 +338,7 @@ scalar_t *scalars, point_t *points, unsigned bitsize, unsigned c, size_t npoints
     // Each thread will handle splitting it's own scalar into sub-scalars, and placing them into buckets. 
     // split_scalars_kernel<<<NUM_BLOCKS_2, NUM_THREADS>>>(bucket_indices + npoints, point_indices + npoints, scalars, npoints, num_bucket_modules, c);
     // ********* This scalar value for launch parameters will also need to be changed instead of being hardcoded! ******************
-    split_scalars_kernel<<<1, npoints>>>(bucket_indices + npoints, point_indices + npoints, scalars, npoints, num_bucket_modules, c);
+    split_scalars_kernel<<<NUM_BLOCKS_2, NUM_THREADS>>>(bucket_indices + npoints, point_indices + npoints, scalars, npoints, num_bucket_modules, c);
     cudaDeviceSynchronize();
 
     // integrating CUB routines for things like offset calculations
@@ -407,12 +404,12 @@ scalar_t *scalars, point_t *points, unsigned bitsize, unsigned c, size_t npoints
 
     // cout << "sum is: " << sum << endl;
 
-    int temp = 0;
-    for (int i = 0; i < nof_buckets_to_compute[0]; i++) {
-        cout << "count is: " << temp << endl;
-        cout << "single_bucket_indices: " << single_bucket_indices[i] << endl;
-        temp++;
-    }
+    // int temp = 0;
+    // for (int i = 0; i < nof_buckets_to_compute[0]; i++) {
+    //     cout << "count is: " << temp << endl;
+    //     cout << "single_bucket_indices: " << single_bucket_indices[i] << endl;
+    //     temp++;
+    // }
 
     // int temp = 0;
     // for (int i = 0; i < num_buckets; i++) {
@@ -514,20 +511,20 @@ scalar_t *scalars, point_t *points, unsigned bitsize, unsigned c, size_t npoints
 
     unsigned *bucket_index;
     cudaMallocManaged(&bucket_index, num_bucket_modules * sizeof(unsigned));
-    int count = 0;
-    for (int i = 0; i < num_buckets; i++) {
-        if (buckets[i].x.data[0] != 0) {
-            cout << "bucket index is: " << i << endl;
-            bucket_index[count] = i;
-            cout << "bucket_index[count] is; " << bucket_index[count] << endl;
-            cout << "x: " << "{ " << buckets[i].x.data[0] << "," << buckets[i].x.data[1] << "," << buckets[i].x.data[2] << "," << buckets[i].x.data[3] << " }; "  
-            << " y: " << "{ " << buckets[i].y.data[0] << "," << buckets[i].y.data[1] << "," << buckets[i].y.data[2] << "," << buckets[i].y.data[3] << " }; "  
-            << " z: " << "{ " << buckets[i].z.data[0] << "," << buckets[i].z.data[1] << "," << buckets[i].z.data[2] << "," << buckets[i].z.data[3] << " }; " << endl;
-            count++;
-        }
-    }
-    cout << "count is: " << count << endl;
-    cout << "??????????????????????????????????????????????\n" << endl;
+    // int count = 0;
+    // for (int i = 0; i < num_buckets; i++) {
+    //     if (buckets[i].x.data[0] != 0) {
+    //         cout << "bucket index is: " << i << endl;
+    //         bucket_index[count] = i;
+    //         cout << "bucket_index[count] is; " << bucket_index[count] << endl;
+    //         cout << "x: " << "{ " << buckets[i].x.data[0] << "," << buckets[i].x.data[1] << "," << buckets[i].x.data[2] << "," << buckets[i].x.data[3] << " }; "  
+    //         << " y: " << "{ " << buckets[i].y.data[0] << "," << buckets[i].y.data[1] << "," << buckets[i].y.data[2] << "," << buckets[i].y.data[3] << " }; "  
+    //         << " z: " << "{ " << buckets[i].z.data[0] << "," << buckets[i].z.data[1] << "," << buckets[i].z.data[2] << "," << buckets[i].z.data[3] << " }; " << endl;
+    //         count++;
+    //     }
+    // }
+    // cout << "count is: " << count << endl;
+    // cout << "??????????????????????????????????????????????\n" << endl;
 
     for (int i = 0; i < num_bucket_modules; i++) {
         cout << "bucket_index is: " << bucket_index[i] << endl;
@@ -561,22 +558,22 @@ scalar_t *scalars, point_t *points, unsigned bitsize, unsigned c, size_t npoints
     bucket_module_sum_reduction_lernel_0<<<26, 4>>>(buckets, final_sum, c);
     cudaDeviceSynchronize();
 
-    cout << "PRINTING bucket_module_sum_reduction_lernel_0: " << endl;
-    for (int i = 0; i < 26; i++) {
-        for (int j = 0; j < LIMBS; j++) {
-            printf("result is: %zu\n", final_sum[i].x.data[j]);
-        }
-        printf("\n");
-        for (int y = 0; y < LIMBS; y++) {
-            printf("result is: %zu\n", final_sum[i].y.data[y]);
-        }
-        printf("\n");
-        for (int z = 0; z < LIMBS; z++) {
-            printf("result is: %zu\n", final_sum[i].z.data[z]);
-        }
-        printf("!!!!!!!!!\n");
-    }
-    printf("\n");
+    // cout << "PRINTING bucket_module_sum_reduction_lernel_0: " << endl;
+    // for (int i = 0; i < 26; i++) {
+    //     for (int j = 0; j < LIMBS; j++) {
+    //         printf("result is: %zu\n", final_sum[i].x.data[j]);
+    //     }
+    //     printf("\n");
+    //     for (int y = 0; y < LIMBS; y++) {
+    //         printf("result is: %zu\n", final_sum[i].y.data[y]);
+    //     }
+    //     printf("\n");
+    //     for (int z = 0; z < LIMBS; z++) {
+    //         printf("result is: %zu\n", final_sum[i].z.data[z]);
+    //     }
+    //     printf("!!!!!!!!!\n");
+    // }
+    // printf("\n");
 
     // cudaSetDevice(0);
     // size_t free_device_mem = 0;
