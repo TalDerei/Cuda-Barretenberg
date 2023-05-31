@@ -5,14 +5,14 @@ using namespace pippenger_common;
 using namespace waffle;
 
 int main(int, char**) {
-    // Dynamically initialize new 'msm_t' object
+    // Initialize dynamic 'msm_t' object
     msm_t<g1_gpu::affine_element, scalar_t, point_t> *msm = new msm_t<g1_gpu::affine_element, fr_gpu, point_t>();
     
-    // Generate sample curve points SRS 
+    // Construct elliptic curve points from SRS
     auto reference_string = std::make_shared<waffle::FileReferenceString>(NUM_POINTS, "../srs_db/ignition");
     g1::affine_element* points = reference_string->get_monomials();
 
-    // Generate sample scalars
+    // Construct scalars
     std::vector<fr> scalars;
     fr element = fr::random_element();
     fr accumulator = element;
@@ -22,8 +22,8 @@ int main(int, char**) {
         scalars.emplace_back(accumulator);
     }
 
-    // Initialize pippenger 'context' object
-    Context<bucket_t, point_t, scalar_t, affine_t> *context = msm->pippenger_initialize(points);
+    // Initialize dynamic pippenger 'context' object
+    Context<bucket_t, point_t, scalar_t> *context = msm->pippenger_initialize(points,  &scalars[0]);
 
     // Execute "Double-And-Add" reference kernel
     g1_gpu::element *final_result_1 = msm->naive_double_and_add(context, NUM_POINTS, points, &scalars[0]);
@@ -123,3 +123,6 @@ int main(int, char**) {
  * 
  * Need to figure out the proper way to time as well. There's a huge dosparity between using chrono timer vs. Cuda events. 
 */
+
+
+// Look into 'Staged concurrent copy and execute' over 'Sequential copy and execute'
