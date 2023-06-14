@@ -29,9 +29,8 @@ typedef element<fq_gpu, fr_gpu> point_t;
 typedef fr_gpu scalar_t;
 
 /**
- * Allocate device storage and buffers. The primary
- * data structure is a vector of initialized pointers
- * to memory locations. 
+ * Allocate device storage and buffers. The primary data structure 
+ * is a vector of initialized pointers to memory locations. 
  */
 template < typename T >
 class device_ptr {
@@ -57,10 +56,8 @@ class stream_t {
         cudaStream_t stream;
 
         stream_t(int device) {
-            // Set GPU device
+            // Set GPU device and create asynchronous stream
             CUDA_WRAPPER(cudaSetDevice(device));
-
-            // Creates a new asynchronous stream
             CUDA_WRAPPER(cudaStreamCreateWithFlags(&stream, cudaStreamNonBlocking));
         }
 
@@ -82,10 +79,7 @@ class pippenger_t {
         size_t n;
         int device;
 
-        // Constructor method
-        pippenger_t() : default_stream(0) {
-            device = 0;
-        }        
+        pippenger_t() : default_stream(0) { device = 0; }        
     
         pippenger_t initialize_msm(pippenger_t &config, size_t npoints);
         
@@ -103,8 +97,6 @@ class pippenger_t {
 
         void transfer_scalars_to_device(pippenger_t &config, scalar_t *device_scalar_ptrs, fr *scalars, cudaStream_t aux_stream);
         
-        // void launch_kernel(pippenger_t &config, size_t d_bases_idx, size_t d_scalar_idx, size_t d_buckets_idx);
-
         void synchronize_stream(pippenger_t &config);
 
         void print_result(g1_gpu::element *result_naive_msm, g1_gpu::element *result_bucket_method_msm);
@@ -126,7 +118,7 @@ struct Context {
         // Indices for device_ptr
         size_t d_points_idx; 
         size_t d_scalar_idx; 
-        scalar_t *h_scalars; // will need to make some conversion between scalar_t and fr...
+        scalar_t *h_scalars; 
 };
 
 }

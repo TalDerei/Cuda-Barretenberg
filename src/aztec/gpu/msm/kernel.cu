@@ -8,8 +8,6 @@ namespace pippenger_common {
 
 /* ----------------------------------------- Sum Reduction Kernels ---------------------------------------------- */
 
-// CLEAN UP COMMENTS HERE
-
 /**
  * Naive multiplications before calling sum reduction kernel
  */
@@ -708,15 +706,6 @@ __global__ void comparator_kernel(g1_gpu::element *point, g1_gpu::element *point
     rhs_x.data[tid] = fq_gpu::mul(point_2[0].x.data[tid], lhs_zz.data[tid], rhs_x.data[tid]);
     rhs_y.data[tid] = fq_gpu::mul(point_2[0].y.data[tid], lhs_zzz.data[tid], rhs_y.data[tid]);
     result[tid] = ((lhs_x.data[tid] == rhs_x.data[tid]) && (lhs_y.data[tid] == rhs_y.data[tid]));
-}
-
-/**
- * Test kernel
- */
-__global__ void test_kernel(scalar_t *h_scalars, scalar_t *test_scalars) {     
-    int tid = blockIdx.x * blockDim.x + threadIdx.x;
-
-    fq_gpu::load(h_scalars[0].data[tid], test_scalars[0].data[tid]);
 }
 
 }

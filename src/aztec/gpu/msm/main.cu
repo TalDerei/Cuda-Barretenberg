@@ -40,6 +40,7 @@ int main(int, char**) {
 
 /**
  * TODO: Add "inlining" to C++/cuda functions
+ * TODO: Look into cudaMallocAsync stream allocator API
  * TODO: benchmark Ingonyama "Icicle" MSM
  * TODO: add multiple stream support
  * TODO: change unified memory to pinned host memory
@@ -47,7 +48,7 @@ int main(int, char**) {
  * TODO: change to memcpy instead of reading from files
  * TODO: incorperate cooperative groups in accmulation 
  * TODO: choose block sizes based on occupancy in terms of active blocks
- * TODO: free memory
+ * TODO: free memory for all cuda memory allocations
  * TODO: look into shared memory optimizations instead of global memory accesses (100x latency lower than global memory)
  * TODO: remove extraneous loops
  * TODO: adjust kernel parameters to reduce overhead
@@ -66,4 +67,6 @@ int main(int, char**) {
  * TODO: switch jacobian to projective coordinates to eliminate infinity and zero checks 
  * TODO: are conditional checks are degrading performance?
  * TODO: Look into 'Staged concurrent copy and execute' over 'Sequential copy and execute'
+ * TODO: wrap all the cuda allocation in error handles wrappers
+ * TODO:  construct method to choose MSM parameters dynamically choose the best depending on the size of the msm
  */
