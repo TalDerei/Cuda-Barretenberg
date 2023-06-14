@@ -59,3 +59,4 @@
     - [ ] Connect wrapper to MSM GPU kernel
 - [ ] Enhance MSM with performance optimizations
 - [ ] Design memory pipeline for data used in MSM GPU kernel
+- [ ] Set proper licenses for repository

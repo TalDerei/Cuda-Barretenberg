@@ -27,7 +27,6 @@ size_t NUM_POINTS = 1 << 10;
  */
 typedef element<fq_gpu, fr_gpu> point_t;
 typedef fr_gpu scalar_t;
-typedef element<fq_gpu, fr_gpu> bucket_t;
 
 /**
  * Allocate device storage and buffers. The primary
@@ -73,13 +72,11 @@ class stream_t {
 /**
  * Initialize pippenger's bucket method for MSM algorithm
  */
-template < typename bucket_t, typename point_t, typename scalar_t > 
-class pippenger_t {
-    private:
+template < typename point_t, typename scalar_t > 
+class pippenger_t {        
+    public: 
         device_ptr<point_t> device_base_ptrs;
         device_ptr<scalar_t> device_scalar_ptrs;
-        device_ptr<bucket_t> device_bucket_ptrs;
-    public: 
         stream_t default_stream;
         size_t npoints;        
         size_t n;
@@ -101,40 +98,33 @@ class pippenger_t {
         size_t allocate_bases(pippenger_t &config);
 
         size_t allocate_scalars(pippenger_t &config);
+
+        void transfer_bases_to_device(pippenger_t &config, point_t *device_bases_ptrs, const point_t *points, cudaStream_t aux_stream);
+
+        void transfer_scalars_to_device(pippenger_t &config, scalar_t *device_scalar_ptrs, fr *scalars, cudaStream_t aux_stream);
         
-        size_t allocate_buckets(pippenger_t &config);
-
-        size_t num_base_ptrs();
-
-        size_t num_scalar_ptrs();
-
-        size_t num_bucket_ptrs();
-
-        void transfer_bases_to_device(pippenger_t &config, size_t d_points_idx, const point_t points[]);
-
-        void transfer_scalars_to_device(pippenger_t &config, scalar_t *d_scalars_idx, fr *scalars, cudaStream_t aux_stream);
-        
-        void launch_kernel(pippenger_t &config, size_t d_bases_idx, size_t d_scalar_idx, size_t d_buckets_idx);
+        // void launch_kernel(pippenger_t &config, size_t d_bases_idx, size_t d_scalar_idx, size_t d_buckets_idx);
 
         void synchronize_stream(pippenger_t &config);
 
-        void print_result(point_t *result);
+        void print_result(g1_gpu::element *result_naive_msm, g1_gpu::element *result_bucket_method_msm);
+
+        void verify_result(point_t *result_1, point_t *result_2);
 
         point_t* execute_bucket_method(pippenger_t &config, scalar_t *scalars, point_t *points, unsigned bitsize, unsigned c, size_t npoints);
 };
-typedef pippenger_t<bucket_t, point_t, scalar_t> pipp_t;
+typedef pippenger_t<point_t, scalar_t> pipp_t;
 
 /**
  * Context used to store persistent state
  */
-template < typename bucket_t, typename point_t, typename scalar_t > 
+template < typename point_t, typename scalar_t > 
 struct Context {
     public: 
         pipp_t pipp;
 
         // Indices for device_ptr
         size_t d_points_idx; 
-        size_t d_buckets_idx; 
         size_t d_scalar_idx; 
         scalar_t *h_scalars; // will need to make some conversion between scalar_t and fr...
 };

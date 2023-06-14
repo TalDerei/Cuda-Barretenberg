@@ -8,11 +8,10 @@ namespace pippenger_common {
 /**
  * Initialize cuda device and MSM parameters
  */
-template <class bucket_t, class point_t, class scalar_t>
-pippenger_t<bucket_t, point_t, scalar_t> 
-pippenger_t<bucket_t, point_t, scalar_t>::initialize_msm(pippenger_t &config, size_t npoints) {
+template <class point_t, class scalar_t>
+pippenger_t<point_t, scalar_t> 
+pippenger_t<point_t, scalar_t>::initialize_msm(pippenger_t &config, size_t npoints) {
     CUDA_WRAPPER(cudaSetDevice(config.device));
-
     config.n = npoints;
 
     return config;
@@ -21,113 +20,76 @@ pippenger_t<bucket_t, point_t, scalar_t>::initialize_msm(pippenger_t &config, si
 /**
  * Calculate the amount of device storage required to store bases 
  */
-template <class bucket_t, class point_t, class scalar_t>
-size_t pippenger_t<bucket_t, point_t, scalar_t>::get_size_bases(pippenger_t &config) {
+template <class point_t, class scalar_t>
+size_t pippenger_t<point_t, scalar_t>::get_size_bases(pippenger_t &config) {
     return config.n * sizeof(point_t);
 }
 
 /**
  * Calculate the amount of device storage required to store scalars 
  */
-template <class bucket_t, class point_t, class scalar_t>
-size_t pippenger_t<bucket_t, point_t, scalar_t>::get_size_scalars(pippenger_t &config) {
-    return config.n * sizeof(scalar_t);
+template <class point_t, class scalar_t>
+size_t pippenger_t<point_t, scalar_t>::get_size_scalars(pippenger_t &config) {
+    // return config.n * sizeof(scalar_t);
+    return config.n * LIMBS * sizeof(uint64_t);
 }
 
 /**
  * Calculate the amount of device storage required to store buckets 
  */
-template <class bucket_t, class point_t, class scalar_t>
-size_t pippenger_t<bucket_t, point_t, scalar_t>::get_size_buckets(pippenger_t &config) { 
+template <class point_t, class scalar_t>
+size_t pippenger_t<point_t, scalar_t>::get_size_buckets(pippenger_t &config) { 
     return (MODULES << C) * 3 * 4 * sizeof(uint64_t);
 }
 
 /**
  * Allocate device storage for bases
  */
-template <class bucket_t, class point_t, class scalar_t>
-size_t pippenger_t<bucket_t, point_t, scalar_t>::allocate_bases(pippenger_t &config) {
+template <class point_t, class scalar_t>
+size_t pippenger_t<point_t, scalar_t>::allocate_bases(pippenger_t &config) {
     return device_base_ptrs.allocate(get_size_bases(config));
 }
 
 /**
  * Allocate device storage for scalars
  */
-template <class bucket_t, class point_t, class scalar_t>
-size_t pippenger_t<bucket_t, point_t, scalar_t>::allocate_scalars(pippenger_t &config) {
+template <class point_t, class scalar_t>
+size_t pippenger_t<point_t, scalar_t>::allocate_scalars(pippenger_t &config) {
     return device_scalar_ptrs.allocate(get_size_scalars(config));
-}
-
-/**
- * Allocate device storage for buckets
- */
-template <class bucket_t, class point_t, class scalar_t>
-size_t pippenger_t<bucket_t, point_t, scalar_t>::allocate_buckets(pippenger_t &config) {
-    return device_bucket_ptrs.allocate(get_size_buckets(config));
-}
-
-/**
- * Return size of base pointers
- */
-template <class bucket_t, class point_t, class scalar_t>
-size_t pippenger_t<bucket_t, point_t, scalar_t>::num_base_ptrs() {
-    return device_base_ptrs.size();
-}
-
-/**
- * Return size of scalar pointers
- */
-template <class bucket_t, class point_t, class scalar_t>
-size_t pippenger_t<bucket_t, point_t, scalar_t>::num_scalar_ptrs() {
-    return device_scalar_ptrs.size();
-}
-
-/**
- * Return size of bucket pointers
- */
-template <class bucket_t, class point_t, class scalar_t>
-size_t pippenger_t<bucket_t, point_t, scalar_t>::num_bucket_ptrs() {
-    return device_bucket_ptrs.size();
 }
 
 /**
  * Transfer base points to GPU device
  */
-template <class bucket_t, class point_t, class scalar_t>
-void pippenger_t<bucket_t, point_t, scalar_t>::transfer_bases_to_device(
-pippenger_t &config, size_t d_points_idx, const point_t points[]) {    
-    // Set cuda device and default stream
-    CUDA_WRAPPER(cudaSetDevice(config.device));
-
-    // Why are the bases and scalars in different streams?
-    cudaStream_t stream = config.default_stream;
-
-    // change to affine_t, along with device_base_ptrs
-    point_t *d_points = device_base_ptrs[d_points_idx];
+template <class point_t, class scalar_t>
+void pippenger_t<point_t, scalar_t>::transfer_bases_to_device(
+pippenger_t &config, point_t *device_bases_ptrs, const point_t *points, cudaStream_t aux_stream = nullptr) {    
+    // Set cuda device and auxilary stream
+    cudaStream_t stream = (aux_stream == nullptr) ? default_stream : aux_stream;
+    cudaSetDevice(config.device);    
 
     // cudaMemcpyAsync() is non-blocking and asynchronous variant of cudaMemcpy() that requires pinned memory.
-    // Asynchronous transfers enable overalapping data transfers with kernel execution.
-    CUDA_WRAPPER(cudaMemcpyAsync(d_points, points, config.npoints * sizeof(*d_points), cudaMemcpyHostToDevice, default_stream));
+    cudaMemcpyAsync(device_bases_ptrs, points, NUM_POINTS * LIMBS * sizeof(uint64_t), cudaMemcpyHostToDevice, stream);
 }
 
 /**
  * Transfer scalars to GPU device
  */
-template <class bucket_t, class point_t, class scalar_t>
-void pippenger_t<bucket_t, point_t, scalar_t>::transfer_scalars_to_device(
-pippenger_t &config, scalar_t *d_scalars_idx, fr *scalars, cudaStream_t aux_stream = nullptr) {
+template <class point_t, class scalar_t>
+void pippenger_t<point_t, scalar_t>::transfer_scalars_to_device(
+pippenger_t &config, scalar_t *device_scalar_ptrs, fr *scalars, cudaStream_t aux_stream = nullptr) {
+    // Set cuda device and auxilary stream
     cudaStream_t stream = (aux_stream == nullptr) ? default_stream : aux_stream;
-    // Set cuda device and auxilary stream -- will need to figure out stream situation here 
-    cudaSetDevice(config.device);
-    
-    CUDA_WRAPPER(cudaMemcpyAsync(d_scalars_idx, scalars, config.npoints * sizeof(*d_scalars_idx), cudaMemcpyHostToDevice, stream));
+    cudaSetDevice(config.device);    
+
+    cudaMemcpyAsync(device_scalar_ptrs, scalars, NUM_POINTS * LIMBS * sizeof(uint64_t), cudaMemcpyHostToDevice, stream);
 }
 
 /**
  * Synchronize stream
  */
-template <class bucket_t, class point_t, class scalar_t>
-void pippenger_t<bucket_t, point_t, scalar_t>::synchronize_stream(pippenger_t &config) {
+template <class point_t, class scalar_t>
+void pippenger_t<point_t, scalar_t>::synchronize_stream(pippenger_t &config) {
     CUDA_WRAPPER(cudaSetDevice(config.device));
     CUDA_WRAPPER(cudaStreamSynchronize(config.default_stream));
 }
@@ -135,53 +97,84 @@ void pippenger_t<bucket_t, point_t, scalar_t>::synchronize_stream(pippenger_t &c
 /**
  * Launch kernel
  */
-template <class bucket_t, class point_t, class scalar_t>
-void pippenger_t<bucket_t, point_t, scalar_t>::launch_kernel(
-pippenger_t &config, size_t d_bases_idx, size_t d_scalar_idx, size_t d_buckets_idx) {
-    // Set default stream
-    cudaStream_t stream = config.default_stream;
+// template <class point_t, class scalar_t>
+// void pippenger_t<point_t, scalar_t>::launch_kernel(
+// pippenger_t &config, size_t d_bases_idx, size_t d_scalar_idx, size_t d_buckets_idx) {
+//     // Set default stream
+//     cudaStream_t stream = config.default_stream;
 
-    // Pointers to malloced memory locations
-    point_t *d_points = device_base_ptrs[d_bases_idx];
-    scalar_t *d_scalars = device_scalar_ptrs[d_scalar_idx];
+//     // Pointers to malloced memory locations
+//     point_t *d_points = device_base_ptrs[d_bases_idx];
+//     scalar_t *d_scalars = device_scalar_ptrs[d_scalar_idx];
     
-    CUDA_WRAPPER(cudaSetDevice(config.device));
+//     CUDA_WRAPPER(cudaSetDevice(config.device));
 
-    g1_gpu::element *final_result;
-    cudaMallocManaged(&final_result, NUM_POINTS * LIMBS * sizeof(uint64_t));    
+//     g1_gpu::element *final_result;
+//     cudaMallocManaged(&final_result, NUM_POINTS * LIMBS * sizeof(uint64_t));    
 
-    cudaDeviceSynchronize();
+//     cudaDeviceSynchronize();
 
-    cout << "\nfinal_result is: " << final_result[0].x.data[0] << endl;
-    cout << "final_result is: " << final_result[0].x.data[1] << endl;
-    cout << "final_result is: " << final_result[0].x.data[2] << endl;
-    cout << "final_result is: " << final_result[0].x.data[3] << endl;
-}
+//     cout << "\nfinal_result is: " << final_result[0].x.data[0] << endl;
+//     cout << "final_result is: " << final_result[0].x.data[1] << endl;
+//     cout << "final_result is: " << final_result[0].x.data[2] << endl;
+//     cout << "final_result is: " << final_result[0].x.data[3] << endl;
+// }
 
 /**
  * Print results
  */
-template <class bucket_t, class point_t, class scalar_t>
-void pippenger_t<bucket_t, point_t, scalar_t>::print_result(point_t *result) {
-    for (int i = 0; i < LIMBS; i++) {
-        printf("result is: %zu\n", result[0].x.data[i]);
+template <class point_t, class scalar_t>
+void pippenger_t<point_t, scalar_t>::print_result(g1_gpu::element *result_naive_msm, g1_gpu::element *result_bucket_method_msm) {
+    for (int i = 0; i < 3; i++) {
+        printf("result_naive_msm is: %zu\n", result_naive_msm[0].x.data[i]);
     }
     printf("\n");
     for (int i = 0; i < LIMBS; i++) {
-        printf("result is: %zu\n", result[0].y.data[i]);
+        printf("result_naive_msm is: %zu\n", result_naive_msm[0].y.data[i]);
     }
     printf("\n");
     for (int i = 0; i < LIMBS; i++) {
-        printf("result is: %zu\n", result[0].z.data[i]);
+        printf("result_naive_msm is: %zu\n", result_naive_msm[0].z.data[i]);
     }
     printf("\n");
+    for (int i = 0; i < 3; i++) {
+        printf("result_bucket_method_msm is: %zu\n", result_bucket_method_msm[0].x.data[i]);
+    }
+    printf("\n");
+    for (int i = 0; i < LIMBS; i++) {
+        printf("result_bucket_method_msm is: %zu\n", result_bucket_method_msm[0].y.data[i]);
+    }
+    printf("\n");
+    for (int i = 0; i < LIMBS; i++) {
+        printf("result_bucket_method_msm is: %zu\n", result_bucket_method_msm[0].z.data[i]);
+    }
+}
+
+/**
+ * Verify double-and-add and pippenger's bucket method results
+ * move to common.cuh file
+ */ 
+template <class point_t, class scalar_t>
+void pippenger_t<point_t, scalar_t>::verify_result(point_t *result_1, point_t *result_2) {
+    var *result;
+    cudaMallocManaged(&result, LIMBS * sizeof(uint64_t));
+    
+    comparator_kernel<<<1, 4>>>(result_1, result_2, result);
+    cudaDeviceSynchronize();
+
+    assert (result[0] == 1);
+    assert (result[1] == 1);
+    assert (result[2] == 1);
+    assert (result[3] == 1);
+
+    cout << "MSM Result Verified!" << endl;
 }
 
 // /**
 //  * Execute bucket method 
 //  */
-template <class bucket_t, class point_t, class scalar_t>
-point_t* pippenger_t<bucket_t, point_t, scalar_t>::execute_bucket_method(
+template <class point_t, class scalar_t>
+point_t* pippenger_t<point_t, scalar_t>::execute_bucket_method(
 pippenger_t &config, scalar_t *scalars, point_t *points, unsigned bitsize, unsigned c, size_t npoints) {
     unsigned num_bucket_modules = bitsize / c; 
     if (bitsize % c) {  
@@ -468,9 +461,9 @@ pippenger_t &config, scalar_t *scalars, point_t *points, unsigned bitsize, unsig
     // cout << "count is: " << count << endl;
     // cout << "??????????????????????????????????????????????\n" << endl;
 
-    for (int i = 0; i < num_bucket_modules; i++) {
-        cout << "bucket_index is: " << bucket_index[i] << endl;
-    }
+    // for (int i = 0; i < num_bucket_modules; i++) {
+    //     cout << "bucket_index is: " << bucket_index[i] << endl;
+    // }
     cudaDeviceSynchronize();
 
 
@@ -607,12 +600,12 @@ pippenger_t &config, scalar_t *scalars, point_t *points, unsigned bitsize, unsig
 /***************************************** Function declerations for 'device_ptr' class  *****************************************/
 
 /**
- * Allocate memory using cudaMalloc
+ * Allocate memory using cudaMallocHost
  */
 template <class T>
 size_t device_ptr<T>::allocate(size_t bytes) {
     T* d_ptr;
-    CUDA_WRAPPER(cudaMalloc(&d_ptr, bytes));
+    CUDA_WRAPPER(cudaMallocHost(&d_ptr, bytes));
     // CUDA_WRAPPER(cudaMallocHost(&context->h_scalars, context->pipp.get_size_scalars(context->pipp)));
 
     d_ptrs.push_back(d_ptr);
