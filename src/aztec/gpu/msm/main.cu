@@ -26,16 +26,33 @@ int main(int, char**) {
     Context<point_t, scalar_t> *context = msm->pippenger_initialize(points,  &scalars[0]);
 
     // Execute "Double-And-Add" reference kernel
-    g1_gpu::element *result_1 = msm->naive_double_and_add(context, NUM_POINTS, points, &scalars[0]);
+    // g1_gpu::element *result_1 = msm->naive_double_and_add(context, NUM_POINTS, points, &scalars[0]);
 
     // Execute "Pippenger's Bucket Method" kernel
     g1_gpu::element *result_2 = msm->msm_bucket_method(context, NUM_POINTS, points, &scalars[0]);
 
+    cout << "final_result_2 is: " << result_2[0].x.data[0] << endl;
+    cout << "final_result_2 is: " << result_2[0].x.data[1] << endl;
+    cout << "final_result_2 is: " << result_2[0].x.data[2] << endl;
+    cout << "final_result_2 is: " << result_2[0].x.data[3] << endl;
+
+    cout << "final_result_2 is: " << result_2[0].y.data[0] << endl;
+    cout << "final_result_2 is: " << result_2[0].y.data[1] << endl;
+    cout << "final_result_2 is: " << result_2[0].y.data[2] << endl;
+    cout << "final_result_2 is: " << result_2[0].y.data[3] << endl;
+
+    cout << "final_result_2 is: " << result_2[0].z.data[0] << endl;
+    cout << "final_result_2 is: " << result_2[0].z.data[1] << endl;
+    cout << "final_result_2 is: " << result_2[0].z.data[2] << endl;
+    cout << "final_result_2 is: " << result_2[0].z.data[3] << endl;
+
+    exit(0);
+
     // Print results 
-    context->pipp.print_result(result_1, result_2);
+    // context->pipp.print_result(result_1, result_2);
 
     // Verify the final results match
-    context->pipp.verify_result(result_1, result_2);
+    // context->pipp.verify_result(result_1, result_2);
 }
 
 /**

@@ -198,7 +198,7 @@ __global__ void initialize_buckets_kernel(g1_gpu::element *bucket) {
 /**
  * Scalar digit decomposition 
  */
-__device__ uint64_t decompose_scalar_digit(fr_gpu scalar, unsigned num, unsigned width) {    
+__device__ __forceinline__ uint64_t decompose_scalar_digit(fr_gpu scalar, unsigned num, unsigned width) {    
     // Determine which 64-bit limb to access 
     const uint64_t limb_lsb_idx = (num * width) / 64;  
     const uint64_t shift_bits = (num * width) % 64;  

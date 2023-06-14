@@ -6,7 +6,7 @@ using namespace gpu_barretenberg;
 /* -------------------------- Affine and Jacobian Coordinate Operations ---------------------------------------------- */
 
 template <class fq_gpu, class fr_gpu> 
-__device__ void group_gpu<fq_gpu, fr_gpu>::load_affine(affine_element &X, affine_element &result) {
+__device__ __forceinline__ void group_gpu<fq_gpu, fr_gpu>::load_affine(affine_element &X, affine_element &result) {
     fq_gpu::load(X.x.data[0], result.x.data[0]);      
     fq_gpu::load(X.x.data[1], result.x.data[1]);      
     fq_gpu::load(X.x.data[2], result.x.data[2]);      
@@ -19,7 +19,7 @@ __device__ void group_gpu<fq_gpu, fr_gpu>::load_affine(affine_element &X, affine
 }
 
 template <class fq_gpu, class fr_gpu> 
-__device__ void group_gpu<fq_gpu, fr_gpu>::load_jacobian(element &X, element &result) {
+__device__ __forceinline__ void group_gpu<fq_gpu, fr_gpu>::load_jacobian(element &X, element &result) {
     fq_gpu::load(X.x.data[0], result.x.data[0]);      
     fq_gpu::load(X.x.data[1], result.x.data[1]);      
     fq_gpu::load(X.x.data[2], result.x.data[2]);      
@@ -41,7 +41,7 @@ __device__ void group_gpu<fq_gpu, fr_gpu>::load_jacobian(element &X, element &re
  * Elliptic curve algorithms: https://hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-0.html#addition-zadd-2007-m
  */
 template <class fq_gpu, class fr_gpu> 
-__device__ void group_gpu<fq_gpu, fr_gpu>::mixed_add(var X, var Y, var Z, var A, var B, var &res_x, var &res_y, var &res_z) {
+__device__ __forceinline__ void group_gpu<fq_gpu, fr_gpu>::mixed_add(var X, var Y, var Z, var A, var B, var &res_x, var &res_y, var &res_z) {
     var z1z1, u2, s2, h, hh, i, j, r, v, t0, t1;
     
     // X Element
@@ -78,7 +78,7 @@ __device__ void group_gpu<fq_gpu, fr_gpu>::mixed_add(var X, var Y, var Z, var A,
 }
 
 template <class fq_gpu, class fr_gpu> 
-__device__ void group_gpu<fq_gpu, fr_gpu>::doubling(var X, var Y, var Z, var &res_x, var &res_y, var &res_z) {
+__device__ __forceinline__ void group_gpu<fq_gpu, fr_gpu>::doubling(var X, var Y, var Z, var &res_x, var &res_y, var &res_z) {
     var T0, T1, T2, T3;
 
    // Check P == 0
@@ -119,7 +119,7 @@ __device__ void group_gpu<fq_gpu, fr_gpu>::doubling(var X, var Y, var Z, var &re
  * Jacobian addition has cost 16T multiplications
  */
 template <class fq_gpu, class fr_gpu> 
-__device__ void group_gpu<fq_gpu, fr_gpu>::add(var X1, var Y1, var Z1, var X2, var Y2, var Z2, var &res_x, var &res_y, var &res_z) {
+__device__ __forceinline__ void group_gpu<fq_gpu, fr_gpu>::add(var X1, var Y1, var Z1, var X2, var Y2, var Z2, var &res_x, var &res_y, var &res_z) {
     var Z1Z1, Z2Z2, U1, U2, S1, S2, F, H, I, J;
 
     // Check P == 0 or Q == 0
@@ -177,7 +177,7 @@ __device__ void group_gpu<fq_gpu, fr_gpu>::add(var X1, var Y1, var Z1, var X2, v
 /* -------------------------- Projective Coordinate Operations ---------------------------------------------- */
 
 template <class fq_gpu, class fr_gpu> 
-__device__ void group_gpu<fq_gpu, fr_gpu>::load_projective(projective_element &X, projective_element &result) {
+__device__ __forceinline__ void group_gpu<fq_gpu, fr_gpu>::load_projective(projective_element &X, projective_element &result) {
     fq_gpu::load(X.x.data[0], result.x.data[0]);      
     fq_gpu::load(X.x.data[1], result.x.data[1]);      
     fq_gpu::load(X.x.data[2], result.x.data[2]);      
@@ -206,7 +206,7 @@ projective_element<fq_gpu, fr_gpu> group_gpu<fq_gpu, fr_gpu>::from_affine(const 
  * Projective addition has cost 14T multiplications
  */
 template <class fq_gpu, class fr_gpu> 
-__device__ void group_gpu<fq_gpu, fr_gpu>::add_projective(
+__device__ __forceinline__ void group_gpu<fq_gpu, fr_gpu>::add_projective(
 var X1, var Y1, var Z1, var X2, var Y2, var Z2, var &res_x, var &res_y, var &res_z) {
     var t00, t01, t02, t03, t04, t05, t06, t07, t08, t09, t10;
     var t11, t12, t13, t14, t15, t16, t17, t18, t19, t20, t21;

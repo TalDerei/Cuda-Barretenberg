@@ -20,7 +20,7 @@ namespace pippenger_common {
 #define BITSIZE 254
 #define C 10
 #define MODULES ((BITSIZE / C) + 1)
-size_t NUM_POINTS = 1 << 10;
+size_t NUM_POINTS = 1 << 20;
 
 /**
  * Typedef points, scalars, and buckets 
