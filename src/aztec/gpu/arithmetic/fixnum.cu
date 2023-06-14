@@ -4,18 +4,12 @@
 #include "primitives.cu"
 
 /*
- * var is the basic register type that we deal with. The
- * interpretation of (one or more) such registers is determined by the
- * struct used, e.g. digit, fixnum, etc.
+ * var is the basic register type that we deal with. The interpretation of 
+ * such registers is determined by the struct used, e.g. digit and fixnum
  */
 typedef std::uint64_t var;
 
 struct digit {
-    // BYTES is the number of bytes in a var value
-    static constexpr int BYTES = sizeof(var);
-    // BITS is the number of bits in a var value
-    static constexpr int BITS = BYTES * 8;
-
     // Add the values of two variables 'a' and 'b' and stores the result in 's'
     __device__ __forceinline__
     static void add(var &s, var a, var b) {
@@ -60,7 +54,7 @@ struct digit {
     __device__ __forceinline__
     static int is_zero(var a) { return a == zero(); }
 
-    // Mltiply two variables 'a' and 'b' and stores the lower 64 bits of the result in 'lo'
+    // Multiply two variables 'a' and 'b' and stores the lower 64 bits of the result in 'lo'
     __device__ __forceinline__
     static void mul_lo(var &lo, var a, var b) {
         lo = a * b;
@@ -101,8 +95,7 @@ struct fixnum {
 
     // Return the layout of the current thread block as a thread_block_tile object with WIDTH threads
     __device__ __forceinline__
-    static cooperative_groups::thread_block_tile<WIDTH>
-    layout() {
+    static cooperative_groups::thread_block_tile<WIDTH> layout() {
         return cooperative_groups::tiled_partition<WIDTH>(cooperative_groups::this_thread_block());
     }
 
@@ -165,14 +158,6 @@ struct fixnum {
     __device__ __forceinline__
     static int is_zero(var r) {
         return nonzero_mask(r) == 0U;
-    }
-
-    __device__ __forceinline__
-    static int most_sig_dig(var x) {
-        enum { UINT32_BITS = 8 * sizeof(uint32_t) };
-
-        uint32_t a = nonzero_mask(x);
-        return UINT32_BITS - (internal::clz(a) + 1);
     }
 
     // Compare equality of two var arrays
