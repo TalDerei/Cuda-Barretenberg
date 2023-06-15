@@ -576,10 +576,10 @@ void assert_checks(var *expected, var *result) {
     cudaDeviceSynchronize();
     
     // Assert clause
-    // assert(expected[0] == result[0]);
-    // assert(expected[1] == result[1]);
-    // assert(expected[2] == result[2]);
-    // assert(expected[3] == result[3]);
+    assert(expected[0] == result[0]);
+    assert(expected[1] == result[1]);
+    assert(expected[2] == result[2]);
+    assert(expected[3] == result[3]);
 
     // Print statements
     printf("expected[0] is: %zu\n", expected[0]);

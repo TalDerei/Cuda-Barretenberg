@@ -1243,13 +1243,13 @@ int main(int, char**) {
     cudaMallocManaged(&expect_z, LIMBS * sizeof(var));
 
     // Execute kernel functions
-    // execute_kernels_finite_fields(a, b, c, d, result, res_x, res_y, res_z, expect_x, expect_y, expect_z);
-    // execute_kernels_curve(a, b, c, d, result, res_x, res_y, res_z, expect_x, expect_y, expect_z);
-    // execute_kernels_finite_fields_vector(a, b, c, d, result, res_x, res_y, res_z, expect_x, expect_y, expect_z);
-    // execute_kernels_curve_vector(a, b, c, d, result, res_x, res_y, res_z, expect_x, expect_y, expect_z);
-    // execute_kernels_finite_fields_vector_with_scalars(a, b, c, d, result, res_x, res_y, res_z, expect_x, expect_y, expect_z);
-    // execute_kernels_curve_vector_with_scalars(a, b, c, d, result, res_x, res_y, res_z, expect_x, expect_y, expect_z);
-    // execute_double_and_add_single(a, b, c, d, result, res_x, res_y, res_z, expect_x, expect_y, expect_z);
+    execute_kernels_finite_fields(a, b, c, d, result, res_x, res_y, res_z, expect_x, expect_y, expect_z);
+    execute_kernels_curve(a, b, c, d, result, res_x, res_y, res_z, expect_x, expect_y, expect_z);
+    execute_kernels_finite_fields_vector(a, b, c, d, result, res_x, res_y, res_z, expect_x, expect_y, expect_z);
+    execute_kernels_curve_vector(a, b, c, d, result, res_x, res_y, res_z, expect_x, expect_y, expect_z);
+    execute_kernels_finite_fields_vector_with_scalars(a, b, c, d, result, res_x, res_y, res_z, expect_x, expect_y, expect_z);
+    execute_kernels_curve_vector_with_scalars(a, b, c, d, result, res_x, res_y, res_z, expect_x, expect_y, expect_z);
+    execute_double_and_add_single(a, b, c, d, result, res_x, res_y, res_z, expect_x, expect_y, expect_z);
     execute_double_and_add_multiple(a, b, c, d, result, res_x, res_y, res_z, expect_x, expect_y, expect_z);
 
     // Successfull execution of unit tests

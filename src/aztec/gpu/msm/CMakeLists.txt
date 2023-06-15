@@ -3,7 +3,7 @@ project(cuda-barretenberg CUDA)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CUDA_STANDARD 17)
 
-include_directories(../arithmetic)
+include_directories(../bignum)
 include_directories(../fields)
 include_directories(../curves)
 include_directories(../srs)
