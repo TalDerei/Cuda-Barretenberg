@@ -28,15 +28,15 @@ int main(int, char**) {
     Context<point_t, scalar_t> *context = msm->pippenger_initialize(points,  &scalars[0], num_streams);
 
     // Execute "Double-And-Add" reference kernel
-    g1_gpu::element *result_1 = msm->naive_double_and_add(context, NUM_POINTS, points, &scalars[0]);
+    g1_gpu::element *result_1 = msm->msm_double_and_add(context, NUM_POINTS, points, &scalars[0]);
 
     // Execute "Pippenger's Bucket Method" kernel
-    g1_gpu::element *result_2 = msm->msm_bucket_method(context, NUM_POINTS, points, &scalars[0]);
+    g1_gpu::element **result_2 = msm->msm_bucket_method(context, NUM_POINTS, points, &scalars[0], num_streams);
 
     // Print results 
     context->pipp.print_result(result_1, result_2);
 
-    // Verify the final results match
+    // Verify the final results are equal
     context->pipp.verify_result(result_1, result_2);
 }
 

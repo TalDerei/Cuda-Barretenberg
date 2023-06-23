@@ -67,9 +67,9 @@ class pippenger_t {
         
         void transfer_scalars_to_device(pippenger_t &config, scalar_t *device_scalar_ptrs, fr *scalars, cudaStream_t stream);
                 
-        void print_result(g1_gpu::element *result_naive_msm, g1_gpu::element *result_bucket_method_msm);
+        void print_result(g1_gpu::element *result_1, g1_gpu::element **result_2);
         
-        void verify_result(point_t *result_1, point_t *result_2);
+        void verify_result(point_t *result_1, point_t **result_2);
         
         point_t* execute_bucket_method(
             pippenger_t &config, scalar_t *scalars, point_t *points, unsigned bitsize, unsigned c, size_t npoints

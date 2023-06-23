@@ -173,29 +173,29 @@ pippenger_t &config, scalar_t *device_scalar_ptrs, fr *scalars, cudaStream_t str
  * Print results
  */
 template <class point_t, class scalar_t>
-void pippenger_t<point_t, scalar_t>::print_result(g1_gpu::element *result_naive_msm, g1_gpu::element *result_bucket_method_msm) {
+void pippenger_t<point_t, scalar_t>::print_result(g1_gpu::element *result_1, g1_gpu::element **result_2) {
     for (int i = 0; i < LIMBS; i++) {
-        printf("result_naive_msm is: %zu\n", result_naive_msm[0].x.data[i]);
+        printf("result_naive_msm is: %zu\n", result_1[0].x.data[i]);
     }
     printf("\n");
     for (int i = 0; i < LIMBS; i++) {
-        printf("result_naive_msm is: %zu\n", result_naive_msm[0].y.data[i]);
+        printf("result_naive_msm is: %zu\n", result_1[0].y.data[i]);
     }
     printf("\n");
     for (int i = 0; i < LIMBS; i++) {
-        printf("result_naive_msm is: %zu\n", result_naive_msm[0].z.data[i]);
+        printf("result_naive_msm is: %zu\n", result_1[0].z.data[i]);
     }
     printf("\n");
     for (int i = 0; i < LIMBS; i++) {
-        printf("result_bucket_method_msm is: %zu\n", result_bucket_method_msm[0].x.data[i]);
+        printf("result_bucket_method_msm is: %zu\n", result_2[0][0].x.data[i]);
     }
     printf("\n");
     for (int i = 0; i < LIMBS; i++) {
-        printf("result_bucket_method_msm is: %zu\n", result_bucket_method_msm[0].y.data[i]);
+        printf("result_bucket_method_msm is: %zu\n", result_2[0][0].y.data[i]);
     }
     printf("\n");
     for (int i = 0; i < LIMBS; i++) {
-        printf("result_bucket_method_msm is: %zu\n", result_bucket_method_msm[0].z.data[i]);
+        printf("result_bucket_method_msm is: %zu\n", result_2[0][0].z.data[i]);
     }
 }
 
@@ -234,10 +234,10 @@ T* device_ptr<T>::operator[](size_t i) {
  * move to common.cuh file
  */ 
 template <class point_t, class scalar_t>
-void pippenger_t<point_t, scalar_t>::verify_result(point_t *result_1, point_t *result_2) {
+void pippenger_t<point_t, scalar_t>::verify_result(point_t *result_1, point_t **result_2) {
     var *result;
     CUDA_WRAPPER(cudaMallocManaged(&result, LIMBS * sizeof(uint64_t)));
-    comparator_kernel<<<1, 4>>>(result_1, result_2, result);
+    comparator_kernel<<<1, 4>>>(result_1, result_2[0], result);
     cudaDeviceSynchronize();
 
     assert (result[0] == 1);

@@ -59,7 +59,7 @@ Context<point_t, scalar_t> *msm_t<P, S>::pippenger_initialize(g1::affine_element
 }
 
 template <class P, class S>
-g1_gpu::element* msm_t<P, S>::naive_double_and_add(
+g1_gpu::element* msm_t<P, S>::msm_double_and_add(
 Context<point_t, scalar_t> *context, size_t npoints, g1::affine_element *points, fr *scalars) {
     // Allocate memory and launch kernel 
     g1_gpu::element *result;
@@ -76,15 +76,18 @@ Context<point_t, scalar_t> *context, size_t npoints, g1::affine_element *points,
  * Perform MSM Bucket Method
  */ 
 template <class P, class S>
-g1_gpu::element* msm_t<P, S>::msm_bucket_method(
-Context<point_t, scalar_t> *context, size_t npoints, g1::affine_element *points, fr *scalars) {
+g1_gpu::element** msm_t<P, S>::msm_bucket_method(
+Context<point_t, scalar_t> *context, size_t npoints, g1::affine_element *points, fr *scalars, int num_streams) {
     // Start timer
     high_resolution_clock::time_point t1 = high_resolution_clock::now();
 
     // Launch pippenger kernel
-    g1_gpu::element *result = context->pipp.execute_bucket_method(
-        context->pipp, context->pipp.device_scalar_ptrs.d_ptrs[0], context->pipp.device_base_ptrs.d_ptrs[0], BITSIZE, C, npoints
-    );
+    g1_gpu::element **result = new g1_gpu::element*[num_streams];
+    for (int i = 0; i < num_streams; i++) { 
+        result[i] = context->pipp.execute_bucket_method(
+            context->pipp, context->pipp.device_scalar_ptrs.d_ptrs[i], context->pipp.device_base_ptrs.d_ptrs[i], BITSIZE, C, npoints
+        );
+    }
     
     // End timer
     high_resolution_clock::time_point t2 = high_resolution_clock::now();
