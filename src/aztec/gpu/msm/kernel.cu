@@ -675,11 +675,14 @@ int tid = blockIdx.x * blockDim.x + threadIdx.x;
 __global__ void affine_to_jacobian(g1_gpu::affine_element *a_point, g1_gpu::element *j_point, size_t npoints) {     
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
 
-    for (size_t i = 0; i < npoints; i++) {
-        fq_gpu::load(a_point[i].x.data[tid], j_point[i].x.data[tid]);
-        fq_gpu::load(a_point[i].y.data[tid], j_point[i].y.data[tid]);
-        fq_gpu::load(field_gpu<fq_gpu>::one().data[tid], j_point[i].z.data[tid]);
-    }
+     // Parameters for coperative groups
+    auto grp = fixnum::layout();
+    int subgroup = grp.meta_group_rank();
+    int subgroup_size = grp.meta_group_size();
+
+    fq_gpu::load(a_point[(subgroup + (subgroup_size * blockIdx.x))].x.data[tid % 4], j_point[(subgroup + (subgroup_size * blockIdx.x))].x.data[tid % 4]);
+    fq_gpu::load(a_point[(subgroup + (subgroup_size * blockIdx.x))].y.data[tid % 4], j_point[(subgroup + (subgroup_size * blockIdx.x))].y.data[tid % 4]);
+    fq_gpu::load(field_gpu<fq_gpu>::one().data[tid % 4], j_point[(subgroup + (subgroup_size * blockIdx.x))].z.data[tid % 4]);
 }
 
 /**

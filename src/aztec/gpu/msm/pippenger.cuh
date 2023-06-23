@@ -11,7 +11,8 @@ template < typename P, typename S >
 class msm_t {
     public: 
         msm_t() {}
-        Context<point_t, scalar_t>* pippenger_initialize(g1::affine_element* points, fr *scalars);
+        
+        Context<point_t, scalar_t>* pippenger_initialize(g1::affine_element* points, fr *scalars, int rounds);
 
         g1_gpu::element* naive_double_and_add(
             Context<point_t, scalar_t> *context, size_t npoints, g1::affine_element* points, fr *scalars

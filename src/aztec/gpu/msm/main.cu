@@ -12,7 +12,7 @@ int main(int, char**) {
     auto reference_string = std::make_shared<waffle::FileReferenceString>(NUM_POINTS, "../srs_db/ignition");
     g1::affine_element* points = reference_string->get_monomials();
 
-    // Construct random scalars -- move to test file 
+    // Construct random scalars 
     std::vector<fr> scalars;
     fr element = fr::random_element();
     fr accumulator = element;
@@ -22,43 +22,26 @@ int main(int, char**) {
         scalars.emplace_back(accumulator);
     }
 
+    int num_streams = 1;
+
     // Initialize dynamic pippenger 'context' object
-    Context<point_t, scalar_t> *context = msm->pippenger_initialize(points,  &scalars[0]);
+    Context<point_t, scalar_t> *context = msm->pippenger_initialize(points,  &scalars[0], num_streams);
 
     // Execute "Double-And-Add" reference kernel
-    // g1_gpu::element *result_1 = msm->naive_double_and_add(context, NUM_POINTS, points, &scalars[0]);
+    g1_gpu::element *result_1 = msm->naive_double_and_add(context, NUM_POINTS, points, &scalars[0]);
 
     // Execute "Pippenger's Bucket Method" kernel
     g1_gpu::element *result_2 = msm->msm_bucket_method(context, NUM_POINTS, points, &scalars[0]);
 
-    cout << "final_result_2 is: " << result_2[0].x.data[0] << endl;
-    cout << "final_result_2 is: " << result_2[0].x.data[1] << endl;
-    cout << "final_result_2 is: " << result_2[0].x.data[2] << endl;
-    cout << "final_result_2 is: " << result_2[0].x.data[3] << endl;
-
-    cout << "final_result_2 is: " << result_2[0].y.data[0] << endl;
-    cout << "final_result_2 is: " << result_2[0].y.data[1] << endl;
-    cout << "final_result_2 is: " << result_2[0].y.data[2] << endl;
-    cout << "final_result_2 is: " << result_2[0].y.data[3] << endl;
-
-    cout << "final_result_2 is: " << result_2[0].z.data[0] << endl;
-    cout << "final_result_2 is: " << result_2[0].z.data[1] << endl;
-    cout << "final_result_2 is: " << result_2[0].z.data[2] << endl;
-    cout << "final_result_2 is: " << result_2[0].z.data[3] << endl;
-
-    exit(0);
-
     // Print results 
-    // context->pipp.print_result(result_1, result_2);
+    context->pipp.print_result(result_1, result_2);
 
     // Verify the final results match
-    // context->pipp.verify_result(result_1, result_2);
+    context->pipp.verify_result(result_1, result_2);
 }
 
 /**
- * TODO: Add "inlining" to C++/cuda functions
  * TODO: Look into cudaMallocAsync stream allocator API
- * TODO: benchmark Ingonyama "Icicle" MSM
  * TODO: add multiple stream support
  * TODO: change unified memory to pinned host memory
  * TODO: look into asynchronous transfers 
@@ -85,5 +68,9 @@ int main(int, char**) {
  * TODO: are conditional checks are degrading performance?
  * TODO: Look into 'Staged concurrent copy and execute' over 'Sequential copy and execute'
  * TODO: wrap all the cuda allocation in error handles wrappers
- * TODO:  construct method to choose MSM parameters dynamically choose the best depending on the size of the msm
+ * TODO: construct method to choose MSM parameters dynamically choose the best depending on the size of the msm
+ * TODO: remove test from main and add as seperate unit test 
+ * TODO: figure out why execution time fluctuates 
+ * TODO: solve dynamic shared memory intiialization warning 
+ * TODO: fix indexing issues
  */
