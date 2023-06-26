@@ -35,9 +35,11 @@ Context<point_t, scalar_t> *msm_t<P, S>::pippenger_initialize(g1::affine_element
         // Convert affine to jacobian coordinates 
         g1_gpu::affine_element *a_points;
         g1_gpu::element *j_points;
-        CUDA_WRAPPER(cudaMalloc(&j_points, 3 * NUM_POINTS * LIMBS * sizeof(uint64_t)));
-        CUDA_WRAPPER(cudaMalloc(&a_points, 3 * NUM_POINTS * LIMBS * sizeof(uint64_t)));
-        CUDA_WRAPPER(cudaMemcpy(a_points, points, NUM_POINTS * LIMBS * 2 * sizeof(uint64_t), cudaMemcpyHostToDevice));
+        CUDA_WRAPPER(cudaMallocAsync(&j_points, 3 * NUM_POINTS * LIMBS * sizeof(uint64_t), context->pipp.streams[0]));
+        CUDA_WRAPPER(cudaMallocAsync(&a_points, 3 * NUM_POINTS * LIMBS * sizeof(uint64_t), context->pipp.streams[0]));
+        CUDA_WRAPPER(cudaMemcpyAsync(a_points, points, NUM_POINTS * LIMBS * 2 * sizeof(uint64_t), 
+                                    cudaMemcpyHostToDevice, context->pipp.streams[0]
+        ));
         affine_to_jacobian<<<(NUM_POINTS / 256), 256, 0, context->pipp.streams[0]>>>(a_points, j_points, NUM_POINTS);
         
         // Transfer bases and scalars to device
@@ -85,7 +87,8 @@ Context<point_t, scalar_t> *context, size_t npoints, g1::affine_element *points,
     g1_gpu::element **result = new g1_gpu::element*[num_streams];
     for (int i = 0; i < num_streams; i++) { 
         result[i] = context->pipp.execute_bucket_method(
-            context->pipp, context->pipp.device_scalar_ptrs.d_ptrs[i], context->pipp.device_base_ptrs.d_ptrs[i], BITSIZE, C, npoints
+            context->pipp, context->pipp.device_scalar_ptrs.d_ptrs[i], context->pipp.device_base_ptrs.d_ptrs[i], 
+            BITSIZE, C, npoints, context->pipp.streams[i]
         );
     }
     

@@ -9,7 +9,7 @@ namespace pippenger_common {
  */ 
 template <class point_t, class scalar_t>
 point_t* pippenger_t<point_t, scalar_t>::execute_bucket_method(
-pippenger_t &config, scalar_t *scalars, point_t *points, unsigned bitsize, unsigned c, size_t npoints) {
+pippenger_t &config, scalar_t *scalars, point_t *points, unsigned bitsize, unsigned c, size_t npoints, cudaStream_t stream) {
     unsigned num_bucket_modules = bitsize / c; 
     if (bitsize % c) {  
         num_bucket_modules++;
@@ -17,12 +17,12 @@ pippenger_t &config, scalar_t *scalars, point_t *points, unsigned bitsize, unsig
     size_t num_buckets = num_bucket_modules << c; 
 
     point_t *buckets;
-    CUDA_WRAPPER(cudaMallocManaged(&buckets, num_buckets * 3 * 4 * sizeof(uint64_t)));
+    CUDA_WRAPPER(cudaMallocAsync(&buckets, num_buckets * 3 * 4 * sizeof(uint64_t), stream));
 
     // Launch bucket initialization kernel
     unsigned NUM_THREADS = 1 << 10; // max number of threads
     unsigned NUM_BLOCKS = (num_buckets + NUM_THREADS - 1) / NUM_THREADS; // max number of blocks
-    initialize_buckets_kernel<<<NUM_BLOCKS * 4, NUM_THREADS>>>(buckets); 
+    initialize_buckets_kernel<<<NUM_BLOCKS * 4, NUM_THREADS, 0, stream>>>(buckets); 
 
     cout << "b-bit scalar is: " << bitsize << endl;
     cout << "c-bit scalar is: " << c << endl;
@@ -34,8 +34,8 @@ pippenger_t &config, scalar_t *scalars, point_t *points, unsigned bitsize, unsig
     // Allocate memory for bucket and point indices
     unsigned *bucket_indices;
     unsigned *point_indices;
-    CUDA_WRAPPER(cudaMallocManaged(&bucket_indices, sizeof(unsigned) * npoints * (num_bucket_modules + 1)));
-    CUDA_WRAPPER(cudaMallocManaged(&point_indices, sizeof(unsigned) * npoints * (num_bucket_modules + 1)));
+    CUDA_WRAPPER(cudaMallocAsync(&bucket_indices, sizeof(unsigned) * npoints * (num_bucket_modules + 1), stream));
+    CUDA_WRAPPER(cudaMallocAsync(&point_indices, sizeof(unsigned) * npoints * (num_bucket_modules + 1), stream));
 
     // Split scalars into digits
     unsigned NUM_BLOCKS_2 = NUM_POINTS / NUM_THREADS;
@@ -44,7 +44,7 @@ pippenger_t &config, scalar_t *scalars, point_t *points, unsigned bitsize, unsig
     cout << "NUM_THREADS is: " << NUM_THREADS << endl;
     cout << "NUM_BLOCKS_2 is: " << NUM_BLOCKS_2 << endl;
 
-    split_scalars_kernel<<<NUM_BLOCKS_2, NUM_THREADS>>>(bucket_indices + npoints, point_indices + npoints, scalars, npoints, num_bucket_modules, c);
+    split_scalars_kernel<<<NUM_BLOCKS_2, NUM_THREADS, 0, stream>>>(bucket_indices + npoints, point_indices + npoints, scalars, npoints, num_bucket_modules, c);
     cudaDeviceSynchronize();
 
     // CUB routines for Radix Sort
@@ -53,47 +53,50 @@ pippenger_t &config, scalar_t *scalars, point_t *points, unsigned bitsize, unsig
 
     // Determine temporary device storage requirements
     cub::DeviceRadixSort::SortPairs(sort_indices_temp_storage, sort_indices_temp_storage_bytes, bucket_indices + npoints, bucket_indices,
-                                    point_indices + npoints, point_indices, npoints);
+                                    point_indices + npoints, point_indices, npoints, 0, sizeof(unsigned) * 8, stream);
 
-    CUDA_WRAPPER(cudaMallocManaged(&sort_indices_temp_storage, sort_indices_temp_storage_bytes));
+    CUDA_WRAPPER(cudaMallocAsync(&sort_indices_temp_storage, sort_indices_temp_storage_bytes, stream));
 
     for (unsigned i = 0; i < num_bucket_modules; i++) {
         unsigned offset_out = i * npoints;
         unsigned offset_in = offset_out + npoints;
         cub::DeviceRadixSort::SortPairs(sort_indices_temp_storage, sort_indices_temp_storage_bytes, bucket_indices + offset_in,
-                                        bucket_indices + offset_out, point_indices + offset_in, point_indices + offset_out, npoints);
+                                        bucket_indices + offset_out, point_indices + offset_in, point_indices + offset_out, npoints, 0, sizeof(unsigned) * 8, stream);
     }
 
     // Next find the size of the buckets based on bucket_indices
     unsigned *single_bucket_indices;
     unsigned *bucket_sizes;
     unsigned *nof_buckets_to_compute;
-    CUDA_WRAPPER(cudaMallocManaged(&single_bucket_indices, sizeof(unsigned) * num_buckets));
-    CUDA_WRAPPER(cudaMallocManaged(&bucket_sizes, sizeof(unsigned) * num_buckets));
-    CUDA_WRAPPER(cudaMallocManaged(&nof_buckets_to_compute, sizeof(unsigned)));
+    CUDA_WRAPPER(cudaMallocAsync(&single_bucket_indices, sizeof(unsigned) * num_buckets, stream));
+    CUDA_WRAPPER(cudaMallocAsync(&bucket_sizes, sizeof(unsigned) * num_buckets, stream));
+    CUDA_WRAPPER(cudaMallocAsync(&nof_buckets_to_compute, sizeof(unsigned), stream));
+
    
     void *encode_temp_storage = NULL;
     size_t encode_temp_storage_bytes = 0;
 
     // Perform length encoding
     cub::DeviceRunLengthEncode::Encode(encode_temp_storage, encode_temp_storage_bytes, bucket_indices, single_bucket_indices, bucket_sizes,
-                                        nof_buckets_to_compute, num_bucket_modules * npoints);
-    CUDA_WRAPPER(cudaMallocManaged(&encode_temp_storage, encode_temp_storage_bytes));
+                                        nof_buckets_to_compute, num_bucket_modules * npoints, stream);
+    CUDA_WRAPPER(cudaMallocAsync(&encode_temp_storage, encode_temp_storage_bytes, stream));
     cub::DeviceRunLengthEncode::Encode(encode_temp_storage, encode_temp_storage_bytes, bucket_indices, single_bucket_indices, bucket_sizes,
-                                        nof_buckets_to_compute, num_bucket_modules * npoints);
+                                        nof_buckets_to_compute, num_bucket_modules * npoints, stream);
 
 
     cout << "nof_buckets_to_compute is: " << nof_buckets_to_compute[0] << endl;
 
+    exit(0);
+
     // Calculate offsets for buckets
     unsigned* bucket_offsets;
-    CUDA_WRAPPER(cudaMallocManaged(&bucket_offsets, sizeof(unsigned) * num_buckets));
+    CUDA_WRAPPER(cudaMallocAsync(&bucket_offsets, sizeof(unsigned) * num_buckets, stream));
     void *offsets_temp_storage = NULL;
     size_t offsets_temp_storage_bytes = 0;
-    cub::DeviceScan::ExclusiveSum(offsets_temp_storage, offsets_temp_storage_bytes, bucket_sizes, bucket_offsets, num_buckets);
-    CUDA_WRAPPER(cudaMallocManaged(&offsets_temp_storage, offsets_temp_storage_bytes));
-    cub::DeviceScan::ExclusiveSum(offsets_temp_storage, offsets_temp_storage_bytes, bucket_sizes, bucket_offsets, num_buckets);
-    CUDA_WRAPPER(cudaFree(offsets_temp_storage));
+    cub::DeviceScan::ExclusiveSum(offsets_temp_storage, offsets_temp_storage_bytes, bucket_sizes, bucket_offsets, num_buckets, stream);
+    CUDA_WRAPPER(cudaMallocAsync(&offsets_temp_storage, offsets_temp_storage_bytes, stream));
+    cub::DeviceScan::ExclusiveSum(offsets_temp_storage, offsets_temp_storage_bytes, bucket_sizes, bucket_offsets, num_buckets, stream);
+    CUDA_WRAPPER(cudaFreeAsync(offsets_temp_storage, stream));
     
     // Launch accumulation kernel -- Need to adjusge kernel para,meters to reduce overhead
     unsigned NUM_THREADS_3 = 1 << 7;
@@ -102,17 +105,18 @@ pippenger_t &config, scalar_t *scalars, point_t *points, unsigned bitsize, unsig
     cout << "NUM_THREADS_3 is: " << NUM_THREADS_3 << endl;
     cout << "NUM_BLOCKS_3 is: " << NUM_BLOCKS_3 << endl;
 
-    accumulate_buckets_kernel<<<NUM_BLOCKS_3, NUM_THREADS_3>>>(buckets, bucket_offsets, bucket_sizes, single_bucket_indices, point_indices, points, num_buckets);
+
+    accumulate_buckets_kernel<<<NUM_BLOCKS_3, NUM_THREADS_3, 0, stream>>>(buckets, bucket_offsets, bucket_sizes, single_bucket_indices, point_indices, points, num_buckets);
     cudaDeviceSynchronize();
 
     point_t *final_sum;
     CUDA_WRAPPER(cudaMallocManaged(&final_sum, num_bucket_modules * 3 * 4 * sizeof(uint64_t)));
-    bucket_module_sum_reduction_lernel_0<<<26, 4>>>(buckets, final_sum, c);
+    bucket_module_sum_reduction_lernel_0<<<26, 4, 0, stream>>>(buckets, final_sum, c);
     cudaDeviceSynchronize();
 
     point_t *res;
     CUDA_WRAPPER(cudaMallocManaged(&res, 3 * 4 * sizeof(uint64_t)));
-    final_accumulation_kernel<<<1,4>>>(final_sum, res, num_bucket_modules, c);
+    final_accumulation_kernel<<<1, 4, 0, stream>>>(final_sum, res, num_bucket_modules, c);
     cudaDeviceSynchronize();
     
     return res;

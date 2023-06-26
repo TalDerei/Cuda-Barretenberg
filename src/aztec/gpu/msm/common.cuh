@@ -72,7 +72,7 @@ class pippenger_t {
         void verify_result(point_t *result_1, point_t **result_2);
         
         point_t* execute_bucket_method(
-            pippenger_t &config, scalar_t *scalars, point_t *points, unsigned bitsize, unsigned c, size_t npoints
+            pippenger_t &config, scalar_t *scalars, point_t *points, unsigned bitsize, unsigned c, size_t npoints, cudaStream_t stream
         );
 };
 typedef pippenger_t<point_t, scalar_t> pipp_t;
