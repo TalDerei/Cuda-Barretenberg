@@ -78,7 +78,7 @@ pippenger_t &config, scalar_t *scalars, point_t *points, unsigned bitsize, unsig
     // Sum reduction kernel
     point_t *final_sum;
     CUDA_WRAPPER(cudaMallocAsync(&final_sum, num_bucket_modules * 3 * 4 * sizeof(uint64_t), stream));
-    bucket_module_sum_reduction_lernel_0<<<26, 4, 0, stream>>>(buckets, final_sum, c);
+    bucket_running_sum_kernel<<<26, 4, 0, stream>>>(buckets, final_sum, c);
 
     // Final accumulation kernel
     point_t *res;
@@ -158,6 +158,54 @@ pippenger_t &config, scalar_t *device_scalar_ptrs, fr *scalars, cudaStream_t str
 }
 
 /**
+ * Allocate pinned memory using cudaMallocHost
+ */
+template <class T>
+void device_ptr<T>::allocate(size_t bytes) {
+    T* d_ptr;
+    CUDA_WRAPPER(cudaMallocHost(&d_ptr, bytes));
+    d_ptrs.push_back(d_ptr);
+}
+
+/**
+ * Get size of d_ptrs vector
+ */
+template <class T>
+size_t device_ptr<T>::size() {
+    return d_ptrs.size();
+}
+
+/**
+ * Operator overloading for device_ptr indexing
+ */
+template <class T>
+T* device_ptr<T>::operator[](size_t i) {
+    if (i > d_ptrs.size() - 1) {
+        cout << "Indexing error!" << endl;
+        throw;
+    }
+    return d_ptrs[i];
+}
+
+/**
+ * Verify results
+ */ 
+template <class point_t, class scalar_t>
+void pippenger_t<point_t, scalar_t>::verify_result(point_t *result_1, point_t **result_2) {
+    var *result;
+    CUDA_WRAPPER(cudaMallocManaged(&result, LIMBS * sizeof(uint64_t)));
+    comparator_kernel<<<1, 4>>>(result_1, result_2[0], result);
+    cudaDeviceSynchronize();
+
+    assert (result[0] == 1);
+    assert (result[1] == 1);
+    assert (result[2] == 1);
+    assert (result[3] == 1);
+
+    cout << "MSM Result Verified!" << endl;
+}
+
+/**
  * Print results
  */
 template <class point_t, class scalar_t>
@@ -185,56 +233,6 @@ void pippenger_t<point_t, scalar_t>::print_result(g1_gpu::element *result_1, g1_
     for (int i = 0; i < LIMBS; i++) {
         printf("result_bucket_method_msm is: %zu\n", result_2[0][0].z.data[i]);
     }
-}
-
-/**
- * Allocate pinned memory using cudaMallocHost
- */
-template <class T>
-void device_ptr<T>::allocate(size_t bytes) {
-    T* d_ptr;
-    CUDA_WRAPPER(cudaMallocHost(&d_ptr, bytes));
-    d_ptrs.push_back(d_ptr);
-}
-
-/**
- * Get size of d_ptrs vector
- */
-template <class T>
-size_t device_ptr<T>::size() {
-    return d_ptrs.size();
-}
-
-/**
- * Operator overloading for device_ptr
- */
-template <class T>
-T* device_ptr<T>::operator[](size_t i) {
-    if (i > d_ptrs.size() - 1) {
-        cout << "Indexing error!" << endl;
-        throw;
-    }
-    return d_ptrs[i];
-}
-
-/**
- * Verify double-and-add and pippenger's bucket method results
- * move to common.cuh file
- */ 
-template <class point_t, class scalar_t>
-void pippenger_t<point_t, scalar_t>::verify_result(point_t *result_1, point_t **result_2) {
-    var *result;
-    // change to cudaMallocAsync()
-    CUDA_WRAPPER(cudaMallocManaged(&result, LIMBS * sizeof(uint64_t)));
-    comparator_kernel<<<1, 4>>>(result_1, result_2[0], result);
-    cudaDeviceSynchronize();
-
-    assert (result[0] == 1);
-    assert (result[1] == 1);
-    assert (result[2] == 1);
-    assert (result[3] == 1);
-
-    cout << "MSM Result Verified!" << endl;
 }
 
 }
