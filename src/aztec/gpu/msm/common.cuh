@@ -16,8 +16,7 @@ namespace pippenger_common {
 
 #define BITSIZE 254
 #define C 10
-#define MODULES ((BITSIZE / C) + 1)
-size_t NUM_POINTS = 1 << 10;
+size_t NUM_POINTS = 1 << 20;
 
 typedef element<fq_gpu, fr_gpu> point_t;
 typedef fr_gpu scalar_t;
@@ -46,13 +45,7 @@ class device_ptr {
  */
 template < typename point_t, typename scalar_t > 
 class pippenger_t {        
-    public: 
-        device_ptr<point_t> device_base_ptrs;
-        device_ptr<scalar_t> device_scalar_ptrs;
-        cudaStream_t *streams;
-        int num_streams;
-        int device;
-
+    public:
         pippenger_t() { cudaSetDevice(0); }
             
         size_t get_size_bases(pippenger_t &config);
@@ -74,6 +67,12 @@ class pippenger_t {
         point_t* execute_bucket_method(
             pippenger_t &config, scalar_t *scalars, point_t *points, unsigned bitsize, unsigned c, size_t npoints, cudaStream_t stream
         );
+
+        device_ptr<point_t> device_base_ptrs;
+        device_ptr<scalar_t> device_scalar_ptrs;
+        cudaStream_t *streams;
+        int num_streams;
+        int device;
 };
 typedef pippenger_t<point_t, scalar_t> pipp_t;
 

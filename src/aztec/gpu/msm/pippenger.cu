@@ -36,7 +36,7 @@ Context<point_t, scalar_t> *msm_t<P, S>::pippenger_initialize(g1::affine_element
         g1_gpu::affine_element *a_points;
         g1_gpu::element *j_points;
         CUDA_WRAPPER(cudaMallocAsync(&j_points, 3 * NUM_POINTS * LIMBS * sizeof(uint64_t), context->pipp.streams[0]));
-        CUDA_WRAPPER(cudaMallocAsync(&a_points, 3 * NUM_POINTS * LIMBS * sizeof(uint64_t), context->pipp.streams[0]));
+        CUDA_WRAPPER(cudaMallocAsync(&a_points, 2 * NUM_POINTS * LIMBS * sizeof(uint64_t), context->pipp.streams[0]));
         CUDA_WRAPPER(cudaMemcpyAsync(a_points, points, NUM_POINTS * LIMBS * 2 * sizeof(uint64_t), 
                                     cudaMemcpyHostToDevice, context->pipp.streams[0]
         ));
@@ -60,10 +60,13 @@ Context<point_t, scalar_t> *msm_t<P, S>::pippenger_initialize(g1::affine_element
     }
 }
 
+/**
+ * Perform MSM Double-And-Add Method
+ */ 
 template <class P, class S>
 g1_gpu::element* msm_t<P, S>::msm_double_and_add(
 Context<point_t, scalar_t> *context, size_t npoints, g1::affine_element *points, fr *scalars) {
-    // Allocate memory and launch kernel 
+    // Allocate unified memory and launch kernel 
     g1_gpu::element *result;
     CUDA_WRAPPER(cudaMallocManaged(&result, 3 * NUM_POINTS * LIMBS * sizeof(uint64_t)));
     double_and_add_kernel<<<1, 4>>>(
