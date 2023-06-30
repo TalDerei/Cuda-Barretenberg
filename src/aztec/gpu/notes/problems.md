@@ -218,3 +218,6 @@
     if the bottleneck is the number of registers?
 
     Need to figure out the proper way to time as well. There's a huge dosparity between using chrono timer vs. Cuda events.
+
+```Profiling discussion```
+    For 2^15 constraints, profiling the kernel execution with "nsys profile --stats=true ./bin/arithmetic_cuda" and "sudo /usr/local/cuda/bin/ncu ./bin/arithmetic_cuda" highlights a low achieved occupancy on device. With regards to the execution time, bucket_running_sum_kernel accounts for 38%, final_accumulation_kernel for 31%, and accumulate_buckets_kernel for 28.1% of the runtime respectively. The radix sorting algorithm is negligible in comparison. Bumping up to 2^20 constraints, the accumulate_buckets_kernel call accounts for 91% of the runtime. It's obvious that as the constraint size increases, optimizing the bucket accumulation seems like a natural step. Both the achieved occupancy and SOL (compute %) are low, indicating the kernel launch parameters and actual kernel computational work aren't stressing the available device capabilities. 
