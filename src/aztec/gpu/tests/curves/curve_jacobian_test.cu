@@ -35,10 +35,10 @@ __global__ void initialize_mixed_add_check_against_constants
 
 __global__ void mixed_add_check_against_constants
 (var *a, var *b, var *c, var *x, var *y, var *z, var *res_x, var *res_y, var *res_z) {
-    g1::element lhs;
-    g1::affine_element rhs;
-    g1::element result;
-    g1::element expected;
+    g1_gpu::element lhs;
+    g1_gpu::affine_element rhs;
+    g1_gpu::element result;
+    g1_gpu::element expected;
     
     // Calculate global thread ID, and boundry check
     int tid = (blockDim.x * blockIdx.x) + threadIdx.x;
@@ -50,7 +50,7 @@ __global__ void mixed_add_check_against_constants
         rhs.y.data[tid] = fq_gpu::to_monty(y[tid], res_x[tid]);
 
         // lhs + rhs (affine element + jacobian element)
-        g1::mixed_add(
+        g1_gpu::mixed_add(
             lhs.x.data[tid], lhs.y.data[tid], lhs.z.data[tid], 
             rhs.x.data[tid], rhs.y.data[tid], 
             res_x[tid], res_y[tid], res_z[tid]
@@ -86,9 +86,9 @@ __global__ void initialize_dbl_check_against_constants
 
 __global__ void dbl_check_against_constants
 (var *a, var *b, var *c, var *x, var *y, var *z, var *res_x, var *res_y, var *res_z) {
-    g1::element lhs;
-    g1::element result;
-    g1::element expected;
+    g1_gpu::element lhs;
+    g1_gpu::element result;
+    g1_gpu::element expected;
     
     // Calculate global thread ID, and boundry check
     int tid = (blockDim.x * blockIdx.x) + threadIdx.x;
@@ -98,17 +98,17 @@ __global__ void dbl_check_against_constants
         lhs.z.data[tid] = fq_gpu::to_monty(c[tid], res_z[tid]);
 
         // lhs.doubling
-        g1::doubling(
+        g1_gpu::doubling(
             lhs.x.data[tid], lhs.y.data[tid], lhs.z.data[tid], 
             res_x[tid], res_y[tid], res_z[tid]
         );
         //  (lhs.doubling).doubling
-        g1::doubling(
+        g1_gpu::doubling(
             res_x[tid], res_y[tid], res_z[tid], 
             res_x[tid], res_y[tid], res_z[tid]
         );
         //  ((lhs.doubling).doubling).doubling
-        g1::doubling(
+        g1_gpu::doubling(
             res_x[tid], res_y[tid], res_z[tid], 
             res_x[tid], res_y[tid], res_z[tid]
         );
@@ -149,10 +149,10 @@ __global__ void initialize_add_check_against_constants
 
 __global__ void add_check_against_constants
 (var *a, var *b, var *c, var *x, var *y, var *z, var *res_x, var *res_y, var *res_z) {
-    g1::element lhs;
-    g1::element rhs;
-    g1::element result;
-    g1::element expected;
+    g1_gpu::element lhs;
+    g1_gpu::element rhs;
+    g1_gpu::element result;
+    g1_gpu::element expected;
 
     // Calculate global thread ID, and boundry check
     int tid = (blockDim.x * blockIdx.x) + threadIdx.x;
@@ -165,7 +165,7 @@ __global__ void add_check_against_constants
         rhs.z.data[tid] = fq_gpu::to_monty(z[tid], res_x[tid]);
 
         // lhs + rhs (affine element + affine element)
-        g1::add(
+        g1_gpu::add(
             lhs.x.data[tid], lhs.y.data[tid], lhs.z.data[tid], 
             rhs.x.data[tid], rhs.y.data[tid], rhs.z.data[tid], 
             res_x[tid], res_y[tid], res_z[tid]
@@ -201,10 +201,10 @@ __global__ void initialize_add_exception_test_dbl
 
 __global__ void add_exception_test_dbl
 (var *a, var *b, var *c, var *x, var *y, var *z, var *expected_x, var *expected_y, var *expected_z, var *res_x, var *res_y, var *res_z) {
-    g1::element lhs;
-    g1::element rhs;
-    g1::element result;
-    g1::element expected;
+    g1_gpu::element lhs;
+    g1_gpu::element rhs;
+    g1_gpu::element result;
+    g1_gpu::element expected;
 
     // Calculate global thread ID, and boundry check
     int tid = (blockDim.x * blockIdx.x) + threadIdx.x;
@@ -217,7 +217,7 @@ __global__ void add_exception_test_dbl
         rhs.z.data[tid] = fq_gpu::load(z[tid], expected_x[tid]);
 
         // lhs + rhs
-        g1::add(
+        g1_gpu::add(
             lhs.x.data[tid], lhs.y.data[tid], lhs.z.data[tid], 
             rhs.x.data[tid], rhs.y.data[tid], rhs.z.data[tid], 
             res_x[tid], res_y[tid], res_z[tid]
@@ -225,14 +225,14 @@ __global__ void add_exception_test_dbl
 
         // Temporarily handle case where P = Q -- NEED TO MOVE TO 'group.cu' file
         if (fq_gpu::is_zero(res_x[tid]) && fq_gpu::is_zero(res_y[tid]) && fq_gpu::is_zero(res_z[tid])) {
-            g1::doubling(
+            g1_gpu::doubling(
                 lhs.x.data[tid], lhs.y.data[tid], lhs.z.data[tid], 
                 res_x[tid], res_y[tid], res_z[tid]
             );
         }
 
         // lhs.doubling
-        g1::doubling(
+        g1_gpu::doubling(
             lhs.x.data[tid], lhs.y.data[tid], lhs.z.data[tid], 
             expected_x[tid], expected_y[tid], expected_z[tid]
         );
@@ -274,12 +274,12 @@ __global__ void initialize_add_dbl_consistency
 
 __global__ void add_dbl_consistency
 (var *a, var *b, var *c, var *x, var *y, var *z, var *expected_x, var *expected_y, var *expected_z, var *res_x, var *res_y, var *res_z) {
-    g1::element a_element;
-    g1::element b_element;
-    g1::element c_element;
-    g1::element d_element;
-    g1::element add_result;
-    g1::element dbl_result;
+    g1_gpu::element a_element;
+    g1_gpu::element b_element;
+    g1_gpu::element c_element;
+    g1_gpu::element d_element;
+    g1_gpu::element add_result;
+    g1_gpu::element dbl_result;
 
     // Calculate global thread ID, and boundry check
     int tid = (blockDim.x * blockIdx.x) + threadIdx.x;
@@ -292,7 +292,7 @@ __global__ void add_dbl_consistency
         b_element.z.data[tid] = fq_gpu::load(z[tid], res_x[tid]);
 
         // c = a + b
-        g1::add(
+        g1_gpu::add(
             a_element.x.data[tid], a_element.y.data[tid], a_element.z.data[tid], 
             b_element.x.data[tid], b_element.y.data[tid], b_element.z.data[tid], 
             c_element.x.data[tid], c_element.y.data[tid], c_element.z.data[tid]
@@ -302,14 +302,14 @@ __global__ void add_dbl_consistency
         fq_gpu::neg(b_element.y.data[tid], b_element.y.data[tid]);                                                                                                                                                      
         
         // d = a + b
-        g1::add(
+        g1_gpu::add(
             a_element.x.data[tid], a_element.y.data[tid], a_element.z.data[tid], 
             b_element.x.data[tid], b_element.y.data[tid], b_element.z.data[tid], 
             d_element.x.data[tid], d_element.y.data[tid], d_element.z.data[tid]
         );
        
         // result = c + d
-        g1::add(
+        g1_gpu::add(
             c_element.x.data[tid], c_element.y.data[tid], c_element.z.data[tid], 
             d_element.x.data[tid], d_element.y.data[tid], d_element.z.data[tid], 
             res_x[tid], res_y[tid], res_z[tid]
@@ -317,14 +317,14 @@ __global__ void add_dbl_consistency
 
         // Temporarily handle case where P = Q -- NEED TO MOVE TO 'group.cu' file
         if (fq_gpu::is_zero(res_x[tid]) && fq_gpu::is_zero(res_y[tid]) && fq_gpu::is_zero(res_z[tid])) {
-            g1::doubling(
+            g1_gpu::doubling(
                 a_element.x.data[tid], a_element.y.data[tid], a_element.z.data[tid], 
                 res_x[tid], res_y[tid], res_z[tid]
             );
         }
 
         // a.doubling
-        g1::doubling(
+        g1_gpu::doubling(
             a_element.x.data[tid], a_element.y.data[tid], a_element.z.data[tid], 
             expected_x[tid], expected_y[tid], expected_z[tid]
         );
@@ -360,13 +360,13 @@ __global__ void initialize_add_dbl_consistency_repeated
 
 __global__ void add_dbl_consistency_repeated
 (var *a, var *b, var *c, var *expected_x, var *expected_y, var *expected_z, var *res_x, var *res_y, var *res_z) {
-    g1::element a_element;
-    g1::element b_element;
-    g1::element c_element;
-    g1::element d_element;
-    g1::element e_element;
-    g1::element result;
-    g1::element expected;
+    g1_gpu::element a_element;
+    g1_gpu::element b_element;
+    g1_gpu::element c_element;
+    g1_gpu::element d_element;
+    g1_gpu::element e_element;
+    g1_gpu::element result;
+    g1_gpu::element expected;
 
     // Calculate global thread ID, and boundry check
     int tid = (blockDim.x * blockIdx.x) + threadIdx.x;
@@ -376,40 +376,40 @@ __global__ void add_dbl_consistency_repeated
         a_element.z.data[tid] = fq_gpu::load(c[tid], res_x[tid]);
 
         // b = 2a
-        g1::doubling(
+        g1_gpu::doubling(
             a_element.x.data[tid], a_element.y.data[tid], a_element.z.data[tid], 
             b_element.x.data[tid], b_element.y.data[tid], b_element.z.data[tid]
         );
 
         // c = 4a
-        g1::doubling(
+        g1_gpu::doubling(
             b_element.x.data[tid], b_element.y.data[tid], b_element.z.data[tid], 
             c_element.x.data[tid], c_element.y.data[tid], c_element.z.data[tid]
         );
          
         // d = 3a
-        g1::add(
+        g1_gpu::add(
             a_element.x.data[tid], a_element.y.data[tid], a_element.z.data[tid], 
             b_element.x.data[tid], b_element.y.data[tid], b_element.z.data[tid], 
             d_element.x.data[tid], d_element.y.data[tid], d_element.z.data[tid]
         ); 
 
         // e = 5a
-        g1::add(
+        g1_gpu::add(
             a_element.x.data[tid], a_element.y.data[tid], a_element.z.data[tid], 
             c_element.x.data[tid], c_element.y.data[tid], c_element.z.data[tid], 
             e_element.x.data[tid], e_element.y.data[tid], e_element.z.data[tid]
         ); 
   
         // result = 8a
-        g1::add(
+        g1_gpu::add(
             d_element.x.data[tid], d_element.y.data[tid], d_element.z.data[tid], 
             e_element.x.data[tid], e_element.y.data[tid], e_element.z.data[tid], 
             res_x[tid], res_y[tid], res_z[tid]
         );
 
         // c.doubling
-        g1::doubling(
+        g1_gpu::doubling(
             c_element.x.data[tid], c_element.y.data[tid], c_element.z.data[tid], 
             expected_x[tid], expected_y[tid], expected_z[tid]
         );
@@ -452,9 +452,9 @@ __global__ void initialize_group_exponentiation
 __global__ void group_exponentiation(uint64_t *a, uint64_t *b, uint64_t *c, var *res_x, var *res_y, var *res_z) {
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
 
-    g1::element one; 
-    g1::element R;
-    g1::element Q;
+    g1_gpu::element one; 
+    g1_gpu::element R;
+    g1_gpu::element Q;
 
     fr_gpu exponent{ 0xb67299b792199cf0, 0xc1da7df1e7e12768, 0x692e427911532edf, 0x13dd85e87dc89978 };
 
@@ -479,13 +479,13 @@ __global__ void group_exponentiation(uint64_t *a, uint64_t *b, uint64_t *c, var 
                 // Performs bit-decompositon by traversing the bits of the scalar from MSB to LSB
                 // and extracting the i-th bit of scalar in limb.
                 if (((exponent.data[j] >> i) & 1) ? 1 : 0)
-                    g1::add(
+                    g1_gpu::add(
                         R.x.data[tid], R.y.data[tid], R.z.data[tid], 
                         Q.x.data[tid], Q.y.data[tid], Q.z.data[tid], 
                         R.x.data[tid], R.y.data[tid], R.z.data[tid]
                     );
                 if (i != 0) 
-                    g1::doubling(
+                    g1_gpu::doubling(
                         R.x.data[tid], R.y.data[tid], R.z.data[tid], 
                         R.x.data[tid], R.y.data[tid], R.z.data[tid]
                     );
@@ -520,9 +520,9 @@ __global__ void initialize_operator_ordering(var *a, var *b, var *c, var *d) {
 __global__ void operator_ordering(uint64_t *a, uint64_t *b, uint64_t *c, uint64_t *d, var *res_x, var *res_y, var *res_z) {
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
 
-    g1::element b_new;
-    g1::element c_new;
-    g1::element d_new;
+    g1_gpu::element b_new;
+    g1_gpu::element c_new;
+    g1_gpu::element d_new;
 
     // Copy a into b
     fq_gpu::load(a[tid], b_new.x.data[tid]);
@@ -530,7 +530,7 @@ __global__ void operator_ordering(uint64_t *a, uint64_t *b, uint64_t *c, uint64_
     fq_gpu::load(c[tid], b_new.z.data[tid]);
 
     // c = a + b
-    g1::add(
+    g1_gpu::add(
         a[tid], b[tid], c[tid], 
         b_new.x.data[tid], b_new.y.data[tid], b_new.z.data[tid], 
         c_new.x.data[tid], c_new.y.data[tid], c_new.z.data[tid]
@@ -538,14 +538,14 @@ __global__ void operator_ordering(uint64_t *a, uint64_t *b, uint64_t *c, uint64_
 
     // Double is c == 0
     if (fq_gpu::is_zero(c_new.x.data[tid]) && fq_gpu::is_zero(c_new.y.data[tid]) && fq_gpu::is_zero(c_new.z.data[tid])) {
-        g1::doubling(
+        g1_gpu::doubling(
             a[tid], b[tid], c[tid], 
             c_new.x.data[tid], c_new.y.data[tid], c_new.z.data[tid]
         );
     }
 
     // d = b + a
-    g1::add(
+    g1_gpu::add(
         b_new.x.data[tid], b_new.y.data[tid], b_new.z.data[tid], 
         a[tid], b[tid], c[tid], 
         d_new.x.data[tid], d_new.y.data[tid], d_new.z.data[tid]
@@ -553,7 +553,7 @@ __global__ void operator_ordering(uint64_t *a, uint64_t *b, uint64_t *c, uint64_
 
     // Double is d == 0
     if (fq_gpu::is_zero(d_new.x.data[tid]) && fq_gpu::is_zero(d_new.y.data[tid]) && fq_gpu::is_zero(d_new.z.data[tid])) {
-        g1::doubling(
+        g1_gpu::doubling(
             b_new.x.data[tid], b_new.y.data[tid], b_new.z.data[tid], 
             d_new.x.data[tid], d_new.y.data[tid], d_new.z.data[tid]
         );
@@ -576,10 +576,10 @@ void assert_checks(var *expected, var *result) {
     cudaDeviceSynchronize();
     
     // Assert clause
-    // assert(expected[0] == result[0]);
-    // assert(expected[1] == result[1]);
-    // assert(expected[2] == result[2]);
-    // assert(expected[3] == result[3]);
+    assert(expected[0] == result[0]);
+    assert(expected[1] == result[1]);
+    assert(expected[2] == result[2]);
+    assert(expected[3] == result[3]);
 
     // Print statements
     printf("expected[0] is: %zu\n", expected[0]);
@@ -675,7 +675,7 @@ int main(int, char**) {
     execute_kernels(a, b, c, x, y, z, expected_x, expected_y, expected_z, res_x, res_y, res_z);
 
     // Successfull execution of unit tests
-    cout << "******* All 'G1 BN-254 Curve' unit tests passed! **********" << endl;
+    cout << "******* All 'g1_gpu BN-254 Curve' unit tests passed! **********" << endl;
 
     // End timer
     auto stop = high_resolution_clock::now();

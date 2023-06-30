@@ -2,29 +2,25 @@
 #include <iostream>
 #include <memory>
 
-using namespace std;
-
 namespace pippenger_common {
 
 /**
  * Pippenger top-level function prototypes 
  */
-template < typename A, typename S, typename J >
+template < typename P, typename S >
 class msm_t {
     public: 
         msm_t() {}
         
-        Context<bucket_t, point_t, scalar_t, affine_t>* pippenger_initialize(A* points);
-        
-        void pippenger_execute(Context<bucket_t, point_t, scalar_t, affine_t> *context, size_t npoints, A* points);
-        
-        void naive_sum_reduction(Context<bucket_t, point_t, scalar_t, affine_t> *context, size_t npoints, A* points);
+        Context<point_t, scalar_t>* pippenger_initialize(g1::affine_element* points, fr *scalars, int rounds, size_t npoints);
 
-        g1::element* naive_double_and_add(Context<bucket_t, point_t, scalar_t, affine_t> *context, size_t npoints, A* points);
+        g1_gpu::element* msm_double_and_add(
+            Context<point_t, scalar_t> *context, size_t npoints, g1::affine_element* points, fr *scalars
+        );
 
-        g1::element* msm_bucket_method(Context<bucket_t, point_t, scalar_t, affine_t> *context, size_t npoints, A* points);
-        
-        void verify_result(J *result_1, J *result_2);
+        g1_gpu::element** msm_bucket_method(
+            Context<point_t, scalar_t> *context, g1::affine_element* points, fr *scalars, int num_streams
+        );
 };
 
 }

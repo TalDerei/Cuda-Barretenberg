@@ -201,3 +201,23 @@
 
     10. The performance is not good for the MSM kernel...Need to figure out what's bottlenecking the performance?
     I think it's because there's conditional branching due to the double function...look into it.
+
+```MSM performance notes```
+    Exploring performance bottlenecks: After setting up a simple bench, the bottleneck is not curve addition or the conditional doubling....a single for loop with 4 threads and 1 block can execute 2^15 additions in 4000 ms. I need to benchmark on A10 to figure out what's going on...Usage of too many registers might be the problem here. Additionally, I need to figure out why there are still correctness errors (ie. some tests pass and some fail on the same run)!    
+    
+    The issue is not with initialize buckets or split scalars kernels. Print statements add some time to the timings, but not much 
+    in this case....accumulate buckets kernel is also not the problem since again, additions are fast. The bucket sum reduction kernel
+    is slow for a couple reasons...1. it's a serial operation, 2. there are 2 additions per iteration, 3. the parallelism amount is low
+    (launch parameters include 26 blocks and 4 threads ONLY). Need to look more into this kernel. We'll also remove the synchronization 
+    primitive cudaDeviceSynchronize since kernel launches are asynchrous but execute serially in the same stream. CudaDeviceSynchroniza
+    and swithching from unified memory to cudaMalloc didn't make any change really. I still haven't pinned point the main performance 
+    bottleneck...which I suspect is the the number of registers not sure. Okay...now the conditional double adds 2x execution time in these
+    kernels, but not in the baseline benches for some reason...need to reconcile that difference as well.  
+    
+    I'm curious if since the maximum registers per thread are the same, will the performance be similiar between A10 and P100
+    if the bottleneck is the number of registers?
+
+    Need to figure out the proper way to time as well. There's a huge dosparity between using chrono timer vs. Cuda events.
+
+```Profiling discussion```
+    For 2^15 constraints, profiling the kernel execution with "nsys profile --stats=true ./bin/arithmetic_cuda" and "sudo /usr/local/cuda/bin/ncu ./bin/arithmetic_cuda" highlights a low achieved occupancy on device. With regards to the execution time, bucket_running_sum_kernel accounts for 38%, final_accumulation_kernel for 31%, and accumulate_buckets_kernel for 28.1% of the runtime respectively. The radix sorting algorithm is negligible in comparison. Bumping up to 2^20 constraints, the accumulate_buckets_kernel call accounts for 91% of the runtime. It's obvious that as the constraint size increases, optimizing the bucket accumulation seems like a natural step. Both the achieved occupancy and SOL (compute %) are low, indicating the kernel launch parameters and actual kernel computational work aren't stressing the available device capabilities. 

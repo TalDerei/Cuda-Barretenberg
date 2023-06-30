@@ -3,7 +3,7 @@ project(cuda-barretenberg CUDA)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CUDA_STANDARD 17)
 
-include_directories(../arithmetic)
+include_directories(../bignum)
 include_directories(../fields)
 include_directories(../curves)
 include_directories(../srs)
@@ -21,6 +21,8 @@ target_link_libraries(
     field_library
     fixnum_library
     reference_string_library
+    stdlib_primitives
+    env
 )
 
 add_custom_target(
@@ -29,3 +31,15 @@ add_custom_target(
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
 )
 
+add_library(msm_library STATIC 
+    ./pippenger.cu
+)
+
+target_link_libraries(
+    msm_library
+    PUBLIC
+    fixnum_library
+    field_library
+    curve_library
+    reference_string_library
+)

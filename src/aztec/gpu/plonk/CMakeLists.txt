@@ -3,9 +3,10 @@ project(cuda-barretenberg CUDA)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CUDA_STANDARD 17)
 
-include_directories(../arithmetic)
+include_directories(../bignum)
 include_directories(../fields)
 include_directories(../curves)
+include_directories(../msm)
 include_directories(../srs)
 
 # Plonk
@@ -23,7 +24,7 @@ target_link_libraries(
     reference_string_library
     stdlib_primitives
     env
-    benchmark
+    msm_library
 )
 
 add_custom_target(

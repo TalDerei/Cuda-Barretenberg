@@ -6,6 +6,7 @@
 #include <polynomials/polynomial_arithmetic.hpp>
 #include <iostream>
 #include <fstream>
+
 using namespace barretenberg;
 using namespace std;
 

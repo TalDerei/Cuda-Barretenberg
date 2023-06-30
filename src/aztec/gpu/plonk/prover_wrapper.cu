@@ -29,3 +29,7 @@ ProverBase<standard_settings>& prover_gpu_wrapper::ProverWrapper::operator=(Prov
 
     return *this;
 }
+
+/**
+ * Overloading retrieval of monomials
+*/

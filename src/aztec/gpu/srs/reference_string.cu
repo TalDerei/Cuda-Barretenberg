@@ -10,13 +10,13 @@ class FileReferenceString {
             , srs(num_points, srs_path)
         {}
 
-        g1::affine_element* get_monomials() { return srs.get_point_table(); }
+        g1_gpu::affine_element* get_monomials() { return srs.get_point_table(); }
 
         size_t get_size() { return n; }
     
     private:
         size_t n;
-        gpu_waffle::SRS<g1::affine_element> srs; 
+        gpu_waffle::SRS<g1_gpu::affine_element> srs; 
 };
 
 } 

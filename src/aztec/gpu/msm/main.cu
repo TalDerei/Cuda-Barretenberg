@@ -2,44 +2,54 @@
 
 using namespace std;
 using namespace pippenger_common;
+using namespace waffle;
 
 int main(int, char**) {
-    // Dynamically initialize new 'msm_t' object
-    msm_t<g1::affine_element, scalar_t, point_t> *msm = new msm_t<g1::affine_element, fr_gpu, point_t>();
+    // Initialize dynamic 'msm_t' object 
+    msm_t<point_t, scalar_t> *msm = new msm_t<point_t, scalar_t>();
     
-    // Read curve points
-    auto reference_string = std::make_shared<gpu_waffle::FileReferenceString>(NUM_POINTS, "../srs_db");
+    // Construct elliptic curve points from SRS
+    auto reference_string = std::make_shared<waffle::FileReferenceString>(NUM_POINTS, "../srs_db/ignition");
     g1::affine_element* points = reference_string->get_monomials();
 
-    // Initialize 'context' object
-    Context<bucket_t, point_t, scalar_t, affine_t> *context = msm->pippenger_initialize(points);
-    msm->pippenger_execute(context, NUM_POINTS, points);
+    // Construct random scalars 
+    std::vector<fr> scalars;
+    fr element = fr::random_element();
+    fr accumulator = element;
+    scalars.reserve(NUM_POINTS);
+    for (size_t i = 0; i < NUM_POINTS; ++i) {
+        accumulator *= element;
+        scalars.emplace_back(accumulator);
+    }
+
+    int num_streams = 1;
+
+    // Initialize dynamic pippenger 'context' object
+    Context<point_t, scalar_t> *context = msm->pippenger_initialize(points,  &scalars[0], num_streams);
 
     // Execute "Double-And-Add" reference kernel
-    g1::element *final_result_1 = msm->naive_double_and_add(context, NUM_POINTS, points);
+    g1_gpu::element *result_1 = msm->msm_double_and_add(context, NUM_POINTS, points, &scalars[0]);
 
     // Execute "Pippenger's Bucket Method" kernel
-    g1::element *final_result_2 = msm->msm_bucket_method(context, NUM_POINTS, points);
+    g1_gpu::element **result_2 = msm->msm_bucket_method(context, NUM_POINTS, points, &scalars[0], num_streams);
 
-    // Verify the results match
-    msm->verify_result(final_result_1, final_result_2);
+    // Print results 
+    context->pipp.print_result(result_1, result_2);
+
+    // Verify the final results are equal
+    context->pipp.verify_result(result_1, result_2);
 }
 
 /**
- * TODO: Add correctness tests
- * TODO: Add "inlining" to C++/cuda functions
- * TODO: benchmark Ingonyama "Icicle" MSM
+ * TODO: Look into cudaMallocAsync stream allocator API
  * TODO: add multiple stream support
- * TODO: look into cuda graph support 
  * TODO: change unified memory to pinned host memory
  * TODO: look into asynchronous transfers 
- * TODO: read affine points instead of jacobian
  * TODO: change to memcpy instead of reading from files
- * TODO: modify number of scalars
  * TODO: incorperate cooperative groups in accmulation 
  * TODO: choose block sizes based on occupancy in terms of active blocks
- * TODO: free memory
- * TODO: look into shared memory optimizations instead of global memory accesses
+ * TODO: free memory for all cuda memory allocations
+ * TODO: look into shared memory optimizations instead of global memory accesses (100x latency lower than global memory)
  * TODO: remove extraneous loops
  * TODO: adjust kernel parameters to reduce overhead
  * TODO: look into loop unrolling with pragma
@@ -54,4 +64,13 @@ int main(int, char**) {
  * TODO: change indexing of threads from tid to threadrank. maybe it's better need to look into it
  * TODO: loop unroll here -- and account for unused threads after first iteration
  * TODO: clean up comments in kernels
+ * TODO: switch jacobian to projective coordinates to eliminate infinity and zero checks 
+ * TODO: are conditional checks are degrading performance?
+ * TODO: Look into 'Staged concurrent copy and execute' over 'Sequential copy and execute'
+ * TODO: wrap all the cuda allocation in error handles wrappers
+ * TODO: construct method to choose MSM parameters dynamically choose the best depending on the size of the msm
+ * TODO: remove test from main and add as seperate unit test 
+ * TODO: figure out why execution time fluctuates 
+ * TODO: solve dynamic shared memory intiialization warning 
+ * TODO: fix indexing issues
  */

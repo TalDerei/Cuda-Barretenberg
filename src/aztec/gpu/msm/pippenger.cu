@@ -7,40 +7,54 @@
 #include <chrono>
 
 using namespace std;
+using namespace std::chrono;
 
 namespace pippenger_common {
 
 /**
- * Entry point into "Pippenger's Bucket Method"
+ * Entry point into initializing "Pippenger's Bucket" Method
  */ 
-template <class A, class S, class J>
-Context<bucket_t, point_t, scalar_t, affine_t>* msm_t<A, S, J>::pippenger_initialize(A* points) {
+template <class P, class S>
+Context<point_t, scalar_t> *msm_t<P, S>::pippenger_initialize(g1::affine_element* points, fr *scalars, int num_streams, size_t npoints) {
     try {
-        // Initialize context object 
-        Context<bucket_t, point_t, scalar_t, affine_t> *context = new Context<bucket_t, point_t, scalar_t, affine_t>();
+        // Initialize 'Context' object 
+        Context<point_t, scalar_t> *context = new Context<point_t, scalar_t>();
 
-        // Initialize MSM parameters
-        context->pipp = context->pipp.initialize_msm(context->pipp, NUM_POINTS);    
+        // Calculate windows and buckets
+        context->pipp.calculate_windows(context->pipp, npoints);
 
-        // Allocate GPU storage for bases, scalars, and buckets 
-        context->d_points_idx = context->pipp.allocate_bases(context->pipp);
-        context->d_buckets_idx = context->pipp.allocate_buckets(context->pipp);
-
-        for (size_t i = 0; i < NUM_BATCH_THREADS; i++) {
-            context->d_scalar_idx[i] = context->pipp.allocate_scalars(context->pipp);
+        // Dynamically allocate streams at runtime
+        context->pipp.streams = new cudaStream_t[num_streams];
+        for (int i = 0; i < num_streams; i++) {
+            CUDA_WRAPPER(cudaStreamCreateWithFlags(&(context->pipp.streams[i]), cudaStreamNonBlocking));
         }
 
-        // Allocate pinned memory on host for scalars
-        CUDA_WRAPPER(cudaMallocHost(&context->h_scalars, context->pipp.get_size_scalars(context->pipp)));
+        // Allocate GPU storage for elliptic curve bases and scalars 
+        for (int i = 0; i < num_streams; i++) { 
+            context->pipp.allocate_bases(context->pipp);
+            context->pipp.allocate_scalars(context->pipp);
+        }
 
-        // Transfer bases to device
-        context->pipp.transfer_bases_to_device(context->pipp, context->d_points_idx, points);
-    
-        // Create results container
-        context->result0 = context->pipp.result_container(context->pipp);
-        context->result1 = context->pipp.result_container(context->pipp);
-
-        // Return initialized context object
+        // Convert affine to jacobian coordinates 
+        g1_gpu::affine_element *a_points;
+        g1_gpu::element *j_points;
+        CUDA_WRAPPER(cudaMallocAsync(&j_points, 3 * NUM_POINTS * LIMBS * sizeof(uint64_t), context->pipp.streams[0]));
+        CUDA_WRAPPER(cudaMallocAsync(&a_points, 2 * NUM_POINTS * LIMBS * sizeof(uint64_t), context->pipp.streams[0]));
+        CUDA_WRAPPER(cudaMemcpyAsync(a_points, points, NUM_POINTS * LIMBS * 2 * sizeof(uint64_t), 
+                                    cudaMemcpyHostToDevice, context->pipp.streams[0]
+        ));
+        affine_to_jacobian<<<(NUM_POINTS / 256), 256, 0, context->pipp.streams[0]>>>(a_points, j_points, NUM_POINTS);
+        
+        // Transfer bases and scalars to device
+        for (int i = 0; i < num_streams; i++) { 
+            context->pipp.transfer_scalars_to_device(
+                context->pipp, context->pipp.device_scalar_ptrs.d_ptrs[i], scalars, context->pipp.streams[i]
+            );
+            context->pipp.transfer_bases_to_device(
+                context->pipp, context->pipp.device_base_ptrs.d_ptrs[i], j_points, context->pipp.streams[i]
+            );
+        }
+        
         return context;
     }
     catch (cudaError_t) {
@@ -50,120 +64,46 @@ Context<bucket_t, point_t, scalar_t, affine_t>* msm_t<A, S, J>::pippenger_initia
 }
 
 /**
- * Execute MSM
+ * Perform MSM Double-And-Add Method
  */ 
-template <class A, class S, class J>
-void msm_t<A, S, J>::pippenger_execute(Context<bucket_t, point_t, scalar_t, affine_t> *context, size_t num_points, A* points) {
-    // Read scalars
-    fr_gpu *scalars;
-    cudaMallocManaged(&scalars, NUM_POINTS * LIMBS * sizeof(uint64_t));
-    context->pipp.read_scalars(scalars);
-    
-    // Create auxilary stream
-    stream_t aux_stream(context->pipp.device);
-
-    try {        
-        // Store results
-        typename pipp_t::result_container_t *kernel_result = &context->result0;
-        typename pipp_t::result_container_t *accumulation_result = &context->result1;
-
-        size_t d_scalars_xfer = context->d_scalar_idx[0];
-        size_t d_scalars_compute = context->d_scalar_idx[1];
-
-        // Create a channel_t object from thread pool
-        channel_t<size_t> channel;
-
-        size_t scalar_size = context->pipp.get_size_scalars(context->pipp);
-
-        // Transfer scalars to device
-        context->pipp.transfer_scalars_to_device(context->pipp, context->d_scalar_idx[1], scalars, aux_stream);
-
-        // Synchronize cuda stream with CPU thread, blocking execution until stream completed all operations
-        CUDA_WRAPPER(cudaStreamSynchronize(aux_stream));
-
-        // Launch kernel
-        context->pipp.launch_kernel(context->pipp, context->d_points_idx, context->d_scalar_idx[1], context->d_buckets_idx);
-    }
-    catch (cudaError_t) {
-        cout << "Failed executing multi-scalar multiplication!" << endl;
-        throw;
-    }
-}
-
-template <class A, class S, class J>
-g1::element* msm_t<A, S, J>::naive_double_and_add(Context<bucket_t, point_t, scalar_t, affine_t> *context, size_t npoints, A *points) {
-    // Allocate cuda unified memory 
-    fr_gpu *d_scalars;
-    J *j_points;
-    J *result;
-    J *final_result;
-    cudaMallocManaged(&d_scalars, NUM_POINTS * LIMBS * sizeof(uint64_t));
-    cudaMallocManaged(&j_points, 3 * NUM_POINTS * LIMBS * sizeof(uint64_t));
-    cudaMallocManaged(&result, 3 * NUM_POINTS * LIMBS * sizeof(uint64_t));
-    cudaMallocManaged(&final_result, 3 * NUM_POINTS * LIMBS * sizeof(uint64_t));
-
-    // Read points and scalars
-    context->pipp.read_jacobian_curve_points(j_points);
-    context->pipp.read_scalars(d_scalars);
-
-    double_and_add_kernel<<<1, 4>>>(d_scalars, j_points, final_result);
+template <class P, class S>
+g1_gpu::element* msm_t<P, S>::msm_double_and_add(
+Context<point_t, scalar_t> *context, size_t npoints, g1::affine_element *points, fr *scalars) {
+    // Allocate unified memory and launch kernel 
+    g1_gpu::element *result;
+    CUDA_WRAPPER(cudaMallocManaged(&result, 3 * NUM_POINTS * LIMBS * sizeof(uint64_t)));
+    double_and_add_kernel<<<1, 4>>>(
+        context->pipp.device_scalar_ptrs.d_ptrs[0], context->pipp.device_base_ptrs.d_ptrs[0], result, NUM_POINTS
+    );
     cudaDeviceSynchronize();
-
-    return final_result;
+    
+    return result;
 }
 
 /**
  * Perform MSM Bucket Method
  */ 
-template <class A, class S, class J>
-g1::element* msm_t<A, S, J>::msm_bucket_method(Context<bucket_t, point_t, scalar_t, affine_t> *context, size_t npoints, A *points) {
-    // Allocate unified memory
-    J *j_points;
-    S *d_scalars;
-    J *result;
-    cudaMallocManaged(&j_points, 3 * NUM_POINTS * LIMBS * sizeof(uint64_t));
-    cudaMallocManaged(&d_scalars, NUM_POINTS * LIMBS * sizeof(uint64_t));
-    cudaMallocManaged(&result, 3 * NUM_POINTS * LIMBS * sizeof(uint64_t));
-
-    // Read points
-    context->pipp.read_jacobian_curve_points(j_points);
-    context->pipp.read_scalars(d_scalars);
-
-    // MSM parameters
-    unsigned bitsize = 254;
-    unsigned c = 10;
-    
+template <class P, class S>
+g1_gpu::element** msm_t<P, S>::msm_bucket_method(
+Context<point_t, scalar_t> *context, g1::affine_element *points, fr *scalars, int num_streams) {
     // Start timer
-    using namespace std::chrono;
     high_resolution_clock::time_point t1 = high_resolution_clock::now();
 
-    g1::element *res = context->pipp.execute_bucket_method(d_scalars, j_points, bitsize, c, npoints);
+    // Launch pippenger kernel
+    g1_gpu::element **result = new g1_gpu::element*[num_streams];
+    for (int i = 0; i < num_streams; i++) { 
+        result[i] = context->pipp.execute_bucket_method(
+            context->pipp, context->pipp.device_scalar_ptrs.d_ptrs[i], context->pipp.device_base_ptrs.d_ptrs[i], 
+            BITSIZE, C, context->pipp.npoints, context->pipp.streams[i]
+        );
+    }
     
     // End timer
     high_resolution_clock::time_point t2 = high_resolution_clock::now();
     duration<double> time_span = duration_cast<duration<double>>(t2 - t1);
-    std::cout << "It took me " << time_span.count() << " seconds." << endl;
+    std::cout << "Pippenger executed in " << time_span.count() << " seconds." << endl;
 
-    return res;
-}
-
-/**
- * Verify double-and-add and pippenger's bucket method results
- */ 
-template <class A, class S, class J>
-void msm_t<A, S, J>::verify_result(J *result_1, J *result_2) {
-    var *result;
-    cudaMallocManaged(&result, LIMBS * sizeof(uint64_t));
-    
-    comparator_kernel<<<1, 4>>>(result_1, result_2, result);
-    cudaDeviceSynchronize();
-
-    assert (result[0] == 1);
-    assert (result[1] == 1);
-    assert (result[2] == 1);
-    assert (result[3] == 1);
-
-    cout << "MSM Result Verified!" << endl;
+    return result;
 }
 
 }
