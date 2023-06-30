@@ -220,4 +220,30 @@
     Need to figure out the proper way to time as well. There's a huge dosparity between using chrono timer vs. Cuda events.
 
 ```Profiling discussion```
-    For 2^15 constraints, profiling the kernel execution with "nsys profile --stats=true ./bin/arithmetic_cuda" and "sudo /usr/local/cuda/bin/ncu ./bin/arithmetic_cuda" highlights a low achieved occupancy on device. With regards to the execution time, bucket_running_sum_kernel accounts for 38%, final_accumulation_kernel for 31%, and accumulate_buckets_kernel for 28.1% of the runtime respectively. The radix sorting algorithm is negligible in comparison. Bumping up to 2^20 constraints, the accumulate_buckets_kernel call accounts for 91% of the runtime. It's obvious that as the constraint size increases, optimizing the bucket accumulation seems like a natural step. Both the achieved occupancy and SOL (compute %) are low, indicating the kernel launch parameters and actual kernel computational work aren't stressing the available device capabilities. 
+    For 2^15 constraints, profiling the kernel execution with "nsys profile --stats=true ./bin/arithmetic_cuda" and "sudo /usr/local/cuda/bin/ncu ./bin/arithmetic_cuda" highlights a low achieved occupancy on device. With regards to the execution time, bucket_running_sum_kernel accounts for 38%, final_accumulation_kernel for 31%, and accumulate_buckets_kernel for 28.1% of the runtime respectively. The radix sorting algorithm is negligible in comparison. Bumping up to 2^20 constraints, the accumulate_buckets_kernel call accounts for 91% of the runtime. It's obvious that as the constraint size increases, optimizing the bucket accumulation seems like a natural step. Both the achieved occupancy and SOL (compute %) are low, indicating the kernel launch parameters and actual kernel computational work aren't stressing the available device capabilities. The register pressure does not seems to be the cause.
+
+    TODOs:
+        /**
+        * TODO: choose block sizes based on occupancy in terms of active blocks
+        * TODO: look into shared memory optimizations instead of global memory accesses (100x latency lower than global memory)
+        * TODO: remove extraneous loops
+        * TODO: adjust kernel parameters to reduce overhead
+        * TODO: look into loop unrolling with pragma
+        * TODO: more efficient sum reduction kernel
+        * TODO: change size of windows (choose b and c parameters dynamically based on number of points and scalars)
+        * TODO: Address depaul notes on SOL, occupancy achieved, etc.
+        * TODO: look into reducing registers and pipelining loads (e.g. __launch_bounds__)
+        * TODO: change the indexing for the other sum reduction kernel
+        * TODO: change indexing of threads from tid to threadrank. maybe it's better need to look into it
+        * TODO: clean up comments in kernels
+        * TODO: switch jacobian to projective coordinates to eliminate infinity and zero checks 
+        * TODO: are conditional checks are degrading performance?
+        * TODO: Look into 'Staged concurrent copy and execute' over 'Sequential copy and execute'
+        * TODO: add threads for for loops in main and pippenger.cu
+        * 
+        * TODO: run a sample roofline model to check performance as a function of Compute (SM) Throughput + occupancy
+        * TODO: review removing seperate bucket initialization step into anothr kernel
+        * TODO: print bucket sizes
+        * TODO: run valgrind to check for leaking memory
+        */
+
