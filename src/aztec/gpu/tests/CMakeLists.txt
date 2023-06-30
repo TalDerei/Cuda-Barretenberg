@@ -74,6 +74,6 @@ add_custom_target(
 )
 add_custom_target(
     run_sum_reduction_test
-    COMMAND msm_example_test
+    COMMAND sum_reduction_test
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
 )

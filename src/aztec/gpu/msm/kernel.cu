@@ -6,6 +6,8 @@ using namespace cooperative_groups;
 
 namespace pippenger_common {
 
+#define MAX_THREADS_PER_BLOCK 128
+
 /* ----------------------------------------- Sum Reduction Kernels ---------------------------------------------- */
 
 /**
@@ -39,8 +41,7 @@ __global__ void sum_reduction_kernel(g1_gpu::element *points, g1_gpu::element *r
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
 
     // Perform reduction in shared memory
-    // is this shared across grid blocks?
-    __shared__ g1_gpu::element partial_sum[128]; // change size of shared memory -- allocate less for fewer points (128)
+    __shared__ g1_gpu::element partial_sum[128]; 
 
     // Parameters for coperative groups
     auto grp = fixnum::layout();
@@ -173,7 +174,7 @@ __global__ void double_and_add_kernel(fr_gpu *test_scalars, g1_gpu::element *tes
     }
 }
 
-/* ----------------------------------------- Pippenger's "Bucket Method" MSM Functions ---------------------------------------------- */
+/* ----------------------------------------- Pippenger's "Bucket Method" MSM Kernels ---------------------------------------------- */
 
 /**
  * Initialize buckets kernel for large MSM
@@ -223,20 +224,20 @@ __global__ void split_scalars_kernel
 
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
 
-        for (int i = 0; i < num_bucket_modules; i++) {
-            bucket_index = decompose_scalar_digit(scalars[tid], i, c);
-            current_index = i * npoints + tid; 
-            
-            // Bitwise performs addition here -- packing information about bucket module and specific bucket index
-            bucket_indices[current_index] = (i << c) | bucket_index; 
-            point_indices[current_index] = tid;
-        }
+    for (int i = 0; i < num_bucket_modules; i++) {
+        bucket_index = decompose_scalar_digit(scalars[tid], i, c);
+        current_index = i * npoints + tid; 
+        
+        // Bitwise performs addition here -- packing information about bucket module and specific bucket index
+        bucket_indices[current_index] = (i << c) | bucket_index; 
+        point_indices[current_index] = tid;
+    }
 }
 
 /**
  * Accumulation kernel adds up points in each bucket -- this can be swapped out for efficient sum reduction kernel (tree reduction method)
  */
-__global__ void accumulate_buckets_kernel
+__global__ void accumulate_buckets_kernel __launch_bounds__(MAX_THREADS_PER_BLOCK)
 (g1_gpu::element *buckets, unsigned *bucket_offsets, unsigned *bucket_sizes, unsigned *single_bucket_indices, 
 unsigned *point_indices, g1_gpu::element *points, unsigned num_buckets) {
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
@@ -288,7 +289,7 @@ unsigned *point_indices, g1_gpu::element *points, unsigned num_buckets) {
 }
 
 /** 
- * Sum reduction kernel that accumulates partial bucket sums using running sum method
+ * Running sum kernel that accumulates partial bucket sums using running sum method
  */
 __global__ void bucket_running_sum_kernel(g1_gpu::element *buckets, g1_gpu::element *final_sum, uint64_t c) {     
     // Global thread ID
@@ -355,7 +356,7 @@ __global__ void bucket_running_sum_kernel(g1_gpu::element *buckets, g1_gpu::elem
 }
 
 /**
- * Sum reduction kernel that accumulates partial bucket sums
+ * Running sum kernel that accumulates partial bucket sums
  * References PipeMSM (Algorithm 2) -- https://eprint.iacr.org/2022/999.pdf
  */
 __global__ void bucket_running_sum_kernel_2(g1_gpu::element *buckets, g1_gpu::element *S_, g1_gpu::element *G_, unsigned M, unsigned U) {     
@@ -633,7 +634,7 @@ int tid = blockIdx.x * blockDim.x + threadIdx.x;
     }
 }
 
-/* ----------------------------------------- Helper Kernel Functions ---------------------------------------------- */
+/* ----------------------------------------- Helper Kernels ---------------------------------------------- */
 
 /**
  * Convert affine to jacobian or projective coordinates 

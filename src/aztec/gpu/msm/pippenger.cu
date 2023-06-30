@@ -12,13 +12,16 @@ using namespace std::chrono;
 namespace pippenger_common {
 
 /**
- * Entry point into "Pippenger's Bucket Method" 
+ * Entry point into initializing "Pippenger's Bucket" Method
  */ 
 template <class P, class S>
-Context<point_t, scalar_t> *msm_t<P, S>::pippenger_initialize(g1::affine_element* points, fr *scalars, int num_streams) {
+Context<point_t, scalar_t> *msm_t<P, S>::pippenger_initialize(g1::affine_element* points, fr *scalars, int num_streams, size_t npoints) {
     try {
         // Initialize 'Context' object 
         Context<point_t, scalar_t> *context = new Context<point_t, scalar_t>();
+
+        // Calculate windows and buckets
+        context->pipp.calculate_windows(context->pipp, npoints);
 
         // Dynamically allocate streams at runtime
         context->pipp.streams = new cudaStream_t[num_streams];
@@ -82,7 +85,7 @@ Context<point_t, scalar_t> *context, size_t npoints, g1::affine_element *points,
  */ 
 template <class P, class S>
 g1_gpu::element** msm_t<P, S>::msm_bucket_method(
-Context<point_t, scalar_t> *context, size_t npoints, g1::affine_element *points, fr *scalars, int num_streams) {
+Context<point_t, scalar_t> *context, g1::affine_element *points, fr *scalars, int num_streams) {
     // Start timer
     high_resolution_clock::time_point t1 = high_resolution_clock::now();
 
@@ -91,7 +94,7 @@ Context<point_t, scalar_t> *context, size_t npoints, g1::affine_element *points,
     for (int i = 0; i < num_streams; i++) { 
         result[i] = context->pipp.execute_bucket_method(
             context->pipp, context->pipp.device_scalar_ptrs.d_ptrs[i], context->pipp.device_base_ptrs.d_ptrs[i], 
-            BITSIZE, C, npoints, context->pipp.streams[i]
+            BITSIZE, C, context->pipp.npoints, context->pipp.streams[i]
         );
     }
     

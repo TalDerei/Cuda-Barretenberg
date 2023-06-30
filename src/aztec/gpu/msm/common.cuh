@@ -40,6 +40,20 @@ class device_ptr {
         T* operator[](size_t i);
 };
 
+class cub_routines {
+    public:
+        // Parameters for CUB routines
+        unsigned *bucket_offsets;
+        unsigned *bucket_sizes;
+        unsigned *single_bucket_indices;
+        unsigned *bucket_indices;
+        unsigned *point_indices;
+        unsigned *sort_indices_temp_storage;
+        unsigned *nof_buckets_to_compute;
+        unsigned *encode_temp_storage;
+        unsigned *offsets_temp_storage;
+};
+
 /**
  * Initialize pippenger's bucket method for MSM algorithm
  */
@@ -68,11 +82,19 @@ class pippenger_t {
             pippenger_t &config, scalar_t *scalars, point_t *points, unsigned bitsize, unsigned c, size_t npoints, cudaStream_t stream
         );
 
+        void execute_cub_routines(pippenger_t &config, cub_routines *params, cudaStream_t stream);
+
+        void calculate_windows(pippenger_t &config, size_t npoints);
+
         device_ptr<point_t> device_base_ptrs;
         device_ptr<scalar_t> device_scalar_ptrs;
         cudaStream_t *streams;
+        cub_routines *params;
         int num_streams;
         int device;
+        size_t npoints;
+        size_t num_buckets;
+        int windows;
 };
 typedef pippenger_t<point_t, scalar_t> pipp_t;
 
