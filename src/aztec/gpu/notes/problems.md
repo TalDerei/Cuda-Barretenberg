@@ -240,10 +240,10 @@
         * TODO: are conditional checks are degrading performance?
         * TODO: Look into 'Staged concurrent copy and execute' over 'Sequential copy and execute'
         * TODO: add threads for for loops in main and pippenger.cu
-        * 
         * TODO: run a sample roofline model to check performance as a function of Compute (SM) Throughput + occupancy
         * TODO: review removing seperate bucket initialization step into anothr kernel
         * TODO: print bucket sizes
         * TODO: run valgrind to check for leaking memory
+        * TODO: update tasks.md file
         */
 
