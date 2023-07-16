@@ -19,7 +19,7 @@ pippenger_t &config, scalar_t *scalars, point_t *points, unsigned bitsize, unsig
     unsigned NUM_BLOCKS = (config.num_buckets + NUM_THREADS - 1) / NUM_THREADS;
     CUDA_WRAPPER(cudaMallocAsync(&buckets, config.num_buckets * 3 * 4 * sizeof(uint64_t), stream));
     initialize_buckets_kernel<<<NUM_BLOCKS * 4, NUM_THREADS, 0, stream>>>(buckets); 
-    
+
     // Scalars decomposition kernel
     CUDA_WRAPPER(cudaMallocAsync(&(params->bucket_indices), sizeof(unsigned) * npoints * (windows + 1), stream));
     CUDA_WRAPPER(cudaMallocAsync(&(params->point_indices), sizeof(unsigned) * npoints * (windows + 1), stream));
@@ -30,9 +30,9 @@ pippenger_t &config, scalar_t *scalars, point_t *points, unsigned bitsize, unsig
     execute_cub_routines(config, config.params, stream);
 
     // Bucket accumulation kernel
-    unsigned NUM_THREADS = 1 << 7;
-    unsigned NUM_BLOCKS = ((config.num_buckets + NUM_THREADS - 1) / NUM_THREADS) * 4;
-    accumulate_buckets_kernel<<<NUM_BLOCKS, NUM_THREADS, 0, stream>>>
+    unsigned NUM_THREADS_2 = 1 << 7;
+    unsigned NUM_BLOCKS_2 = ((config.num_buckets + NUM_THREADS_2 - 1) / NUM_THREADS_2) * 4;
+    accumulate_buckets_kernel<<<NUM_BLOCKS_2, NUM_THREADS_2, 0, stream>>>
         (buckets, params->bucket_offsets, params->bucket_sizes, params->single_bucket_indices, 
         params->point_indices, points, config.num_buckets);
 
@@ -50,8 +50,8 @@ pippenger_t &config, scalar_t *scalars, point_t *points, unsigned bitsize, unsig
     cudaStreamSynchronize(stream);
 
     // Free host and device memory 
-    CUDA_WRAPPER(cudaFreeAsync(points, stream));
-    CUDA_WRAPPER(cudaFreeAsync(scalars, stream));
+    CUDA_WRAPPER(cudaFreeHost(points));
+    CUDA_WRAPPER(cudaFreeHost(scalars));
     CUDA_WRAPPER(cudaFreeAsync(buckets, stream));
     CUDA_WRAPPER(cudaFreeAsync(params->bucket_indices, stream));
     CUDA_WRAPPER(cudaFreeAsync(params->point_indices, stream));
@@ -63,6 +63,7 @@ pippenger_t &config, scalar_t *scalars, point_t *points, unsigned bitsize, unsig
     CUDA_WRAPPER(cudaFreeAsync(params->bucket_offsets, stream));
     CUDA_WRAPPER(cudaFreeAsync(params->offsets_temp_storage, stream));
     CUDA_WRAPPER(cudaFreeAsync(final_sum, stream));
+    CUDA_WRAPPER(cudaFree(res));
 
     return res;
 }

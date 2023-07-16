@@ -54,6 +54,10 @@ Context<point_t, scalar_t> *msm_t<P, S>::pippenger_initialize(g1::affine_element
                 context->pipp, context->pipp.device_base_ptrs.d_ptrs[i], j_points, context->pipp.streams[i]
             );
         }
+
+        // Free intermediary state variables
+        CUDA_WRAPPER(cudaFreeAsync(j_points, context->pipp.streams[0]));
+        CUDA_WRAPPER(cudaFreeAsync(a_points, context->pipp.streams[0]));
         
         return context;
     }
@@ -76,6 +80,7 @@ Context<point_t, scalar_t> *context, size_t npoints, g1::affine_element *points,
         context->pipp.device_scalar_ptrs.d_ptrs[0], context->pipp.device_base_ptrs.d_ptrs[0], result, NUM_POINTS
     );
     cudaDeviceSynchronize();
+    CUDA_WRAPPER(cudaFree(result));
     
     return result;
 }
@@ -90,6 +95,7 @@ Context<point_t, scalar_t> *context, g1::affine_element *points, fr *scalars, in
     high_resolution_clock::time_point t1 = high_resolution_clock::now();
 
     // Launch pippenger kernel
+    cout << "starting pippenger!" << endl;
     g1_gpu::element **result = new g1_gpu::element*[num_streams];
     for (int i = 0; i < num_streams; i++) { 
         result[i] = context->pipp.execute_bucket_method(
@@ -97,6 +103,7 @@ Context<point_t, scalar_t> *context, g1::affine_element *points, fr *scalars, in
             BITSIZE, C, context->pipp.npoints, context->pipp.streams[i]
         );
     }
+    cout << "finished pippenger!" << endl;
     
     // End timer
     high_resolution_clock::time_point t2 = high_resolution_clock::now();

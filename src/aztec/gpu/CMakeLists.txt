@@ -17,7 +17,7 @@ string(REPLACE ";" " " CUDA_ARCH_FLAGS_SPACES "${CUDA_ARCH_FLAGS}")
 
 string(APPEND CMAKE_CUDA_FLAGS " ${CUDA_ARCH_FLAGS_SPACES}")
 string(APPEND CMAKE_CUDA_FLAGS " -Xcompiler -Wall,-Wextra, -Xptxas="-v"")
-set(CMAKE_CUDA_FLAGS_DEBUG "-g -G")
+set(CMAKE_CUDA_FLAGS_DEBUG "-g -o -G")
 
 add_subdirectory(bignum)
 add_subdirectory(fields)
