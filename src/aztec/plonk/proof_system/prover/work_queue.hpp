@@ -9,8 +9,6 @@
 #include <polynomials/polynomial_arithmetic.hpp>
 #include <iostream>
 
-using namespace std;
-
 namespace waffle {
 class work_queue {
 
@@ -50,6 +48,8 @@ class work_queue {
     work_queue(work_queue&& other) = default;
     work_queue& operator=(const work_queue& other) = default;
     work_queue& operator=(work_queue&& other) = default;
+
+    virtual ~work_queue() {};
 
     work_item_info get_queued_work_item_info() const
     {
