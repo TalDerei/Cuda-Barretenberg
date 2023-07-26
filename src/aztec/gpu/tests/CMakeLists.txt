@@ -62,6 +62,13 @@ add_custom_target(
     COMMAND curve_bn254_test_2
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
 )
+target_link_libraries(
+    msm_test_cpu
+    PUBLIC
+    polynomials
+    plonk
+    env
+)
 add_custom_target(
     run_msm_test_cpu
     COMMAND msm_test_cpu

@@ -2,12 +2,8 @@
 #include <iostream>
 #include <ecc/curves/grumpkin/grumpkin.hpp>
 
-using namespace std;
-
 int main(int, char**)
 {
-    std::cout << "test" << std::endl;
-
     constexpr size_t num_points = 1024;
 
     std::vector<grumpkin::g1::element> points;
@@ -31,12 +27,10 @@ int main(int, char**)
 
     std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
     std::chrono::milliseconds diff = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-    std::cout << "regular mul operations: " << diff.count() << "ms" << std::endl;
 
     start = std::chrono::steady_clock::now();
 
     const auto result = grumpkin::g1::element::batch_mul_with_endomorphism(affine_points, exponent);
     end = std::chrono::steady_clock::now();
     diff = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-    std::cout << "batched mul operations: " << diff.count() << "ms" << std::endl;
 }

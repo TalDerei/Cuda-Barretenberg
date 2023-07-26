@@ -43,6 +43,8 @@ template <typename settings> class ProverBase {
     waffle::plonk_proof& export_proof();
     virtual waffle::plonk_proof& construct_proof();
 
+    virtual ~ProverBase() {};
+
     size_t get_circuit_size() const { return n; }
 
     work_queue::work_item_info get_queued_work_item_info() const { return queue->get_queued_work_item_info(); }

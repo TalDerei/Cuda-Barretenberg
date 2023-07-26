@@ -30,7 +30,3 @@ add_subdirectory(plonk)
 add_subdirectory(stdlib)
 add_subdirectory(rollup)
 add_subdirectory(gpu)
-
-# if(BENCHMARKS)
-#     add_subdirectory(benchmark)
-# endif()

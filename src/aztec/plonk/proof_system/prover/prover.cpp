@@ -7,7 +7,6 @@
 #include <polynomials/polynomial_arithmetic.hpp>
 #include <iostream>
 
-using namespace std;
 using namespace barretenberg;
 
 namespace waffle {

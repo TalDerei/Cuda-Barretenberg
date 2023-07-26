@@ -4,8 +4,6 @@
 #include <plonk/transcript/manifest.hpp>
 #include <iostream>
 
-using namespace std;
-
 namespace waffle {
 enum StandardSelectors {
     QM = 0,
@@ -31,7 +29,7 @@ class StandardComposer : public ComposerBase {
     StandardComposer(const size_t size_hint = 0)
         : ComposerBase(5, size_hint, standard_sel_props())
     {
-        cout << "Enetered StandardComposer constructor!" << endl;
+        // cout << "Enetered StandardComposer constructor!" << endl;
         w_l.reserve(size_hint);
         w_r.reserve(size_hint);
         w_o.reserve(size_hint);
@@ -85,7 +83,7 @@ class StandardComposer : public ComposerBase {
 
     StandardComposer(StandardComposer&& other) = default;
     StandardComposer& operator=(StandardComposer&& other) = default;
-    ~StandardComposer() {}
+    virtual ~StandardComposer() {};
 
     void assert_equal_constant(uint32_t const a_idx,
                                barretenberg::fr const& b,

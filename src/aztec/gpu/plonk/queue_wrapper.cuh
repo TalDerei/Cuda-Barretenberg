@@ -1,6 +1,5 @@
 #include <plonk/proof_system/prover/work_queue.hpp>
 
-using namespace std;
 using namespace waffle;
 
 namespace queue_gpu_wrapper {
@@ -15,6 +14,7 @@ class QueueWrapper : public work_queue {
                     : work_queue(prover_key, program_witness, prover_transcript) {}
 
         virtual void process_queue() override;
+        virtual ~QueueWrapper() {};
 };
 
 }
