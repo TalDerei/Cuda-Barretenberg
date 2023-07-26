@@ -1,8 +1,17 @@
 #include "pippenger.cu"
+#include <chrono>
+#include <common/assert.hpp>
+#include <cstdlib>
+#include <ecc/curves/bn254/scalar_multiplication/scalar_multiplication.hpp>
+#include <plonk/reference_string/file_reference_string.hpp>
+#include <polynomials/polynomial_arithmetic.hpp>
+#include <iostream>
+#include <fstream>
 
 using namespace std;
 using namespace pippenger_common;
 using namespace waffle;
+using namespace barretenberg;
 
 int main(int, char**) {
     // Initialize dynamic 'msm_t' object 
@@ -14,24 +23,22 @@ int main(int, char**) {
 
     // Construct random scalars 
     std::vector<fr> scalars;
-    fr element = fr::random_element();
-    fr accumulator = element;
     scalars.reserve(NUM_POINTS);
     for (size_t i = 0; i < NUM_POINTS; ++i) {
-        accumulator *= element;
-        scalars.emplace_back(accumulator);
+        scalars.emplace_back(fr::random_element());
     }
 
+    // Number of streams
     int num_streams = 1;
 
     // Initialize dynamic pippenger 'context' object
-    Context<point_t, scalar_t> *context = msm->pippenger_initialize(points,  &scalars[0], num_streams);
+    Context<point_t, scalar_t> *context = msm->pippenger_initialize(points, &scalars[0], num_streams, NUM_POINTS);
 
     // Execute "Double-And-Add" reference kernel
     g1_gpu::element *result_1 = msm->msm_double_and_add(context, NUM_POINTS, points, &scalars[0]);
 
     // Execute "Pippenger's Bucket Method" kernel
-    g1_gpu::element **result_2 = msm->msm_bucket_method(context, NUM_POINTS, points, &scalars[0], num_streams);
+    g1_gpu::element **result_2 = msm->msm_bucket_method(context, points, &scalars[0], num_streams);
 
     // Print results 
     context->pipp.print_result(result_1, result_2);

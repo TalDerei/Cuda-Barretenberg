@@ -237,7 +237,7 @@ __global__ void split_scalars_kernel
 /**
  * Accumulation kernel adds up points in each bucket -- this can be swapped out for efficient sum reduction kernel (tree reduction method)
  */
-__global__ void accumulate_buckets_kernel __launch_bounds__(MAX_THREADS_PER_BLOCK)
+__global__ void accumulate_buckets_kernel 
 (g1_gpu::element *buckets, unsigned *bucket_offsets, unsigned *bucket_sizes, unsigned *single_bucket_indices, 
 unsigned *point_indices, g1_gpu::element *points, unsigned num_buckets) {
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
@@ -251,6 +251,8 @@ unsigned *point_indices, g1_gpu::element *points, unsigned num_buckets) {
     unsigned bucket_index = single_bucket_indices[(subgroup + (subgroup_size * blockIdx.x))];
     unsigned bucket_size = bucket_sizes[(subgroup + (subgroup_size * blockIdx.x))];
     unsigned bucket_offset = bucket_offsets[(subgroup + (subgroup_size * blockIdx.x))];
+
+    // printf("bucket size is: %d", bucket_size);
 
     // Sync loads
     grp.sync();

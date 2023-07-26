@@ -16,7 +16,7 @@ namespace pippenger_common {
 
 #define BITSIZE 254
 #define C 10
-size_t NUM_POINTS = 1 << 10;
+size_t NUM_POINTS = 1 << 11;
 
 typedef element<fq_gpu, fr_gpu> point_t;
 typedef fr_gpu scalar_t;
@@ -31,7 +31,7 @@ class device_ptr {
 
         device_ptr() {}
         
-        // ~device_ptr() {}
+        ~device_ptr() {}
 
         void allocate(size_t bytes);
 
@@ -40,9 +40,11 @@ class device_ptr {
         T* operator[](size_t i);
 };
 
+/**
+ * Parameters for CUB routines
+ */
 class cub_routines {
     public:
-        // Parameters for CUB routines
         unsigned *bucket_offsets;
         unsigned *bucket_sizes;
         unsigned *single_bucket_indices;

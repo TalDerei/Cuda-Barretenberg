@@ -58,7 +58,7 @@ Context<point_t, scalar_t> *msm_t<P, S>::pippenger_initialize(g1::affine_element
         // Free intermediary state variables
         CUDA_WRAPPER(cudaFreeAsync(j_points, context->pipp.streams[0]));
         CUDA_WRAPPER(cudaFreeAsync(a_points, context->pipp.streams[0]));
-        
+    
         return context;
     }
     catch (cudaError_t) {
@@ -76,11 +76,12 @@ Context<point_t, scalar_t> *context, size_t npoints, g1::affine_element *points,
     // Allocate unified memory and launch kernel 
     g1_gpu::element *result;
     CUDA_WRAPPER(cudaMallocManaged(&result, 3 * NUM_POINTS * LIMBS * sizeof(uint64_t)));
-    double_and_add_kernel<<<1, 4>>>(
-        context->pipp.device_scalar_ptrs.d_ptrs[0], context->pipp.device_base_ptrs.d_ptrs[0], result, NUM_POINTS
+    double_and_add_kernel<<<1, 4, 0, 0>>>(
+        context->pipp.device_scalar_ptrs.d_ptrs[0], context->pipp.device_base_ptrs.d_ptrs[0], result, npoints
     );
     cudaDeviceSynchronize();
-    CUDA_WRAPPER(cudaFree(result));
+
+    // CUDA_WRAPPER(cudaFree(result));
     
     return result;
 }
@@ -104,7 +105,7 @@ Context<point_t, scalar_t> *context, g1::affine_element *points, fr *scalars, in
         );
     }
     cout << "finished pippenger!" << endl;
-    
+
     // End timer
     high_resolution_clock::time_point t2 = high_resolution_clock::now();
     duration<double> time_span = duration_cast<duration<double>>(t2 - t1);

@@ -16,6 +16,7 @@ pippenger_t &config, scalar_t *scalars, point_t *points, unsigned bitsize, unsig
     // Bucket initialization kernel
     point_t *buckets;
     unsigned NUM_THREADS = 1 << 10; 
+
     unsigned NUM_BLOCKS = (config.num_buckets + NUM_THREADS - 1) / NUM_THREADS;
     CUDA_WRAPPER(cudaMallocAsync(&buckets, config.num_buckets * 3 * 4 * sizeof(uint64_t), stream));
     initialize_buckets_kernel<<<NUM_BLOCKS * 4, NUM_THREADS, 0, stream>>>(buckets); 
@@ -30,7 +31,7 @@ pippenger_t &config, scalar_t *scalars, point_t *points, unsigned bitsize, unsig
     execute_cub_routines(config, config.params, stream);
 
     // Bucket accumulation kernel
-    unsigned NUM_THREADS_2 = 1 << 7;
+    unsigned NUM_THREADS_2 = 1 << 8;
     unsigned NUM_BLOCKS_2 = ((config.num_buckets + NUM_THREADS_2 - 1) / NUM_THREADS_2) * 4;
     accumulate_buckets_kernel<<<NUM_BLOCKS_2, NUM_THREADS_2, 0, stream>>>
         (buckets, params->bucket_offsets, params->bucket_sizes, params->single_bucket_indices, 
@@ -49,6 +50,10 @@ pippenger_t &config, scalar_t *scalars, point_t *points, unsigned bitsize, unsig
     // Synchronize stream
     cudaStreamSynchronize(stream);
 
+    // Check for errors codes
+    auto res1 = cudaGetLastError();
+    cout << "Cuda Error Code: " << res1 << endl;
+
     // Free host and device memory 
     CUDA_WRAPPER(cudaFreeHost(points));
     CUDA_WRAPPER(cudaFreeHost(scalars));
@@ -62,7 +67,7 @@ pippenger_t &config, scalar_t *scalars, point_t *points, unsigned bitsize, unsig
     CUDA_WRAPPER(cudaFreeAsync(params->encode_temp_storage, stream));
     CUDA_WRAPPER(cudaFreeAsync(params->bucket_offsets, stream));
     CUDA_WRAPPER(cudaFreeAsync(params->offsets_temp_storage, stream));
-    CUDA_WRAPPER(cudaFreeAsync(final_sum, stream));
+    CUDA_WRAPPER(cudaFree(final_sum));
     CUDA_WRAPPER(cudaFree(res));
 
     return res;
@@ -89,9 +94,11 @@ void pippenger_t<point_t, scalar_t>::execute_cub_routines(pippenger_t &config, c
 
     // Perform length encoding
     CUDA_WRAPPER(cudaMallocAsync(&(params->single_bucket_indices), sizeof(unsigned) * config.num_buckets, stream));
-    CUDA_WRAPPER(cudaMallocAsync(&(params->bucket_sizes), sizeof(unsigned) * config.num_buckets, stream));
+
+    // TODO: THIS ALLOCATION NEEDS TO BE CHANGED AND WILL VARY RUNTIME OF PIPPENGER FOR SOME REASON
+    CUDA_WRAPPER(cudaMallocAsync(&(params->bucket_sizes), sizeof(unsigned) * config.num_buckets * config.num_buckets, stream));
     CUDA_WRAPPER(cudaMallocAsync(&(params->nof_buckets_to_compute), sizeof(unsigned), stream));
-       size_t encode_temp_storage_bytes = 0;
+    size_t encode_temp_storage_bytes = 0;
     cub::DeviceRunLengthEncode::Encode(params->encode_temp_storage, encode_temp_storage_bytes, params->bucket_indices, 
                                        params->single_bucket_indices, params->bucket_sizes, params->nof_buckets_to_compute, 
                                        config.windows * npoints, stream);
