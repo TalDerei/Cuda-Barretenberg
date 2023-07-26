@@ -1,6 +1,6 @@
 #include "queue_wrapper.cu"
 
-using namespace std;
+// using namespace std;
 using namespace waffle;
 
 namespace prover_gpu_wrapper {
@@ -12,6 +12,7 @@ namespace prover_gpu_wrapper {
 class ProverWrapper : public ProverBase<standard_settings> {
     public:    
         virtual ProverBase<standard_settings>& operator=(ProverBase<standard_settings>&& other) override;
+        virtual ~ProverWrapper() {};
 };
 
 }

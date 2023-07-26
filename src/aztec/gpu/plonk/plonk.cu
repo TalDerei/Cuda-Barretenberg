@@ -8,7 +8,6 @@
 
 #include "composer_wrapper.cuh"
 
-using namespace std;
 using namespace waffle;
 
 constexpr size_t MAX_GATES = 1 << 5;
@@ -26,8 +25,6 @@ void generate_test_plonk_circuit(StandardComposer& composer, size_t num_gates) {
 }
 
 int main(int, char**) {
-    cout << "Entered Plonk on GPU!\n" << endl;
-
     // Initialize composer and prover wrapper objects
     composer_gpu_wrapper::ComposerWrapper *composer = new composer_gpu_wrapper::ComposerWrapper;
     StandardComposer *composer_wrapper = &(*composer);
@@ -43,6 +40,4 @@ int main(int, char**) {
     // Generate and verify proof
     plonk_proof proof = prover->construct_proof();
     verifier.verify_proof(proof);
-
-    cout << "Successfully verifier proof for circuit of size: " << MAX_GATES << endl;
 }
