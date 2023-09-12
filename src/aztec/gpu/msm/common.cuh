@@ -1,5 +1,5 @@
 #include "reference_string.cu"
-#include "util/thread_pool.hpp"
+// #include "util/thread_pool.hpp"
 #include "error.cuh"
 #include <cuda.h>
 #include <cub/device/device_radix_sort.cuh>

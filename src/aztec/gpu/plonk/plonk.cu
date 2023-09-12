@@ -40,4 +40,6 @@ int main(int, char**) {
     // Generate and verify proof
     plonk_proof proof = prover->construct_proof();
     verifier.verify_proof(proof);
+
+    cout << "verified proof!" << endl;
 }

@@ -3,10 +3,13 @@ project(cuda-barretenberg CUDA)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CUDA_STANDARD 17)
 
+link_directories(/home/ubuntu/Cuda-Barretenberg/src/aztec/gpu)
+
 include_directories(../bignum)
 include_directories(../fields)
 include_directories(../curves)
 include_directories(../srs)
+include_directories(../headers)
 
 # Pippenger's bucket method
 add_executable(
@@ -23,6 +26,8 @@ target_link_libraries(
     reference_string_library
     stdlib_primitives
     env
+    bn254
+    dl
 )
 
 add_custom_target(
@@ -43,3 +48,4 @@ target_link_libraries(
     curve_library
     reference_string_library
 )
+
