@@ -24,7 +24,7 @@ extern "C" {
 #endif
 
 typedef struct BN254_projective_t BN254_projective_t;
-typedef struct BN254_g2_projective_t BN254_g2_projective_t;
+// typedef struct BN254_g2_projective_t BN254_g2_projective_t;
 typedef struct BN254_affine_t BN254_affine_t;
 typedef struct BN254_g2_affine_t BN254_g2_affine_t;
 typedef struct BN254_scalar_t BN254_scalar_t;
